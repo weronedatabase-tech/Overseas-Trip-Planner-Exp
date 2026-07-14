@@ -1,0 +1,97 @@
+name: Deploy Google Apps Script
+
+on:
+ push:
+   branches:
+     - main
+   paths:
+     - 'backend/**'
+
+jobs:
+ deploy:
+   runs-on: ubuntu-latest
+
+   steps:
+     - name: Checkout repository
+       uses: actions/checkout@v3
+
+     - name: Setup Node.js
+       uses: actions/setup-node@v3
+       with:
+         node-version: '18'
+
+     - name: Install Google Clasp
+       run: npm install -g @google/clasp
+
+     - name: Write Clasp Credentials (Safely via Node)
+       env:
+         CLASPRC_JSON_SECRET: ${{ secrets.CLASPRC_JSON }}
+       run: |
+         node -e "
+         const fs = require('fs');
+         const os = require('os');
+         const path = require('path');
+         
+         try {
+           if (!process.env.CLASPRC_JSON_SECRET) {
+             throw new Error('Secret is empty! Check GitHub Secrets.');
+           }
+           
+           const parsed = JSON.parse(process.env.CLASPRC_JSON_SECRET);
+           console.log('🔍 Secret JSON root keys found:', Object.keys(parsed).join(', '));
+           
+           let finalClaspData = {};
+           
+           if (parsed.tokens && parsed.tokens.default) {
+             console.log('🛠️ Detected custom tokens.default structure. Translating to clasp format...');
+             finalClaspData = {
+               token: {
+                 access_token: parsed.tokens.default.access_token,
+                 refresh_token: parsed.tokens.default.refresh_token,
+                 token_type: 'Bearer',
+                 expiry_date: 0 
+               },
+               oauth2ClientSettings: {
+                 clientId: parsed.tokens.default.client_id,
+                 clientSecret: parsed.tokens.default.client_secret,
+                 redirectUri: 'http://localhost'
+               },
+               isLocalCreds: false
+             };
+           } 
+           else if (parsed.token) {
+             console.log('🛠️ Detected standard clasp structure.');
+             finalClaspData = parsed;
+           } 
+           else {
+              throw new Error('Unrecognized JSON structure. Missing tokens.default or token keys.');
+           }
+           
+           const destPath = path.join(os.homedir(), '.clasprc.json');
+           fs.writeFileSync(destPath, JSON.stringify(finalClaspData, null, 2), 'utf8');
+           console.log('✅ Successfully translated and wrote .clasprc.json');
+           
+         } catch (e) {
+           console.error('❌ ERROR:', e.message);
+           process.exit(1);
+         }
+         "
+
+     - name: Create .clasp.json config
+       working-directory: ./backend
+       run: |
+         cat <<EOF > .clasp.json
+         {
+           "scriptId": "${{ secrets.GAS_SCRIPT_ID }}",
+           "rootDir": "."
+         }
+         EOF
+
+     - name: Push Code to Apps Script
+       working-directory: ./backend
+       run: clasp push --force
+
+     - name: Deploy and Maintain Web App URL
+       working-directory: ./backend
+       run: |
+         clasp deploy -i ${{ secrets.GAS_DEPLOYMENT_ID }} -d "Auto-deploy via GitHub Actions (Commit ${{ github.sha }})"
