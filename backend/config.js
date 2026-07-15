@@ -6,7 +6,7 @@
 
 // ENVIRONMENT TOGGLE
 // Options: 'Exp' (Experimental) | 'Dev' (Development) | 'Prod' (Production)
-const ENV = 'Dev';
+const ENV = 'Exp';
 
 // ENVIRONMENT API ENDPOINTS (Google Apps Script Web App URLs)
 const EXP_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
