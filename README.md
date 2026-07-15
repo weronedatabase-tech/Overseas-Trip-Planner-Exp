@@ -1,45 +1,42 @@
-# MINDS MYG Outings Organiser
+# Overseas Trip Planner
 
-This repository holds the code for the MINDS MYG Outings Organiser app. It features a completely modularized architecture designed for scalability, ease of maintenance, and continuous integration/continuous deployment (CI/CD).
+A fully modular and progressive web application powered by Google Apps Script and vanilla JS/Tailwind.
 
-## 📂 Project Structure
-- **`.github/workflows/`**: Contains the GitHub Actions `deploy.yml` CI/CD pipeline script.
-- **`assets/`**: Stores app-related static imagery like PWA icons (`icon-192.png`, `icon-512.png`).
-- **`backend/`**: Contains Google Apps Script backend `.js` files and `config.js` acting as the single source of truth for environments.
-- **`frontend/`**: 
-  - **`css/`**: Separated, structured CSS styling.
-  - **`js/`**: Modular logic separated by specific features (State, API wrapper, App UI, Authentication, Profiles, Settings).
-- **`index.html`**: The unified frontend interface referencing the modules.
-- **`sw.js`** & **`manifest.json`**: PWA service worker configuration allowing caching, offline-availability logic, and PWA integration.
+## Project Structure
+The repository is modularized for long-term scalability and parallel development:
+- **`backend/`**: Contains Google Apps Script (`Code.js`, `config.js`, `appsscript.json`).
+- **`frontend/`**: Contains the client-side UI separated logically.
+  - **`js/`**: All JavaScript logic (`app.js`, `config.js`, `auth.js`, etc.).
+  - **`css/`**: All styling (`styles.css`).
+- **`assets/`**: Static assets like `icon-192.png` and `icon-512.png`. Place all future images here.
+- **`root files`**: Core entry points like `index.html`, `sw.js` (Service Worker), and `manifest.json`.
 
-## 🔄 Environments
+## Environment Configurations
+The application natively supports three environments: **Prod**, **Dev**, and **Exp**.
+To change the active environment, update the `ENV` variable in:
+1. `/backend/config.js`
 
-We maintain 3 completely separate environments. To switch environments, you only need to modify one file: `backend/config.js`.
+The frontend will automatically render a red "Testing" banner for Dev, and a purple "Experimentation" banner for Exp.
 
-1. **Exp (Experimentation)**: Displays a purple banner.
-2. **Dev (Development)**: Displays a red banner.
-3. **Prod (Production)**: Standard UI.
+## CI/CD: Automated Google Apps Script Deployment
+This repository is configured to automatically push and deploy backend code to Google Apps Script while maintaining your existing Web App URL.
 
-## 🚀 GitHub Actions Setup (Auto Deployment)
+### 1. Initial Local Setup (Only needed once to get credentials)
+1. Install Clasp: `npm install -g @google/clasp`
+2. Login to Clasp: `clasp login`
+3. Locate your `.clasprc.json` file (usually in your home directory `~/.clasprc.json` or `C:\Users\Name\.clasprc.json`).
 
-The project includes an automated CI/CD pipeline utilizing Google `clasp`. When code is pushed to the `backend/` directory on the `main` branch, GitHub Actions will:
-1. Push the updated code to Google Apps Script.
-2. Deploy the latest version natively to Google's servers.
-3. Keep the original Web App URL functional without changes.
+### 2. GitHub Secrets Setup
+Navigate to your GitHub Repository -> **Settings** -> **Secrets and variables** -> **Actions**.
+Add the following three Repository Secrets:
 
-### How to Configure Secrets in GitHub
+- **`CLASPRC_JSON`**: Paste the entire contents of your `.clasprc.json` file here.
+- **`GAS_SCRIPT_ID`**: The Script ID of your Google Apps Script project (Found in Apps Script -> Project Settings).
+- **`GAS_DEPLOYMENT_ID`**: The active Web App Deployment ID. 
+  - *To find this:* In Apps Script, go to Deploy -> Manage Deployments. Copy the Deployment ID for your active Web App.
 
-To make the auto-deployment functional, you must add the following **Repository Secrets** in your GitHub repository: 
-*(Settings -> Secrets and variables -> Actions -> New repository secret)*
-
-#### 1. `CLASP_CREDENTIALS`
-Install clasp locally (`npm install -g @google/clasp`), log in (`clasp login`), and copy the entire contents of your generated `~/.clasprc.json` file. Paste it as the value for `CLASP_CREDENTIALS`.
-
-#### 2. `SCRIPT_ID`
-Go to your Apps Script project -> Project Settings (gear icon) -> Copy the **Script ID** and paste it here.
-
-#### 3. `DEPLOYMENT_ID`
-To retain your current Web App URL, we must target your existing deployment. Go to your Apps Script project -> Deploy -> Manage Deployments -> Copy the **Deployment ID** of your active Web App and paste it here.
-
----
-*Note: Make sure to clear your browser cache or utilize the "Refresh" button on the UI to load the newest service worker (sw.js) when making CSS/JS changes.*
+### 3. Deployment Workflow
+Whenever you push changes to the `main` branch that modify files inside the `/backend/` folder, GitHub Actions will automatically:
+1. Authenticate with Google using your saved `CLASPRC_JSON`.
+2. Push your latest code from `/backend` to the Apps Script project.
+3. Deploy a new version to the **existing** Web App URL so users don't need a new link.
