@@ -1,4 +1,4 @@
-/* OVERSEAS TRIP APP BACKEND - Code.gs */ 
+/* OVERSEAS TRIP APP BACKEND - Code.gs */
 
 // SAFE SETUP: Triggers authorization without wiping data.
 function setupProject() {
