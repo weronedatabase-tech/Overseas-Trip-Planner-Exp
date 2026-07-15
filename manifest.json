@@ -1,10 +1,10 @@
 {
-  "name": "MYG Overseas Trip Planner",
-  "short_name": "Trip Planner",
-  "start_url": "./index.html",
+  "name": "MINDS MYG Outings Organiser",
+  "short_name": "MYG Outings",
+  "start_url": ".",
   "display": "standalone",
-  "background_color": "#f3f4f6",
-  "theme_color": "#2563eb",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
   "icons": [
     {
       "src": "assets/icon-192.png",

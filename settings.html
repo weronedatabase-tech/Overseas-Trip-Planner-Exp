@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Settings | MINDS MYG</title>
+<base target="_top">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: { extend: { colors: { primary: '#3b82f6' } } }
+}
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="frontend/css/style.css">
+
+<script src="backend/config.js"></script>
+<script src="frontend/js/state.js"></script>
+<script src="frontend/js/api.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/auth.js"></script>
+<script src="frontend/js/settings.js"></script>
+<script src="frontend/js/main.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-black min-h-screen font-sans text-gray-900 dark:text-gray-100 pb-20 selection:bg-primary selection:text-white transition-all">
+
+<div class="sticky top-0 z-50 shadow-lg shrink-0 bg-white dark:bg-zinc-900">
+<div id="envBar" class="hidden text-white text-center text-[10px] uppercase tracking-wider font-bold py-0.5 border-b"></div>
+
+<nav class="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 py-2 flex flex-col justify-center">
+<div class="container mx-auto px-2 md:px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between w-full min-h-[32px] gap-2">
+<div class="flex items-center gap-1.5 min-w-0 flex-1">
+<button onclick="handleNavBack()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 w-8 h-8 flex items-center justify-center rounded shadow-sm shrink-0 transition-colors">
+  <i class="fa-solid fa-arrow-left text-sm md:text-base"></i>
+</button>
+<h1 class="text-base md:text-lg font-extrabold text-gray-900 dark:text-white leading-tight truncate">Configuration & Security</h1>
+</div>
+<div class="flex items-center gap-1.5 shrink-0 pl-2 ml-auto border-l border-gray-200 dark:border-zinc-700">
+<button onclick="refreshApp()" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors group flex items-center p-1">
+  <i id="refreshIcon" class="fa-solid fa-arrows-rotate text-sm md:text-base group-hover:text-primary transition-transform"></i>
+</button>
+<button onclick="toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors flex items-center p-1">
+  <span class="text-sm md:text-base leading-none">🌗</span>
+</button>
+<button onclick="navigateTo('./')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors flex items-center p-1">
+  <i class="fa-solid fa-house text-sm md:text-base"></i>
+</button>
+</div>
+</div>
+</div>
+</nav>
+</div>
+
+<main class="container mx-auto p-4 mt-2 max-w-7xl transition-all">
+<div class="fade-in">
+<div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-2xl p-6 shadow-xl mt-2 max-w-4xl mx-auto">
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Configure App Behavior & Settings.</p>
+<div class="mb-4 text-right"><button onclick="loadSettings()" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline font-bold">Refresh Configuration</button></div>
+<div id="settingsLoader" class="hidden flex justify-center py-6"><div class="loader w-10 h-10 border-4"></div></div>
+
+<div id="settingsContent" class="hidden">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div><h3 class="text-base font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 p-3 rounded mb-3">Trainee Tab Columns</h3><div id="traineeColsContainer" class="grid grid-cols-2 gap-3 text-sm"></div></div>
+<div><h3 class="text-base font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 p-3 rounded mb-3">Volunteer Tab Columns</h3><div id="volColsContainer" class="grid grid-cols-2 gap-3 text-sm"></div></div>
+</div>
+
+<div class="mt-8 border-t border-gray-200 dark:border-zinc-800 pt-6">
+<h3 class="text-base font-bold text-gray-900 dark:text-white mb-4">Security</h3>
+<div class="space-y-4 max-w-sm">
+   <div>
+       <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Current Admin Password</label>
+       <div class="relative">
+           <input type="password" id="settingsCurrentPwd" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 rounded-lg p-2.5 pr-10 text-sm text-gray-900 dark:text-white focus:border-purple-500 outline-none shadow-sm">
+           <button type="button" onclick="togglePasswordVisibility('settingsCurrentPwd')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+               <i id="settingsCurrentPwdIcon" class="fa-regular fa-eye"></i>
+           </button>
+       </div>
+   </div>
+   <div>
+       <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">New Admin Password</label>
+       <div class="relative">
+           <input type="password" id="settingsNewPwd" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 rounded-lg p-2.5 pr-10 text-sm text-gray-900 dark:text-white focus:border-purple-500 outline-none shadow-sm">
+           <button type="button" onclick="togglePasswordVisibility('settingsNewPwd')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+               <i id="settingsNewPwdIcon" class="fa-regular fa-eye"></i>
+           </button>
+       </div>
+   </div>
+   <button id="changePwdBtn" onclick="changeAdminPassword()" class="w-full bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold py-2.5 rounded-lg border border-gray-300 dark:border-zinc-700 transition-colors shadow-sm text-sm">Change Password</button>
+</div>
+</div>
+
+<div id="settingsStatus" class="hidden p-4 rounded text-center text-sm mt-4 font-bold"></div>
+<button onclick="saveSettings()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transition-colors mt-6 text-lg">Save Configuration</button>
+</div>
+</div>
+</div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  requestAccess(null, () => loadSettings());
+});
+window.handleNavBack = function() {
+  navigateTo('./');
+};
+</script>
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
+<div class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-zinc-800 p-6 shadow-2xl transform transition-all scale-100">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Restricted Access</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">Please enter the admin password.</p>
+<form onsubmit="handleAuth(event)">
+<div class="relative mb-4">
+<input type="password" id="adminPassword" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 rounded-lg py-3 pl-3 pr-10 text-gray-900 dark:text-white text-center tracking-widest focus:border-primary outline-none shadow-sm" placeholder="Password" required>
+<button type="button" onclick="togglePasswordVisibility('adminPassword')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none">
+<i id="adminPasswordIcon" class="fa-regular fa-eye"></i>
+</button>
+</div>
+<div id="authError" class="hidden text-red-500 dark:text-red-400 text-xs text-center mb-3 font-bold">Incorrect Password</div>
+<div class="flex gap-2">
+<button type="button" onclick="closeAuthModal()" class="flex-1 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 font-bold py-2 rounded-lg transition-colors">Cancel</button>
+<button type="submit" id="authBtn" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors">Access</button>
+</div>
+</form>
+</div>
+</div>
+</body>
+</html>

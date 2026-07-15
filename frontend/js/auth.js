@@ -1,38 +1,84 @@
-async function attemptLogin(btn) {
-const nric = document.getElementById('loginNric').value.trim().toUpperCase(); const pass = document.getElementById('loginPass').value;
-const err = document.getElementById('loginError');
-if(!nric || !pass) { err.textContent = "Please enter NRIC and Password"; return err.classList.remove('hidden-force'); }
-err.classList.add('hidden-force'); setBtnLoading(btn, true);
-try {
-  const res = await callBackend('login', { nric, password: pass }); currentUser = { nric: nric, role: res.role, name: res.name };
-  localStorage.setItem('userSession', JSON.stringify(currentUser)); renderDashboard();
-} catch (error) { err.textContent = error.message; err.classList.remove('hidden-force'); } finally { setBtnLoading(btn, false); }
+function requestAccess(urlPath, actionFn = null) { 
+   if (isAdminAuthenticated) { 
+       executeAccess(urlPath, actionFn);
+   } else { 
+       const savedKey = localStorage.getItem('adminKey');
+       if (savedKey) {
+           showOverlay('loading', 'Verifying session...');
+           apiCall('verifyAdminPassword', savedKey).then(isValid => {
+               closeOverlay();
+               if (isValid) {
+                   isAdminAuthenticated = true;
+                   executeAccess(urlPath, actionFn);
+               } else {
+                   localStorage.removeItem('adminKey');
+                   promptAuthModal(urlPath, actionFn);
+               }
+           });
+       } else {
+           promptAuthModal(urlPath, actionFn);
+       }
+   } 
 }
 
-function logout(btn) { setBtnLoading(btn, true); localStorage.removeItem('userSession'); currentUser = null; window.location.reload(); }
-
-function renderDashboard() {
-document.getElementById('unauthLayout').classList.add('hidden-force');
-document.getElementById('authLayout').classList.remove('hidden-force');
-
-const roleStr = currentUser.nric === 'ADMIN' ? 'Main Admin' : (currentUser.role === 'admin' ? 'Committee' : 'Participant');
-document.getElementById('deskUserName').textContent = currentUser.name || 'User';
-document.getElementById('deskUserRole').textContent = roleStr;
-
-if(currentUser.role === 'admin') { 
-  document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden-force')); 
-  if (currentUser.nric === 'ADMIN') { document.getElementById('nav-profile').classList.add('hidden-force'); } 
-  else { document.getElementById('nav-profile').classList.remove('hidden-force'); }
-  switchTab('settings'); loadLogisticsData(); 
-} else { 
-  document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden-force')); 
-  document.getElementById('nav-profile').classList.remove('hidden-force'); switchTab('profile'); 
-}
+function executeAccess(urlPath, actionFn) {
+   if (actionFn) {
+       actionFn();
+   } else if (urlPath) {
+       window.navigateTo(urlPath);
+   }
 }
 
-function togglePassword(id) { 
-const el = document.getElementById(id); const eyeOpen = document.getElementById('eyeOpen'); const eyeClosed = document.getElementById('eyeClosed');
-if(el.type === 'password') { el.type = 'text'; eyeOpen.classList.add('hidden-force'); eyeClosed.classList.remove('hidden-force'); } 
-else { el.type = 'password'; eyeOpen.classList.remove('hidden-force'); eyeClosed.classList.add('hidden-force'); } 
+function promptAuthModal(urlPath, actionFn) {
+   pendingView = urlPath; 
+   pendingAction = actionFn;
+   document.getElementById('authModal').classList.remove('hidden'); 
+   document.getElementById('adminPassword').value = ""; 
+   document.getElementById('authError').classList.add('hidden'); 
+   document.getElementById('adminPassword').focus(); 
 }
-function handleEnter(e, func) { if(e.key === 'Enter') func(); }
+
+function closeAuthModal(isCancel = true) { 
+   document.getElementById('authModal').classList.add('hidden'); 
+   
+   if (isCancel && !isAdminAuthenticated) {
+       const protectedPages = ['admin.html', 'settings.html', 'grouping.html', 'pairing.html'];
+       const currentPath = window.location.pathname.toLowerCase();
+       const isProtected = protectedPages.some(page => currentPath.includes(page));
+       
+       if (isProtected) {
+           if (typeof window.navigateTo === 'function') {
+               window.navigateTo('./');
+           } else {
+               window.location.href = './';
+           }
+       }
+   }
+   
+   pendingView = ""; 
+   pendingAction = null;
+}
+
+function handleAuth(e) { 
+   e.preventDefault(); 
+   const pwd = document.getElementById('adminPassword').value; 
+   const btn = document.getElementById('authBtn'); 
+   btn.disabled = true; 
+   btn.innerText = "Checking..."; 
+   
+   apiCall('verifyAdminPassword', pwd).then(isValid => { 
+       btn.disabled = false; 
+       btn.innerText = "Access"; 
+       if (isValid) { 
+           isAdminAuthenticated = true; 
+           localStorage.setItem('adminKey', pwd); 
+           const target = pendingView; 
+           const action = pendingAction;
+           closeAuthModal(false); 
+           executeAccess(target, action);
+       } else { 
+           document.getElementById('authError').classList.remove('hidden'); 
+           document.getElementById('adminPassword').value = ""; 
+       } 
+   }); 
+}

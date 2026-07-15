@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Actual Day Tracker | MINDS MYG</title>
+<base target="_top">
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: { extend: { colors: { primary: '#3b82f6' } } }
+}
+</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<link rel="stylesheet" href="frontend/css/style.css">
+
+<!-- Config & Scripts -->
+<script src="backend/config.js"></script>
+<script src="frontend/js/state.js"></script>
+<script src="frontend/js/api.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/auth.js"></script>
+<script src="frontend/js/comm.js"></script>
+<script src="frontend/js/main.js"></script>
+</head>
+<body class="bg-gray-50 dark:bg-black min-h-screen font-sans text-gray-900 dark:text-gray-100 pb-20 selection:bg-primary selection:text-white transition-all overflow-hidden overscroll-none">
+
+<div class="sticky top-0 z-50 shadow-lg shrink-0 bg-white dark:bg-zinc-900">
+<div id="envBar" class="hidden text-white text-center text-[10px] uppercase tracking-wider font-bold py-0.5 border-b"></div>
+<nav class="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border-b border-gray-200 dark:border-zinc-800 py-2 flex flex-col justify-center">
+<div class="container mx-auto px-2 md:px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between w-full min-h-[32px] gap-2">
+<div class="flex items-center gap-1.5 min-w-0 flex-1">
+<button onclick="handleNavBack()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 w-8 h-8 flex items-center justify-center rounded shadow-sm shrink-0 transition-colors">
+<i class="fa-solid fa-arrow-left text-sm md:text-base"></i>
+</button>
+<h1 id="navContextTitle" class="text-base md:text-lg font-extrabold text-gray-900 dark:text-white leading-tight truncate">Live Tracker</h1>
+</div>
+<div class="flex items-center gap-1.5 shrink-0 pl-2 ml-auto border-l border-gray-200 dark:border-zinc-700">
+<button onclick="refreshApp()" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors group flex items-center p-1">
+<i id="refreshIcon" class="fa-solid fa-arrows-rotate text-sm md:text-base group-hover:text-primary transition-transform"></i>
+</button>
+<button onclick="toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors flex items-center p-1">
+<span class="text-sm md:text-base leading-none">🌗</span>
+</button>
+<button onclick="navigateTo('./')" class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-[10px] md:text-xs transition-colors flex items-center p-1">
+<i class="fa-solid fa-house text-sm md:text-base"></i>
+</button>
+</div>
+</div>
+<!-- Actions Row -->
+<div class="flex items-center justify-start w-full overflow-x-auto custom-scrollbar pb-1 gap-1" id="navActionsRow">
+<div id="navContextActionsCommAtt" class="hidden items-center gap-1 shrink-0">
+<button id="liveBusBtn" onclick="openBusTrackerModal()" class="text-[10px] md:text-xs px-2 py-1 rounded font-bold transition flex items-center border border-yellow-300 dark:border-yellow-700 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-900/50 dark:hover:bg-yellow-900/70 text-yellow-800 dark:text-yellow-400 shadow-sm focus:outline-none shrink-0"><i class="fa-solid fa-bus mr-1"></i> BUS</button>
+<button id="liveUnpairedBtn" onclick="openFilteredPairingFromTracker()" class="hidden text-[9px] md:text-[10px] font-bold bg-red-100 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900/70 text-red-700 dark:text-red-400 px-1.5 py-1 rounded border border-red-300 dark:border-red-700 uppercase tracking-wider flex items-center shadow-sm transition-colors cursor-pointer animate-pulse shrink-0"><span id="liveUnpairedCount">0 Unpaired</span></button>
+<button id="btn-sync-comm-att" onclick="manualSyncCommAttendance()" class="text-[10px] md:text-xs px-1.5 py-1 flex items-center justify-center rounded font-bold transition border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 focus:outline-none shadow-sm shrink-0"><span class="btn-text">Saved</span><i class="fa-solid fa-circle-notch fa-spin btn-spinner hidden ml-1"></i></button>
+</div>
+</div>
+</div>
+</nav>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="container mx-auto p-1 mt-1 max-w-7xl transition-all">
+
+<!-- TRACKER VIEW -->
+<div id="view-comm-attendance" class="fade-in">
+<div class="flex flex-col h-[calc(100dvh-105px)] w-full relative bg-gray-50 dark:bg-black border border-gray-200 dark:border-zinc-800 rounded-xl shadow-xl overflow-hidden max-w-7xl mx-auto">
+<div class="px-2 md:px-3 py-1.5 border-b border-gray-200 dark:border-zinc-800 shrink-0 z-10 flex flex-col gap-1.5 bg-white dark:bg-zinc-900">
+
+<!-- Top Row: Juncture Select + Add + Delete -->
+<div class="flex gap-1 w-full items-center">
+<select id="commAttJunctureSelect" onchange="changeCommAttContext()" class="flex-1 px-2 h-7 border border-gray-300 dark:border-zinc-700 rounded font-bold text-xs bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-teal-500 shadow-sm appearance-none truncate"></select>
+
+<div class="flex items-center gap-1 shrink-0">
+<button onclick="promptNewCommJuncture()" class="h-7 w-7 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-teal-600 dark:text-teal-400 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded shadow-sm border border-gray-300 dark:border-zinc-700 transition" title="Add Juncture"><i class="fa-solid fa-plus text-xs"></i></button>
+<button onclick="promptDeleteCommJuncture()" class="h-7 w-7 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-red-600 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded shadow-sm border border-gray-300 dark:border-zinc-700 transition" title="Delete Juncture"><i class="fa-solid fa-trash text-xs"></i></button>
+</div>
+</div>
+
+<!-- Mid Row: Group, Meet, Dismiss Filters -->
+<div class="flex gap-1 w-full relative">
+<button id="commAttGroupBtn" onclick="toggleCommAttFilter('group')" class="flex-1 min-w-[60px] py-1 px-2 border border-gray-300 dark:border-zinc-700 rounded font-bold text-xs md:text-sm bg-gray-50 dark:bg-black text-teal-600 dark:text-teal-400 focus:outline-none shadow-sm truncate transition-colors">Group: All</button>
+<button id="commAttMeetBtn" onclick="toggleCommAttFilter('meet')" class="flex-1 min-w-[60px] py-1 px-2 border border-gray-300 dark:border-zinc-700 rounded font-bold text-xs md:text-sm bg-gray-50 dark:bg-black text-blue-600 dark:text-blue-400 focus:outline-none shadow-sm truncate transition-colors">Meet: All</button>
+<button id="commAttDismissBtn" onclick="toggleCommAttFilter('dismiss')" class="flex-1 min-w-[60px] py-1 px-2 border border-gray-300 dark:border-zinc-700 rounded font-bold text-xs md:text-sm bg-gray-50 dark:bg-black text-purple-600 dark:text-purple-400 focus:outline-none shadow-sm truncate transition-colors">Dismiss: All</button>
+
+<!-- Custom Multi-Select Dropdowns -->
+<div id="commAttGroupDropdown" class="absolute top-full left-0 mt-1 w-56 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded shadow-2xl hidden z-[60] max-h-[40vh] overflow-y-auto overscroll-contain custom-scrollbar pb-6"></div>
+<div id="commAttMeetDropdown" class="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded shadow-2xl hidden z-[60] max-h-[40vh] overflow-y-auto overscroll-contain custom-scrollbar pb-6"></div>
+<div id="commAttDismissDropdown" class="absolute top-full right-0 mt-1 w-56 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded shadow-2xl hidden z-[60] max-h-[40vh] overflow-y-auto overscroll-contain custom-scrollbar pb-6"></div>
+</div>
+
+<!-- Bottom Row: Search Box -->
+<div class="relative">
+<i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs"></i>
+<input type="text" id="commAttSearchInput" oninput="handleCommAttSearch(); toggleClearBtn('commAttSearchInput')" placeholder="Search trainee or volunteer..." class="w-full py-1 pl-8 pr-8 border border-gray-300 dark:border-zinc-700 rounded bg-gray-50 dark:bg-black font-bold text-sm focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500 text-gray-900 dark:text-white shadow-sm transition">
+<button type="button" id="clearBtn-commAttSearchInput" onclick="clearSearchInput('commAttSearchInput', 'handleCommAttSearch')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hidden transition-colors z-10"><i class="fa-solid fa-xmark text-sm"></i></button>
+</div>
+</div>
+
+<!-- Tracker Main Data Columns -->
+<div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative overflow-x-auto custom-scrollbar">
+<div id="commAttLoadingOverlay" class="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10 hidden flex flex-col justify-center items-center">
+<i class="fa-solid fa-circle-notch fa-spin text-teal-500 text-3xl mb-2"></i>
+<span class="text-teal-600 dark:text-teal-400 font-bold text-sm mt-2">Loading...</span>
+</div>
+
+<!-- Not Checked -->
+<div class="flex-none w-[45%] min-w-[150px] md:w-auto md:flex-1 flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-red-50/50 dark:bg-red-900/10">
+<div class="flex justify-between items-center bg-red-100 dark:bg-red-900/50 border-b border-red-200 dark:border-red-800 px-3 py-0.5 shrink-0">
+<h4 class="font-black text-[9px] md:text-xs uppercase tracking-wide text-red-800 dark:text-red-300">Not Checked (<span id="commAttNotCheckedCount">0</span>)</h4>
+<div class="flex gap-2 items-center">
+<button onclick="copyColumnData('notChecked')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors py-0" title="Copy List"><i class="fa-regular fa-copy text-xs"></i></button>
+<button onclick="shareColumnData('notChecked')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors py-0" title="Share List"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+</div>
+</div>
+<div id="commAttNotCheckedList" class="flex-grow overflow-y-auto p-2 custom-scrollbar pb-32 space-y-2"></div>
+</div>
+
+<!-- Checked -->
+<div class="flex-none w-[45%] min-w-[150px] md:w-auto md:flex-1 flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-green-50/50 dark:bg-green-900/10">
+<div class="flex justify-between items-center bg-green-100 dark:bg-green-900/50 border-b border-green-200 dark:border-green-800 px-3 py-0.5 shrink-0">
+<h4 class="font-black text-[9px] md:text-xs uppercase tracking-wide text-green-800 dark:text-green-300">Checked (<span id="commAttCheckedCount">0</span>)</h4>
+<div class="flex gap-2 items-center">
+<button onclick="copyColumnData('checked')" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors py-0" title="Copy List"><i class="fa-regular fa-copy text-xs"></i></button>
+<button onclick="shareColumnData('checked')" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors py-0" title="Share List"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+</div>
+</div>
+<div id="commAttCheckedList" class="flex-grow overflow-y-auto p-2 custom-scrollbar pb-32 space-y-2"></div>
+</div>
+
+<!-- Gone Home -->
+<div class="flex-none w-[45%] min-w-[150px] md:w-auto md:flex-1 flex flex-col bg-blue-50/50 dark:bg-blue-900/10">
+<div class="flex justify-between items-center bg-blue-100 dark:bg-blue-900/50 border-b border-blue-200 dark:border-blue-800 px-3 py-0.5 shrink-0">
+<h4 class="font-black text-[9px] md:text-xs uppercase tracking-wide text-blue-800 dark:text-blue-300">Gone Home (<span id="commAttGoneHomeCount">0</span>)</h4>
+<div class="flex gap-2 items-center">
+<button onclick="copyColumnData('goneHome')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors py-0" title="Copy List"><i class="fa-regular fa-copy text-xs"></i></button>
+<button onclick="shareColumnData('goneHome')" class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors py-0" title="Share List"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+</div>
+</div>
+<div id="commAttGoneHomeList" class="flex-grow overflow-y-auto p-2 custom-scrollbar pb-32 space-y-2"></div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+const params = new URLSearchParams(window.location.search);
+const url = params.get('url');
+
+if (!url) {
+    alert("No event selected. Please select an event from the home page.");
+    navigateTo('./');
+    return;
+}
+
+const localListStr = localStorage.getItem('myg_sheetList');
+if(localListStr) {
+    try {
+        const list = JSON.parse(localListStr);
+        const match = list.find(x => x.sheetUrl === url);
+        if(match) {
+            document.getElementById('navContextTitle').innerText = "Live: " + match.displayName;
+        }
+    } catch(e) {}
+}
+
+currentCommAttSheetUrl = url;
+document.getElementById('navContextActionsCommAtt').classList.remove('hidden');
+document.getElementById('navContextActionsCommAtt').classList.add('flex');
+document.getElementById('navActionsRow').classList.remove('hidden');
+document.getElementById('navActionsRow').classList.add('flex');
+loadCommAttendanceData();
+});
+
+function openFilteredPairingFromTracker() {
+if (!currentCommAttSheetUrl) return;
+navigateTo('pairing.html', { url: currentCommAttSheetUrl, filtered: true, source: 'tracker.html' });
+}
+
+window.handleNavBack = function() {
+navigateTo('./');
+};
+</script>
+
+<!-- BUS TRACKER MODAL -->
+<div id="busTrackerModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[80] flex items-start md:items-center justify-center md:p-4 transition-opacity duration-300">
+<div class="bg-white dark:bg-zinc-900 w-full md:max-w-5xl h-[100dvh] max-h-[100dvh] md:h-[95dvh] md:max-h-[95dvh] md:rounded-2xl border-b md:border border-gray-200 dark:border-zinc-800 flex flex-col shadow-2xl overflow-hidden">
+<div class="p-3 md:p-4 border-b border-gray-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+<h3 class="text-gray-900 dark:text-white font-bold text-base md:text-lg"><i class="fa-solid fa-bus mr-2 text-yellow-500"></i>Bus Tracker</h3>
+<button onclick="closeBusTrackerModal()" class="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
+</div>
+
+<div class="p-2 md:p-3 border-b border-gray-200 dark:border-zinc-800 shrink-0 flex flex-col gap-2">
+<div id="busGlobalStatus" class="hidden p-2 rounded text-[10px] md:text-xs font-bold text-center mb-1"></div>
+<div class="flex gap-2 w-full items-center">
+ <select id="busJunctureSelect" onchange="changeBusContext()" class="flex-1 px-2 py-2 border border-gray-300 dark:border-zinc-700 rounded font-bold text-sm bg-gray-50 dark:bg-black text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 shadow-sm"></select>
+ <button onclick="promptNewBusJuncture()" class="h-9 w-9 shrink-0 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-yellow-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded shadow-sm border border-gray-300 dark:border-zinc-700 transition" title="Add Bus Juncture"><i class="fa-solid fa-plus text-sm"></i></button>
+ <button onclick="promptDeleteBusJuncture()" class="h-9 w-9 shrink-0 flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-red-600 dark:text-red-400 hover:bg-gray-200 dark:hover:bg-zinc-700 rounded shadow-sm border border-gray-300 dark:border-zinc-700 transition" title="Delete Bus Juncture"><i class="fa-solid fa-trash text-sm"></i></button>
+</div>
+
+<div class="relative">
+ <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+ <input type="text" id="busSearchInput" oninput="handleBusSearch(); toggleClearBtn('busSearchInput')" placeholder="Search trainee to assign bus..." class="w-full py-2.5 pl-9 pr-9 border border-gray-300 dark:border-zinc-700 rounded bg-gray-50 dark:bg-black font-bold text-sm focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-gray-900 dark:text-white shadow-sm transition">
+ <button type="button" id="clearBtn-busSearchInput" onclick="clearSearchInput('busSearchInput', 'handleBusSearch')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hidden transition-colors z-10"><i class="fa-solid fa-xmark text-sm"></i></button>
+</div>
+</div>
+
+<div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative">
+<div id="busLoadingOverlay" class="absolute inset-0 bg-white/80 dark:bg-black/80 backdrop-blur-sm z-10 hidden flex flex-col justify-center items-center">
+<i class="fa-solid fa-circle-notch fa-spin text-yellow-500 text-3xl mb-2"></i>
+<span class="text-yellow-600 font-bold text-sm mt-2">Loading...</span>
+</div>
+
+<div class="flex-1 flex flex-col border-r border-gray-200 dark:border-zinc-800 bg-red-50/50 dark:bg-red-900/10 min-w-0">
+ <div class="bg-red-100 dark:bg-red-900/50 border-b border-red-200 dark:border-red-800 p-2 md:px-3 shrink-0 flex flex-col justify-start min-h-[64px]">
+     <div class="flex justify-between items-center w-full mt-0.5">
+         <h4 class="font-black text-[10px] md:text-xs uppercase tracking-wide text-red-800 dark:text-red-300 truncate">Not Boarded (<span id="busNotBoardedCount">0</span>)</h4>
+         <div class="flex gap-2 items-center shrink-0">
+             <button onclick="copyBusColumnData('notBoarded')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors py-0" title="Copy List"><i class="fa-regular fa-copy text-xs"></i></button>
+             <button onclick="shareBusColumnData('notBoarded')" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors py-0" title="Share List"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+         </div>
+     </div>
+ </div>
+ <div id="busNotBoardedList" class="flex-grow overflow-y-auto p-2 custom-scrollbar pb-32 space-y-2"></div>
+</div>
+
+<div class="flex-1 flex flex-col bg-green-50/50 dark:bg-green-900/10 min-w-0">
+ <div class="bg-green-100 dark:bg-green-900/50 border-b border-green-200 dark:border-green-800 p-2 shrink-0 flex flex-col justify-start gap-1.5 min-h-[64px]">
+     <div class="flex justify-between items-center w-full mt-0.5">
+         <h4 class="font-black text-[10px] md:text-xs uppercase tracking-wide text-green-800 dark:text-green-300 shrink-0 truncate">Boarded (<span id="busBoardedCount">0</span>)</h4>
+         <div class="flex items-center gap-2 shrink-0">
+             <button onclick="copyBusColumnData('boarded')" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors py-0" title="Copy List"><i class="fa-regular fa-copy text-xs"></i></button>
+             <button onclick="shareBusColumnData('boarded')" class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-colors py-0" title="Share List"><i class="fa-solid fa-share-nodes text-xs"></i></button>
+         </div>
+     </div>
+     <div class="flex items-center gap-1 w-full justify-between">
+         <select id="busFilterSelect" onchange="renderBusLists()" class="flex-1 text-xs font-bold py-1 px-1.5 rounded border border-green-300 dark:border-green-700 bg-white dark:bg-black text-green-900 dark:text-green-100 min-w-0 focus:outline-none transition-all duration-300"></select>
+         <div class="flex items-center gap-1 shrink-0">
+             <button onclick="addBusOption()" class="h-6 w-6 shrink-0 flex items-center justify-center bg-white dark:bg-black text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded shadow-sm hover:bg-green-50 dark:hover:bg-green-900/30 transition" title="Add Bus"><i class="fa-solid fa-plus text-[10px]"></i></button>
+             <button onclick="removeBusOption()" class="h-6 w-6 shrink-0 flex items-center justify-center bg-white dark:bg-black text-red-600 dark:text-red-400 border border-green-300 dark:border-green-700 rounded shadow-sm hover:bg-red-50 dark:hover:bg-red-900/10 transition" title="Remove Selected Bus"><i class="fa-solid fa-trash text-[10px]"></i></button>
+         </div>
+     </div>
+ </div>
+ <div id="busBoardedList" class="flex-grow overflow-y-auto p-2 custom-scrollbar pb-32 space-y-2"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- PERSON INFO MODAL -->
+<div id="personInfoModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[90] flex items-center justify-center p-4">
+<div class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh]">
+<div class="p-4 border-b border-gray-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+<h3 id="personInfoModalTitle" class="text-gray-900 dark:text-white font-bold text-base md:text-lg flex items-center w-full min-w-0 pr-4"></h3>
+<button onclick="closePersonInfoModal()" class="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors shrink-0"><i class="fa-solid fa-xmark text-xl"></i></button>
+</div>
+<div class="p-5 flex-grow overflow-y-auto custom-scrollbar pb-12">
+<div id="personInfoContent" class="w-full"></div>
+</div>
+<div id="personInfoFooter" class="p-4 border-t border-gray-200 dark:border-zinc-800 shrink-0 flex gap-2"></div>
+</div>
+</div>
+
+<!-- FULL PAGE STATUS OVERLAY -->
+<div id="fullPageOverlay" class="fixed inset-0 z-[110] bg-white/90 dark:bg-black/95 backdrop-blur-sm hidden flex flex-col items-center justify-center p-4 transition-opacity duration-300">
+<div id="overlayLoading" class="flex flex-col items-center">
+<div class="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+<h2 id="overlayLoadingText" class="text-xl font-bold text-gray-900 dark:text-white animate-pulse">Saving...</h2>
+</div>
+<div id="overlaySuccess" class="hidden flex flex-col items-center text-center scale-100 transition-transform">
+<div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(34,197,94,0.4)]">
+<i class="fa-solid fa-check text-4xl text-white"></i>
+</div>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Success!</h2>
+<p id="overlaySuccessText" class="text-gray-600 dark:text-gray-300 mb-8 max-w-xs text-sm">Operation completed.</p>
+<button onclick="closeOverlay()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold py-3 px-10 rounded-xl border border-gray-300 dark:border-zinc-700 shadow-lg transition-all transform hover:scale-105">Close</button>
+</div>
+<div id="overlayError" class="hidden flex flex-col items-center text-center">
+<div class="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(239,68,68,0.4)]">
+<i class="fa-solid fa-xmark text-4xl text-white"></i>
+</div>
+<h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-2">Error</h2>
+<p id="overlayErrorText" class="text-red-500 dark:text-red-400 mb-8 max-w-xs text-sm">Something went wrong.</p>
+<button onclick="closeOverlay()" class="bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold py-3 px-10 rounded-xl border border-gray-300 dark:border-zinc-700 shadow-lg transition-all transform hover:scale-105">Close</button>
+</div>
+</div>
+
+<!-- AUTH MODAL (for quick edit unlock) -->
+<div id="authModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
+<div class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-zinc-800 p-6 shadow-2xl transform transition-all scale-100">
+<h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4 text-center">Restricted Access</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">Please enter the admin password.</p>
+<form onsubmit="handleAuth(event)">
+<div class="relative mb-4">
+<input type="password" id="adminPassword" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 rounded-lg py-3 pl-3 pr-10 text-gray-900 dark:text-white text-center tracking-widest focus:border-primary outline-none shadow-sm" placeholder="Password" required>
+<button type="button" onclick="togglePasswordVisibility('adminPassword')" class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus:outline-none"><i id="adminPasswordIcon" class="fa-regular fa-eye"></i></button>
+</div>
+<div id="authError" class="hidden text-red-500 dark:text-red-400 text-xs text-center mb-3 font-bold">Incorrect Password</div>
+<div class="flex gap-2">
+<button type="button" onclick="closeAuthModal()" class="flex-1 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 font-bold py-2 rounded-lg transition-colors">Cancel</button>
+<button type="submit" id="authBtn" class="flex-1 bg-primary hover:bg-blue-600 text-white font-bold py-2 rounded-lg transition-colors">Access</button>
+</div>
+</form>
+</div>
+</div>
+</body>
+</html>

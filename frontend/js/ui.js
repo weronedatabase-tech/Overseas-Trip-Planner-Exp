@@ -1,246 +1,825 @@
-const projectColorPalette =[
-'bg-slate-100 border-slate-400 text-slate-900 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100',
-'bg-gray-100 border-gray-400 text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-slate-100',
-'bg-zinc-100 border-zinc-400 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-600 dark:text-zinc-100',
-'bg-neutral-100 border-neutral-400 text-neutral-900 dark:bg-neutral-900 dark:border-neutral-600 dark:text-neutral-100',
-'bg-stone-100 border-stone-400 text-stone-900 dark:bg-stone-900 dark:border-stone-600 dark:text-stone-100',
-'bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-900 dark:border-amber-600 dark:text-amber-100',
-'bg-yellow-100 border-yellow-400 text-yellow-900 dark:bg-yellow-900 dark:border-yellow-600 dark:text-yellow-100',
-'bg-lime-100 border-lime-400 text-lime-900 dark:bg-lime-900 dark:border-lime-600 dark:text-lime-100',
-'bg-green-100 border-green-400 text-green-900 dark:bg-green-900 dark:border-green-600 dark:text-green-100',
-'bg-emerald-100 border-emerald-400 text-emerald-900 dark:bg-emerald-900 dark:border-emerald-600 dark:text-emerald-100',
-'bg-teal-100 border-teal-400 text-teal-900 dark:bg-teal-900 dark:border-teal-600 dark:text-teal-100',
-'bg-cyan-100 border-cyan-400 text-cyan-900 dark:bg-cyan-900 dark:border-cyan-600 dark:text-cyan-100',
-'bg-sky-100 border-sky-400 text-sky-900 dark:bg-sky-900 dark:border-sky-600 dark:text-sky-100',
-'bg-blue-100 border-blue-400 text-blue-900 dark:bg-blue-900 dark:border-blue-600 dark:text-blue-100',
-'bg-indigo-100 border-indigo-400 text-indigo-900 dark:bg-indigo-900 dark:border-indigo-600 dark:text-indigo-100',
-'bg-violet-100 border-violet-400 text-violet-900 dark:bg-violet-900 dark:border-violet-600 dark:text-violet-100',
-'bg-purple-100 border-purple-400 text-purple-900 dark:bg-purple-900 dark:border-purple-600 dark:text-purple-100',
-'bg-fuchsia-100 border-fuchsia-400 text-fuchsia-900 dark:bg-fuchsia-900 dark:border-fuchsia-600 dark:text-fuchsia-100'
-];
+// Navigates securely handling Base URL and Query parameters
+window.navigateTo = function(page, params = {}) {
+  let url = new URL(page, window.location.origin + window.location.pathname);
+  for (let key in params) {
+      url.searchParams.set(key, params[key]);
+  }
+  window.location.href = url.toString();
+};
 
-function getProjectColor(groupName) {
-if (!groupName || groupName === 'None') return 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100'; 
-if (appSettings.projectColors && appSettings.projectColors[groupName]) return appSettings.projectColors[groupName];
-return 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100'; 
+async function refreshApp() { 
+  const icon = document.getElementById('refreshIcon'); 
+  if(icon) icon.classList.add('fa-spin'); 
+  
+  // Provide UX feedback since a deep sync takes a few seconds
+  showOverlay('loading', 'Syncing from Google Drive...');
+
+  // 1. Wipe frontend LocalStorage cache so the next load doesn't show stale data immediately
+  localStorage.removeItem('myg_sheetList');
+
+  // 2. Determine if a specific sheet is open so we can bust its specific cache too
+  let targetSheetUrl = null;
+  if (typeof currentCommAttSheetUrl !== 'undefined' && currentCommAttSheetUrl) targetSheetUrl = currentCommAttSheetUrl;
+  else if (typeof currentManualPairingSheetUrl !== 'undefined' && currentManualPairingSheetUrl) targetSheetUrl = currentManualPairingSheetUrl;
+  else if (typeof currentGroupingSheetUrl !== 'undefined' && currentGroupingSheetUrl) targetSheetUrl = currentGroupingSheetUrl;
+  else if (document.getElementById('volSheetSelector') && document.getElementById('volSheetSelector').value && document.getElementById('volSheetSelector').value.startsWith('http')) {
+      targetSheetUrl = document.getElementById('volSheetSelector').value;
+  } else if (document.getElementById('actualSheetSelector') && document.getElementById('actualSheetSelector').value && document.getElementById('actualSheetSelector').value.startsWith('http')) {
+      targetSheetUrl = document.getElementById('actualSheetSelector').value;
+  } else if (document.getElementById('commSheetSelector') && document.getElementById('commSheetSelector').value && document.getElementById('commSheetSelector').value.startsWith('http')) {
+      targetSheetUrl = document.getElementById('commSheetSelector').value;
+  }
+
+  // 3. Command backend to bust and rebuild caches
+  try {
+      await apiCall('forceBackendRefresh', { sheetUrl: targetSheetUrl });
+  } catch(e) {
+      console.warn("Backend refresh failed, proceeding with local refresh.");
+  }
+
+  // 4. Force Service Worker Update
+  if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+          for (let reg of regs) {
+              reg.update();
+          }
+      });
+  }
+
+  // 5. Clear Browser Cache Storage & Reload
+  if ('caches' in window) {
+      caches.keys().then(names => {
+          Promise.all(names.map(name => caches.delete(name))).then(() => {
+              window.location.reload(true);
+          });
+      });
+  } else {
+      setTimeout(() => { window.location.reload(true); }, 300);
+  }
 }
 
-function getProjectAbbreviation(name) {
-const match = name.match(/\((.*?)\)/); if (match && match[1]) return match[1].substring(0,3).toUpperCase();
-const words = name.split(' ').filter(w => w.length > 0);
-if (words.length > 1) return words.slice(0,3).map(w => w[0]).join('').toUpperCase();
-return name.substring(0,3).toUpperCase();
+function toggleTheme() { 
+  document.documentElement.classList.toggle('dark'); 
+  localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); 
 }
 
-function renderHeaderLegend() {
-const deskCont = document.getElementById('headerLegend');
-const mobCont = document.getElementById('mobHeaderLegend');
-if (!appSettings.activeProjects || appSettings.activeProjects.length === 0) { 
-if(deskCont) deskCont.innerHTML = ''; 
-if(mobCont) mobCont.innerHTML = ''; 
-return; 
-}
-let html = '';
-appSettings.activeProjects.forEach(proj => {
-if(!proj) return;
-const colorCls = getProjectColor(proj); const shortName = getProjectAbbreviation(proj);
-html += `<span class="px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-bold border shadow-sm cursor-help ${colorCls}" title="${proj}">${shortName}</span>`;
-});
-if(deskCont) deskCont.innerHTML = html;
-if(mobCont) mobCont.innerHTML = html;
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  const icon = document.getElementById(inputId + 'Icon');
+  if(input.type === 'password') {
+      input.type = 'text';
+      icon.classList.remove('fa-eye');
+      icon.classList.add('fa-eye-slash');
+  } else {
+      input.type = 'password';
+      icon.classList.remove('fa-eye-slash');
+      icon.classList.add('fa-eye');
+  }
 }
 
-function setBtnLoading(btn, isLoading) {
-if (!btn) return; 
-const spinner = btn.querySelector('.btn-spinner');
-const icon = btn.querySelector('.btn-icon');
-const text = btn.querySelector('.btn-text');
+// --- OVERLAY LOGIC ---
+function showOverlay(type, msg) {
+  const overlay = document.getElementById('fullPageOverlay');
+  if(!overlay) return;
+  overlay.classList.remove('hidden');
 
-if (isLoading) { 
-btn.disabled = true; btn.classList.add('opacity-80', 'cursor-not-allowed'); 
-if (spinner) spinner.classList.remove('hidden-force'); 
-if (icon) icon.classList.add('opacity-0'); 
-if (text) text.classList.add('opacity-0'); 
-} else { 
-btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed'); 
-if (spinner) spinner.classList.add('hidden-force'); 
-if (icon) icon.classList.remove('opacity-0');
-if (text) text.classList.remove('opacity-0');
-}
-}
+  ['overlayLoading', 'overlaySuccess', 'overlayError'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.classList.add('hidden');
+  });
 
-function showToast(msg, isError = false) {
-const t = document.getElementById('toast'); t.textContent = msg;
-t.className = `fixed top-12 left-1/2 transform -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-2xl z-[100] transition-opacity duration-300 text-sm font-bold border ${isError ? 'bg-red-600 text-white border-red-700' : 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-700 dark:border-gray-200'}`;
-t.classList.remove('opacity-0'); setTimeout(() => t.classList.add('opacity-0'), 4000);
-}
-
-function toggleTheme() { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); }
-
-function goHome() { 
-if(currentUser) return renderDashboard(); 
-document.getElementById('authLayout').classList.add('hidden-force');
-document.getElementById('unauthLayout').classList.remove('hidden-force');
-document.querySelectorAll('#unauthMain > div').forEach(el => el.classList.add('hidden-force')); 
-document.getElementById('viewLanding').classList.remove('hidden-force'); 
+  if (type === 'loading') {
+      const el = document.getElementById('overlayLoading');
+      if(el) el.classList.remove('hidden');
+      const txt = document.getElementById('overlayLoadingText');
+      if(txt) txt.innerText = msg || "Processing...";
+  } else if (type === 'success') {
+      const el = document.getElementById('overlaySuccess');
+      if(el) el.classList.remove('hidden');
+      const txt = document.getElementById('overlaySuccessText');
+      if(txt) txt.innerText = msg;
+  } else {
+      const el = document.getElementById('overlayError');
+      if(el) el.classList.remove('hidden');
+      const txt = document.getElementById('overlayErrorText');
+      if(txt) txt.innerText = msg;
+  }
 }
 
-function navTo(view) {
-document.querySelectorAll('#unauthMain > div').forEach(el => el.classList.add('hidden-force'));
-if (view === 'register') { document.getElementById('viewRegister').classList.remove('hidden-force'); document.getElementById('membersContainer').innerHTML = ''; regMemberCount = 0; addRegMember(); }
-if (view === 'login') { document.getElementById('viewLogin').classList.remove('hidden-force'); document.getElementById('loginPass').value = ''; }
+function closeOverlay() {
+  const el = document.getElementById('fullPageOverlay');
+  if(el) el.classList.add('hidden');
 }
 
-function switchTab(tabId) {
-document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden-force'));
-
-document.querySelectorAll('.nav-item').forEach(el => { 
-el.classList.remove('text-primary', 'dark:text-blue-400', 'font-bold', 'border-primary', 'md:bg-blue-50', 'md:dark:bg-gray-800'); 
-el.classList.add('text-gray-500', 'dark:text-gray-400', 'font-medium', 'border-transparent', 'hover:bg-gray-50', 'dark:hover:bg-gray-800'); 
-});
-
-document.getElementById(`tab-${tabId}`).classList.remove('hidden-force');
-const activeBtn = document.getElementById(`nav-${tabId}`);
-if(activeBtn) { 
-activeBtn.classList.remove('text-gray-500', 'dark:text-gray-400', 'font-medium', 'border-transparent', 'hover:bg-gray-50', 'dark:hover:bg-gray-800'); 
-activeBtn.classList.add('text-primary', 'dark:text-blue-400', 'font-bold', 'border-primary', 'md:bg-blue-50', 'md:dark:bg-gray-800'); 
+function showFlashMessage(elementId, message, type) { 
+  const el = document.getElementById(elementId); 
+  if(!el) return;
+  el.innerText = message; 
+  el.classList.remove('hidden', 'bg-green-100', 'dark:bg-green-900/30', 'text-green-600', 'dark:text-green-400', 'border-green-200', 'dark:border-green-800', 'bg-red-100', 'dark:bg-red-900/30', 'text-red-600', 'dark:text-red-400', 'border-red-200', 'dark:border-red-800'); 
+  if (type === 'success') { 
+      el.classList.add('bg-green-100', 'dark:bg-green-900/30', 'text-green-600', 'dark:text-green-400', 'border', 'border-green-200', 'dark:border-green-800'); 
+  } else { 
+      el.classList.add('bg-red-100', 'dark:bg-red-900/30', 'text-red-600', 'dark:text-red-400', 'border', 'border-red-200', 'dark:border-red-800'); 
+  } 
+  el.classList.remove('hidden'); 
+  setTimeout(() => { el.classList.add('hidden'); }, 5000); 
 }
 
-if(tabId === 'profile') loadProfileData();
-if(tabId === 'participants') { if(typeof buildParticipantsUI === 'function') buildParticipantsUI(); }
-if(tabId === 'logistics') { buildLogisticsUI(); switchLogisticsSubTab('pairings'); renderPairings(); }
-if(tabId === 'attendance') { buildAttendanceUI(); renderAttendanceChecklist(); }
-if(tabId === 'finance') { if(typeof buildFinanceUI === 'function') buildFinanceUI(); }
-if(tabId === 'minutes') { if(typeof buildMinutesUI === 'function') buildMinutesUI(); }
-if(tabId === 'settings') buildSettingsUI();
-if(tabId === 'files') {
-if (!document.getElementById('driveContentsList')) {
-buildFilesUI();
-currentDrivePath = [];
-loadDriveFolder('root', 'Trip Folder');
-}
-}
+function formatDateDisplay(input) { 
+  const val = input.value; 
+  if(!val) { input.type='text'; return; } 
+  const date = new Date(val); 
+  if(isNaN(date.getTime())) { input.type='text'; return; } 
+  const day = date.getDate().toString().padStart(2, '0'); 
+  const month = date.toLocaleString('default', { month: 'short' }); 
+  const year = date.getFullYear(); 
+  input.type = 'text'; 
+  input.value = `${day} ${month} ${year}`; 
 }
 
-function injectGlobalModals() {
-document.getElementById('modalContainer').innerHTML = `
-<div id="tripSetupModal" class="fixed inset-0 bg-black/60 z-[95] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity overflow-y-auto">
-<div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-6 shadow-2xl border border-gray-200 dark:border-gray-700 m-auto">
-<h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700 pb-2">Initialize Trip Setup</h3>
-<div class="space-y-3 mb-6 mt-4">
-<div><label class="block text-[10px] uppercase font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wider">Trip Title</label><input type="text" id="tripTitleInput" value="MYG Overseas Trip" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-<div><label class="block text-[10px] uppercase font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wider">Trip Year</label><input type="number" id="tripYearInput" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-<div class="grid grid-cols-2 gap-2 mt-2">
-  <div><label class="block text-[10px] uppercase font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wider">Start Date</label><input type="date" id="tripStartInput" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]"></div>
-  <div><label class="block text-[10px] uppercase font-bold mb-1 text-gray-500 dark:text-gray-400 tracking-wider">End Date</label><input type="date" id="tripEndInput" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]"></div>
-</div>
-<p class="text-[9px] text-gray-400 dark:text-gray-500 mt-1 leading-tight">End date is used to flag participants with passports expiring within 6 months.</p>
-</div>
-<div class="flex space-x-3">
-<button onclick="cancelTripSetup()" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 py-2.5 rounded-lg font-bold border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600 transition focus:outline-none">Cancel</button>
-<button onclick="confirmTripSetup(this)" class="flex-1 bg-primary text-white py-2.5 rounded-lg font-bold shadow-sm flex justify-center items-center hover:bg-blue-600 transition focus:outline-none"><span class="btn-text">Open Reg</span><div class="btn-spinner spinner-white hidden-force ml-2"></div></button>
-</div>
-</div>
-</div>
+// --- HELPER LOGIC FOR SEARCH CLEAR BUTTONS ---
+window.toggleClearBtn = function(inputId) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById('clearBtn-' + inputId);
+  if (input && btn) {
+      if (input.value.length > 0) {
+          btn.classList.remove('hidden');
+      } else {
+          btn.classList.add('hidden');
+      }
+  }
+}
 
-<div id="selectionBottomSheet" class="fixed inset-0 bg-black/60 z-[95] hidden-force flex flex-col justify-end">
-<div class="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-gray-200 dark:border-gray-800 h-[80vh] flex flex-col">
-<div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
-<span id="sheetTitle" class="font-bold text-base md:text-lg text-gray-800 dark:text-gray-100 truncate pr-2">Select</span><button type="button" onclick="closeSelectionSheet()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none shrink-0">&times;</button>
-</div>
-<div class="p-3 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-gray-50 dark:bg-gray-900">
-<input type="text" id="sheetSearchInput" oninput="filterBottomSheet()" placeholder="Search by name..." class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-950 font-medium text-sm focus:outline-none focus:border-primary text-gray-900 dark:text-white shadow-sm">
-</div>
-<div class="flex-grow overflow-y-auto p-3 space-y-2 bg-gray-50/50 dark:bg-gray-900/50" id="sheetListContainer"></div>
-</div>
-</div>
+window.clearSearchInput = function(inputId, filterCallbackName) {
+  const input = document.getElementById(inputId);
+  const btn = document.getElementById('clearBtn-' + inputId);
+  if (input) {
+      input.value = '';
+      if (btn) btn.classList.add('hidden');
+      input.focus();
 
-<div id="colorPickerModal" class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm">
-<div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
-<div class="flex justify-between items-center mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-<h3 class="text-lg font-bold text-gray-900 dark:text-white">Select Color</h3>
-<button type="button" onclick="closeColorPicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none">&times;</button>
-</div>
-<div class="grid grid-cols-6 gap-3 mb-2" id="colorPaletteGrid"></div>
-</div>
-</div>
+      if (filterCallbackName && typeof window[filterCallbackName] === 'function') {
+          window[filterCallbackName]();
+      }
+  }
+}
 
-<div id="datePickerSheet" class="fixed inset-0 bg-black/60 z-[90] hidden-force flex flex-col justify-end">
-<div class="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-gray-200 dark:border-gray-800">
-<div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-800"><span class="font-bold text-lg text-gray-800 dark:text-gray-100">Select Date</span><button type="button" onclick="closePicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none">&times;</button></div>
-<div class="relative flex h-[200px] text-lg font-bold bg-white dark:bg-gray-950"><div class="picker-highlight"></div><div class="flex-1 picker-col" id="colDay"></div><div class="flex-1 picker-col" id="colMonth"></div><div class="flex-1 picker-col" id="colYear"></div></div>
-<div class="p-5 border-t border-gray-200 dark:border-gray-800"><button type="button" onclick="confirmPicker()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg shadow-md focus:outline-none hover:bg-blue-600 transition">Done</button></div>
-</div>
-</div>
+function updateUnpairedNotification(count) {
+  // Update Comm Dashboard List
+  if(currentSheetList) {
+      currentSheetList.forEach((item, index) => {
+          if (
+              (typeof currentCommAttSheetUrl !== 'undefined' && item.sheetUrl === currentCommAttSheetUrl) || 
+              (typeof currentManualPairingSheetUrl !== 'undefined' && item.sheetUrl === currentManualPairingSheetUrl) || 
+              (typeof currentGroupingSheetUrl !== 'undefined' && item.sheetUrl === currentGroupingSheetUrl)
+          ) {
+              const pendingDiv = document.getElementById(`pending-badge-${index}`);
+              if (pendingDiv) {
+                  if (count > 0) {
+                      pendingDiv.innerHTML = `<button onclick="navigateTo('pairing.html', { url: '${item.sheetUrl}', filtered: 'true' })" class="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800 animate-pulse shadow-sm flex items-center justify-center w-fit pointer-events-auto cursor-pointer">${count} Unpaired</button>`;
+                      pendingDiv.classList.remove('hidden');
+                      pendingDiv.classList.add('flex');
+                  } else {
+                      pendingDiv.classList.add('hidden');
+                      pendingDiv.classList.remove('flex');
+                  }
+              }
+          }
+      });
+  }
 
-<!-- Sleeping Request Info Modal -->
-<div id="sleepingInfoModal" class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity overflow-y-auto">
-  <div class="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-5 shadow-2xl border border-gray-200 dark:border-gray-700 m-auto animate-slide-up">
-    <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-gray-700 pb-2">
-      <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2 min-w-0 pr-2">
-        <svg class="w-5 h-5 text-indigo-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
-        <span id="sleepingModalTitle" class="truncate leading-tight">Sleeping Request</span>
-      </h3>
-      <button type="button" onclick="closeSleepingModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none shrink-0">&times;</button>
-    </div>
-    <div class="text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-100 dark:border-gray-700 whitespace-pre-wrap max-h-[40vh] overflow-y-auto custom-scrollbar leading-snug" id="sleepingModalContent"></div>
-    <div class="mt-4 flex justify-end">
-      <button onclick="closeSleepingModal()" class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white py-2 px-5 rounded-lg font-bold shadow-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition focus:outline-none border border-gray-200 dark:border-gray-600">Close</button>
-    </div>
+  // Update Live Tracker
+  const liveBadgeBtn = document.getElementById('liveUnpairedBtn');
+  const liveBadgeCount = document.getElementById('liveUnpairedCount');
+  if (liveBadgeBtn && liveBadgeCount) {
+      if (count > 0) {
+          liveBadgeCount.innerText = `${count} Unpaired`;
+          liveBadgeBtn.classList.remove('hidden');
+          liveBadgeBtn.classList.add('flex');
+      } else {
+          liveBadgeBtn.classList.add('hidden');
+          liveBadgeBtn.classList.remove('flex');
+      }
+  }
+
+  // Update Manual Pairing View
+  const manualBadge = document.getElementById('manualPairingUnpairedCount');
+  if (manualBadge) {
+      if (count > 0) {
+          manualBadge.innerText = `${count} Unpaired`;
+          manualBadge.classList.remove('hidden');
+          manualBadge.classList.add('flex');
+      } else {
+          manualBadge.classList.add('hidden');
+          manualBadge.classList.remove('flex');
+      }
+  }
+}
+
+// --- UNIVERSAL LONG PRESS LOGIC ---
+
+function uiBindLongPress(element, callback) {
+  let pressTimer = null;
+  let startX = 0, startY = 0;
+  let hasFired = false;
+
+  const clearTimer = () => {
+      if (pressTimer !== null) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+      }
+  };
+
+  const handleStart = (e) => {
+      if (e.button !== undefined && e.button !== 0) return; // Ignore right-click/middle-click
+
+      hasFired = false;
+      if (e.touches && e.touches.length > 0) {
+          startX = e.touches[0].clientX;
+          startY = e.touches[0].clientY;
+      } else {
+          startX = e.clientX;
+          startY = e.clientY;
+      }
+
+      pressTimer = setTimeout(() => {
+          hasFired = true;
+          callback();
+          element.classList.remove('active:scale-95');
+          setTimeout(() => element.classList.add('active:scale-95'), 100);
+      }, 500); 
+  };
+
+  const handleMove = (e) => {
+      if (!pressTimer) return;
+      let currentX, currentY;
+
+      if (e.touches && e.touches.length > 0) {
+          currentX = e.touches[0].clientX;
+          currentY = e.touches[0].clientY;
+      } else {
+          currentX = e.clientX;
+          currentY = e.clientY;
+      }
+
+      if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
+          clearTimer();
+      }
+  };
+
+  const handleEnd = (e) => {
+      clearTimer();
+      if (hasFired) {
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+
+          const preventClick = (clickEvent) => {
+              clickEvent.preventDefault();
+              clickEvent.stopPropagation();
+              element.removeEventListener('click', preventClick, true);
+          };
+          element.addEventListener('click', preventClick, true);
+          setTimeout(() => element.removeEventListener('click', preventClick, true), 300);
+      }
+  };
+
+  element.addEventListener('touchstart', handleStart, {passive: true});
+  element.addEventListener('touchmove', handleMove, {passive: true});
+  element.addEventListener('touchend', handleEnd);
+  element.addEventListener('touchcancel', handleEnd);
+
+  element.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      callback();
+  });
+}
+
+// --- GLOBAL GROUP SELECTOR MODAL ---
+window.renderGlobalGroupGrid = function() {
+  const grid = document.getElementById('globalGroupGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  if (window.extractedActiveGroups) {
+      window.extractedActiveGroups.forEach(g => {
+          grid.innerHTML += `
+          <div class="relative group/btn">
+              <button onclick="selectGlobalGroup('${g}')" class="w-full bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-zinc-700 py-2 md:py-3 rounded-lg text-sm font-bold hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors shadow-sm focus:outline-none">Grp ${g}</button>
+              <button onclick="removeGlobalGroupOption('${g}', event)" class="absolute -top-1.5 -right-1.5 bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm border border-gray-300 dark:border-zinc-600 transition-colors z-10"><i class="fa-solid fa-xmark"></i></button>
+          </div>`;
+      });
+  }
+};
+
+window.openGlobalGroupSelect = function(inputId) {
+  if (!isAdminAuthenticated) return requestAccess(null, () => window.openGlobalGroupSelect(inputId));
+  
+  let modal = document.getElementById('globalGroupSelectModal');
+  if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'globalGroupSelectModal';
+      modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[120] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0';
+      modal.innerHTML = `
+          <div class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-zinc-800 flex flex-col max-h-[90vh] shadow-2xl scale-95 transition-transform duration-300" id="globalGroupSelectPanel">
+              <div class="p-4 border-b border-gray-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                  <h3 class="text-gray-900 dark:text-white font-bold text-sm md:text-base">Assign Group</h3>
+                  <button onclick="closeGlobalGroupSelect()" class="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+              </div>
+              <div class="p-4 flex-grow overflow-y-auto custom-scrollbar max-h-[60vh] pb-12">
+                  <div id="globalGroupGrid" class="grid grid-cols-3 gap-2"></div>
+                  <div class="mt-4 border-t border-gray-200 dark:border-zinc-800 pt-4 flex gap-2">
+                      <button onclick="selectGlobalGroup('')" class="flex-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 py-2 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition">Unassign</button>
+                      <button onclick="selectGlobalNewGroup()" class="flex-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">+ New Group</button>
+                  </div>
+              </div>
+          </div>
+      `;
+      document.body.appendChild(modal);
+  }
+
+  window.globalGroupTargetInput = inputId;
+  window.renderGlobalGroupGrid();
+
+  modal.classList.remove('hidden');
+  setTimeout(() => {
+      modal.classList.remove('opacity-0');
+      document.getElementById('globalGroupSelectPanel').classList.replace('scale-95', 'scale-100');
+  }, 10);
+};
+
+window.closeGlobalGroupSelect = function() {
+  const modal = document.getElementById('globalGroupSelectModal');
+  if (modal) {
+      modal.classList.add('opacity-0');
+      document.getElementById('globalGroupSelectPanel').classList.replace('scale-100', 'scale-95');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+  }
+};
+
+window.selectGlobalGroup = function(g) {
+  const input = document.getElementById(window.globalGroupTargetInput);
+  if (input) {
+      input.value = g;
+  }
+  window.closeGlobalGroupSelect();
+};
+
+window.selectGlobalNewGroup = function() {
+  const g = prompt("Enter new Group Name or Number:");
+  if (g && g.trim()) {
+      const clean = g.trim();
+      if (!window.extractedActiveGroups.includes(clean)) {
+          window.extractedActiveGroups.push(clean);
+      }
+      selectGlobalGroup(clean);
+  }
+};
+
+window.removeGlobalGroupOption = function(g, event) {
+  if (event) event.stopPropagation();
+  window.extractedActiveGroups = window.extractedActiveGroups.filter(x => String(x) !== String(g));
+  if (typeof activeGroups !== 'undefined') {
+      activeGroups = activeGroups.filter(x => String(x) !== String(g));
+  }
+  window.renderGlobalGroupGrid();
+};
+
+
+// --- PERSON INFO & INTEGRATED QUICK EDIT ---
+
+window.lastPersonObj = null;
+window.infoPairingVols = [];
+window.infoAllAvailableVols = [];
+
+function showPersonInfo(personObj) {
+  if (window.navigator && window.navigator.vibrate) {
+      try { window.navigator.vibrate(50); } catch(e){}
+  }
+
+  if (!personObj) return;
+  window.lastPersonObj = personObj;
+
+  const ex = personObj.extra || {};
+  const role = personObj.role || ex.role || 'TRAINEE';
+  let htmlContent = "";
+
+  const nameStr = personObj.name || '-';
+  const roleBadge = role === 'TRAINEE' 
+  ? `<span class="bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 px-1.5 py-0.5 rounded text-[10px] uppercase font-black tracking-wider shadow-sm">Trainee</span>`
+  : `<span class="bg-teal-50 text-teal-600 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800 px-1.5 py-0.5 rounded text-[10px] uppercase font-black tracking-wider shadow-sm">Volunteer</span>`;
+
+  const infoTitle = document.getElementById('personInfoModalTitle');
+  if (infoTitle) {
+      infoTitle.innerHTML = `<i class="fa-solid fa-circle-info mr-2 text-blue-500 dark:text-blue-400 shrink-0"></i> <span class="truncate flex-1">${nameStr}</span> <div class="shrink-0 ml-2">${roleBadge}</div>`;
+  }
+
+  // Resilient context extraction bypassing URL constraints
+  let sheetUrl = "";
+  let meetingOpts = [];
+  let dismissalOpts = [];
+  let allGroups = new Set(["1", "2", "3", "4", "5"]);
+
+  const extractData = (dataObj) => {
+      if (dataObj?.meetingLocs) meetingOpts = dataObj.meetingLocs;
+      if (dataObj?.dismissalLocs) dismissalOpts = dataObj.dismissalLocs;
+      if (dataObj?.participants || dataObj?.trainees) {
+          const arr = dataObj.participants || dataObj.trainees;
+          arr.forEach(p => { if (p.group) allGroups.add(String(p.group).trim()); });
+      }
+  };
+
+  if (typeof commAttData !== 'undefined' && commAttData) extractData(commAttData);
+  if (typeof manualPairingData !== 'undefined' && manualPairingData) extractData(manualPairingData);
+  if (typeof groupingData !== 'undefined' && groupingData) extractData(groupingData);
+
+  if (typeof currentCommAttSheetUrl !== 'undefined' && currentCommAttSheetUrl) sheetUrl = currentCommAttSheetUrl;
+  if (typeof currentManualPairingSheetUrl !== 'undefined' && currentManualPairingSheetUrl) sheetUrl = currentManualPairingSheetUrl;
+  if (typeof currentGroupingSheetUrl !== 'undefined' && currentGroupingSheetUrl) sheetUrl = currentGroupingSheetUrl;
+
+  window.extractedActiveGroups = Array.from(allGroups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+
+  let attVal = (personObj.attending || '').toLowerCase();
+  if (!attVal) attVal = 'y';
+
+  let meetVal = (personObj.meetingLoc || (role === 'TRAINEE' ? ex.t_meet : ex.v_meet) || '').trim();
+  let disVal = (personObj.dismissalLoc || (role === 'TRAINEE' ? ex.t_dismiss : ex.v_dismiss) || '').trim();
+
+  let groupVal = personObj.group || ex.v_group || '';
+  let pairedVal = personObj.volPaired || ex.t_paired_vol || ex.v_paired_trainee || '';
+
+  const generateOpts = (optsArr, currentVal, placeholder) => {
+      let html = `<option value="">-- ${placeholder} --</option>`;
+      let found = false;
+      optsArr.forEach(opt => {
+          const isSelected = currentVal.toLowerCase() === opt.toLowerCase();
+          if (isSelected) found = true;
+          html += `<option value="${opt}" ${isSelected ? 'selected' : ''}>${opt}</option>`;
+      });
+      if (currentVal && !found) {
+          html += `<option value="${currentVal}" selected>${currentVal} (Current)</option>`;
+      }
+      return html;
+  };
+
+  const meetOptionsHtml = generateOpts(meetingOpts, meetVal, "None");
+  const disOptionsHtml = generateOpts(dismissalOpts, disVal, "None");
+
+  const adminLockHtml = isAdminAuthenticated ? '' : `
+  <div class="absolute inset-0 bg-white/60 dark:bg-black/60 z-20 flex items-center justify-center cursor-pointer rounded-lg backdrop-blur-[1px] transition-all hover:bg-white/40 dark:hover:bg-black/40" onclick="requestAccess(null, () => showPersonInfo(window.lastPersonObj))">
+  <span class="bg-gray-900 dark:bg-gray-100 text-white dark:text-black text-[10px] px-2 py-1 rounded font-bold shadow-md"><i class="fa-solid fa-lock mr-1"></i>Admin Edit</span>
+  </div>`;
+
+  let detailsHtml = `<div class="space-y-3 mt-1 text-sm text-gray-700 dark:text-gray-300">`;
+
+  detailsHtml += `
+  <div class="bg-gray-50/50 dark:bg-zinc-800/30 p-3 rounded-xl border border-gray-200 dark:border-zinc-700/60 space-y-3 shadow-inner">
+  <div class="flex items-center gap-2 mb-1 border-b border-gray-200 dark:border-zinc-700/60 pb-2">
+      <i class="fa-solid fa-pen-to-square text-gray-500"></i>
+      <h4 class="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Quick Edit</h4>
   </div>
-</div>
-`;
+
+  <input type="hidden" id="infoEditSheetUrl" value="${sheetUrl || ''}">
+  <input type="hidden" id="infoEditRole" value="${role}">
+  <input type="hidden" id="infoEditName" value="${nameStr.replace(/"/g, '&quot;')}">
+
+  <div class="grid grid-cols-1 gap-3">
+      <div class="flex items-center gap-3">
+           <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-clipboard-user"></i></div>
+           <div class="flex-1">
+               <label class="block text-[10px] font-bold text-blue-700 dark:text-blue-400 mb-0.5 uppercase tracking-wider">Attending</label>
+               <select id="infoEditAttending" class="w-full bg-white dark:bg-black border border-blue-200 dark:border-blue-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-blue-500 shadow-sm outline-none transition-colors">
+                   <option value="Y" ${attVal === 'y' ? "selected" : ""}>Yes (Y)</option>
+                   <option value="N" ${attVal === 'n' ? "selected" : ""}>No (N)</option>
+                   <option value="" ${attVal !== 'y' && attVal !== 'n' ? "selected" : ""}>Unknown</option>
+               </select>
+           </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+           <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500 shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+           <div class="flex-1">
+               <label class="block text-[10px] font-bold text-green-700 dark:text-green-400 mb-0.5 uppercase tracking-wider">Meeting</label>
+               <select id="infoEditMeeting" class="w-full bg-white dark:bg-black border border-green-200 dark:border-green-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-green-500 shadow-sm outline-none transition-colors">
+                   ${meetOptionsHtml}
+               </select>
+           </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+           <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 shrink-0"><i class="fa-solid fa-flag-checkered"></i></div>
+           <div class="flex-1">
+               <label class="block text-[10px] font-bold text-purple-700 dark:text-purple-400 mb-0.5 uppercase tracking-wider">Dismissal</label>
+               <select id="infoEditDismissal" class="w-full bg-white dark:bg-black border border-purple-200 dark:border-purple-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-purple-500 shadow-sm outline-none transition-colors">
+                   ${disOptionsHtml}
+               </select>
+           </div>
+      </div>
+      
+      <div class="flex items-center gap-3 relative cursor-pointer group" onclick="openGlobalGroupSelect('infoEditGroup')">
+          ${adminLockHtml}
+          <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 shrink-0 group-hover:scale-110 transition-transform"><i class="fa-solid fa-users"></i></div>
+          <div class="flex-1 pointer-events-none">
+              <label class="block text-[10px] font-bold text-orange-700 dark:text-orange-400 mb-0.5 uppercase tracking-wider">Group</label>
+              <input type="text" id="infoEditGroup" value="${groupVal.replace(/"/g, '&quot;')}" class="w-full bg-gray-50 dark:bg-black border border-orange-200 dark:border-orange-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs shadow-sm outline-none transition-colors cursor-pointer" readonly placeholder="Unassigned">
+          </div>
+      </div>`;
+      
+  if (role === 'TRAINEE') {
+      detailsHtml += `
+      <div class="flex items-start gap-3 relative mt-1">
+          ${adminLockHtml}
+          <div class="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-500 shrink-0"><i class="fa-solid fa-handshake-angle"></i></div>
+          <div class="flex-1 relative">
+              <label class="block text-[10px] font-bold text-teal-700 dark:text-teal-400 mb-0.5 uppercase tracking-wider">Paired Vol(s)</label>
+              <input type="hidden" id="infoEditPairingHidden" value="${pairedVal.replace(/"/g, '&quot;')}">
+              <div id="infoEditPairingTags" class="flex flex-wrap gap-1 mb-1"></div>
+              <input type="text" id="infoEditPairingInput" class="w-full bg-white dark:bg-black border border-teal-200 dark:border-teal-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-teal-500 shadow-sm outline-none transition-colors" placeholder="Search active vol..." oninput="window.filterInfoPairing()" onfocus="window.filterInfoPairing()" autocomplete="off" ${isAdminAuthenticated ? '' : 'readonly'}>
+              <ul id="infoEditPairingList" class="absolute z-50 w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg mt-1 shadow-xl hidden max-h-40 overflow-y-auto pb-4 custom-scrollbar"></ul>
+          </div>
+      </div>`;
+  }
+
+  detailsHtml += `
+  </div>
+  </div>
+  `;
+
+  if (role === 'TRAINEE') {
+      const meetFetch = ex.t_meet_fetching || '-';
+      const disFetch = ex.t_dismiss_fetching || '-';
+      const dietary = ex.t_dietary || '-';
+      const cgContact = ex.m_cg_contact || '-';
+
+      if (meetFetch !== '-' && meetFetch !== '') {
+          detailsHtml += `
+          <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+              <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0 mt-0.5"><i class="fa-solid fa-car-side"></i></div>
+              <div class="flex-1 min-w-0">
+                  <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Meeting Fetch</div>
+                  <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${meetFetch}</div>
+              </div>
+          </div>`;
+      }
+
+      if (disFetch !== '-' && disFetch !== '') {
+          detailsHtml += `
+          <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+              <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 shrink-0 mt-0.5"><i class="fa-solid fa-car-side"></i></div>
+              <div class="flex-1 min-w-0">
+                  <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dismissal Fetch</div>
+                  <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${disFetch}</div>
+              </div>
+          </div>`;
+      }
+
+      detailsHtml += `
+      <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+          <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 shrink-0 mt-0.5"><i class="fa-solid fa-utensils"></i></div>
+          <div class="flex-1 min-w-0">
+              <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dietary Restrictions</div>
+              <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${dietary}</div>
+          </div>
+      </div>
+
+      <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+          <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500 shrink-0 mt-0.5"><i class="fa-solid fa-phone"></i></div>
+          <div class="flex-1 min-w-0">
+              <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">CG Contact</div>
+              <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${cgContact}</div>
+          </div>
+      </div>
+      `;
+  } 
+
+  detailsHtml += `</div>`; 
+
+  let remarks = ex.remark || '-';
+  let remarksHtml = "";
+  if (remarks && remarks !== '-' && remarks.trim() !== '') {
+      remarksHtml = `
+      <div class="mt-2 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 border-l-4 border-l-yellow-400 dark:border-l-yellow-500 p-3 rounded-r-lg shadow-sm">
+      <div class="flex items-center gap-2 mb-1">
+          <i class="fa-solid fa-triangle-exclamation text-yellow-600 dark:text-yellow-500 text-sm"></i>
+          <span class="font-black text-yellow-800 dark:text-yellow-400 text-[10px] uppercase tracking-wider">Remarks</span>
+      </div>
+      <p class="text-yellow-900 dark:text-yellow-100 text-sm whitespace-pre-wrap font-medium leading-relaxed">${remarks}</p>
+      </div>
+      `;
+  }
+
+  let pairingConsiderationsHtml = "";
+  if (role === 'TRAINEE' && ex.t_one_on_one) {
+      const oneOnOneRaw = String(ex.t_one_on_one).trim().toLowerCase();
+      if (oneOnOneRaw !== '' && !['no', 'n', 'false', '0'].includes(oneOnOneRaw)) {
+          pairingConsiderationsHtml = `
+          <div class="mt-2 mb-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 border-l-4 border-l-blue-400 dark:border-l-blue-500 p-3 rounded-r-lg shadow-sm">
+              <div class="flex items-center gap-2 mb-1">
+                  <i class="fa-solid fa-star text-blue-600 dark:text-blue-500 text-sm"></i>
+                  <span class="font-black text-blue-800 dark:text-blue-400 text-[10px] uppercase tracking-wider">Pairing Considerations</span>
+              </div>
+              <p class="text-blue-900 dark:text-blue-100 text-sm whitespace-pre-wrap font-medium leading-relaxed">${String(ex.t_one_on_one).trim()}</p>
+          </div>
+          `;
+      }
+  }
+
+  htmlContent = `
+  ${remarksHtml}
+  ${pairingConsiderationsHtml}
+  ${detailsHtml}
+  `;
+
+  const infoContent = document.getElementById('personInfoContent');
+  if(infoContent) {
+      infoContent.className = "w-full";
+      infoContent.innerHTML = htmlContent;
+  }
+
+  const footer = document.getElementById('personInfoFooter');
+  if(footer) {
+      footer.innerHTML = `
+      <button onclick="closePersonInfoModal()" class="flex-1 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold py-3 rounded-xl border border-gray-300 dark:border-zinc-700 shadow-sm transition-colors text-base">Close</button>
+      <button onclick="submitIntegratedQuickEdit()" id="infoSaveBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl border border-blue-600 shadow-sm transition-colors text-base flex items-center justify-center gap-2">
+      <i class="fa-solid fa-save"></i> Save Changes
+      </button>
+      `;
+  }
+
+  if (role === 'TRAINEE') {
+      window.initInfoPairing(pairedVal, sheetUrl);
+  }
+
+  const infoModal = document.getElementById('personInfoModal');
+  if(infoModal) infoModal.classList.remove('hidden');
 }
 
-function getUnusedColor() {
-const used = Object.values(appSettings.projectColors || {});
-const unused = projectColorPalette.filter(c => !used.includes(c));
-return unused.length > 0 ? unused[0] : projectColorPalette[0];
+function closePersonInfoModal() {
+  const infoModal = document.getElementById('personInfoModal');
+  if(infoModal) infoModal.classList.add('hidden');
+  window.lastPersonObj = null;
 }
 
-function openColorPickerForNewProject() {
-pendingColorGroupTarget = 'NEW';
-if(!newProjectSelectedColor) newProjectSelectedColor = getUnusedColor();
-renderColorPickerGrid(); document.getElementById('colorPickerModal').classList.remove('hidden-force');
+function submitIntegratedQuickEdit() {
+  const btn = document.getElementById('infoSaveBtn');
+  const sheetUrl = document.getElementById('infoEditSheetUrl').value;
+  const role = document.getElementById('infoEditRole').value;
+  const name = document.getElementById('infoEditName').value;
+
+  const att = document.getElementById('infoEditAttending').value;
+  const meet = document.getElementById('infoEditMeeting').value;
+  const dis = document.getElementById('infoEditDismissal').value;
+
+  const groupEl = document.getElementById('infoEditGroup');
+  const group = groupEl ? groupEl.value.trim() : null;
+
+  const pairingEl = document.getElementById('infoEditPairingHidden');
+  const pairing = pairingEl ? pairingEl.value.trim() : null;
+
+  if (!sheetUrl) return alert("Error: Context URL lost.");
+
+  btn.disabled = true;
+  btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Saving...`;
+
+  const payloadData = {
+      "Name": name,
+      "Attending (Y/N)": att,
+      "Meeting Location": meet,
+      "Dismissal Location": dis
+  };
+
+  if (group !== null) {
+      if (role.toLowerCase() === 'trainee') payloadData["Outing Grouping"] = group;
+      else payloadData["Group"] = group; 
+  }
+
+  if (pairing !== null && role.toLowerCase() === 'trainee') {
+      payloadData["Vol Paired"] = pairing;
+  }
+
+  const payload = { sheetUrl: sheetUrl, type: role.toLowerCase(), data: payloadData, targetName: name };
+
+  apiCall('submitAttendanceData', payload).then(res => {
+      if(res.success) {
+          btn.innerHTML = `<i class="fa-solid fa-check"></i> Saved!`;
+          btn.classList.replace('bg-blue-600', 'bg-green-600');
+          btn.classList.replace('border-blue-600', 'border-green-600');
+          btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+          
+          setTimeout(() => {
+              closePersonInfoModal();
+              btn.disabled = false;
+              btn.innerHTML = `<i class="fa-solid fa-save"></i> Save Changes`;
+              btn.classList.replace('bg-green-600', 'bg-blue-600');
+              btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+              btn.classList.replace('border-green-600', 'border-blue-600');
+              
+              if (typeof manualSyncCommAttendance === 'function') {
+                  manualSyncCommAttendance();
+              } else if (typeof manualSyncManualPairing === 'function') {
+                  manualSyncManualPairing();
+              } else if (typeof manualSyncGrouping === 'function') {
+                  manualSyncGrouping();
+              }
+          }, 1500);
+      } else {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Save Failed`;
+          alert("Error: " + res.message);
+      }
+  });
 }
-function openColorPicker(groupName) {
-pendingColorGroupTarget = groupName; renderColorPickerGrid(); document.getElementById('colorPickerModal').classList.remove('hidden-force');
-}
-function closeColorPicker() { document.getElementById('colorPickerModal').classList.add('hidden-force'); }
 
-function renderColorPickerGrid() {
-const grid = document.getElementById('colorPaletteGrid');
-const usedColors = Object.values(appSettings.projectColors || {});
-let html = '';
-projectColorPalette.forEach(colorCls => {
-let isUsed = usedColors.includes(colorCls);
-let isCurrent = false;
-if (pendingColorGroupTarget === 'NEW') { isCurrent = (colorCls === newProjectSelectedColor); } 
-else { isCurrent = (colorCls === appSettings.projectColors[pendingColorGroupTarget]); if(isCurrent) isUsed = false; }
+window.initInfoPairing = function(initialStr, sheetUrl) {
+  window.infoPairingVols = initialStr ? initialStr.split(/[,|\n]+/).map(s=>s.trim()).filter(s=>s) : [];
+  window.updateInfoPairingUI();
+  
+  // Pulls robust architectural data limiting options to active volunteers
+  apiCall('fetchManualPairingData', { sheetUrl: sheetUrl }).then(res => {
+      if(res.success && res.data && res.data.volunteers) {
+          window.infoAllAvailableVols = res.data.volunteers.map(v => v.name);
+      }
+  });
+};
 
-const opacity = isUsed ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer hover:scale-110';
-const ring = isCurrent ? 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-800' : '';
-const onclick = isUsed ? '' : `onclick="selectColor('${colorCls}')"`;
-const bgMatch = colorCls.match(/bg-[a-z]+-[0-9]+/); const bgClass = bgMatch ? bgMatch[0] : 'bg-gray-200';
+window.filterInfoPairing = function() {
+  const input = document.getElementById('infoEditPairingInput');
+  const list = document.getElementById('infoEditPairingList');
+  if(!input || !list) return;
+  const filter = input.value.toLowerCase().trim();
+  list.innerHTML = "";
 
-html += `<div ${onclick} class="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 shadow-sm transition-all ${bgClass} ${opacity} ${ring}"></div>`;
+  if(filter.length === 0 && window.infoAllAvailableVols.length === 0) {
+      list.classList.add('hidden');
+      return;
+  }
+
+  list.classList.remove('hidden');
+  const matches = window.infoAllAvailableVols.filter(v => 
+      v.toLowerCase().includes(filter) && !window.infoPairingVols.includes(v)
+  );
+
+  matches.forEach(match => {
+      const li = document.createElement('li');
+      li.className = "px-3 py-2 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-zinc-700 hover:bg-teal-600 hover:text-white cursor-pointer text-xs transition-colors last:border-0";
+      li.innerText = match;
+      li.onmousedown = (e) => { e.preventDefault(); window.addInfoPairing(match); };
+      list.appendChild(li);
+  });
+
+  if (matches.length === 0 && filter.length > 0) {
+      const li = document.createElement('li');
+      li.className = "px-3 py-2 text-xs text-gray-500 dark:text-gray-400 italic bg-white dark:bg-zinc-800 cursor-pointer hover:bg-teal-50 dark:hover:bg-zinc-700";
+      li.innerText = `Press Enter or Click to add "${input.value.trim()}"`;
+      li.onmousedown = (e) => { e.preventDefault(); window.addInfoPairing(input.value.trim()); };
+      list.appendChild(li);
+  }
+};
+
+window.addInfoPairing = function(name) {
+  if(!name) return;
+  if(!window.infoPairingVols.includes(name)) {
+      window.infoPairingVols.push(name);
+      window.updateInfoPairingUI();
+  }
+  const input = document.getElementById('infoEditPairingInput');
+  input.value = "";
+  input.focus();
+  window.filterInfoPairing();
+};
+
+window.removeInfoPairing = function(name) {
+  window.infoPairingVols = window.infoPairingVols.filter(v => v !== name);
+  window.updateInfoPairingUI();
+  window.filterInfoPairing();
+};
+
+window.updateInfoPairingUI = function() {
+  const tags = document.getElementById('infoEditPairingTags');
+  const hidden = document.getElementById('infoEditPairingHidden');
+  if(!tags || !hidden) return;
+
+  tags.innerHTML = window.infoPairingVols.map(v => 
+      `<span class="bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="window.removeInfoPairing('${v.replace(/'/g, "\\'")}')"></i></span>`
+  ).join('');
+
+  hidden.value = window.infoPairingVols.join(', ');
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.target && e.target.id === 'infoEditPairingInput') {
+      if (e.key === 'Enter' || e.key === ',') {
+          e.preventDefault();
+          if (e.target.value.trim()) {
+              window.addInfoPairing(e.target.value.trim());
+          }
+      }
+  }
 });
-grid.innerHTML = html;
-}
 
-async function selectColor(colorClass) {
-closeColorPicker();
-if (pendingColorGroupTarget === 'NEW') {
-newProjectSelectedColor = colorClass;
-const bgMatch = colorClass.match(/bg-[a-z]+-[0-9]+/);
-document.getElementById('newGroupColorBtn').className = `w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 shadow-sm transition hover:scale-105 ${bgMatch ? bgMatch[0] : 'bg-gray-200'}`;
-} else {
-showToast("Updating color...", false);
-try {
-const res = await callBackend('addProjectGroup', { groupName: pendingColorGroupTarget, callerNric: currentUser.nric, colorClass: colorClass });
-appSettings.projectGroups = res.groups; appSettings.projectColors = res.projectColors;
-if (typeof renderGroupList === "function") renderGroupList(res.groups); 
-renderHeaderLegend(); showToast("Color Updated!");
-} catch(e) { showToast(e.message, true); }
-}
-}
+document.addEventListener('click', function(e) {
+  const list = document.getElementById('infoEditPairingList');
+  const input = document.getElementById('infoEditPairingInput');
+  if(list && !list.classList.contains('hidden') && e.target !== input && !list.contains(e.target)) {
+      list.classList.add('hidden');
+  }
+});
