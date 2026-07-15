@@ -1,12 +1,13 @@
 // ==========================================
 // config.js - Application Configuration (SHARED)
 // ==========================================
-// This file is used by both the Google Apps Script backend and the GitHub Pages frontend.
-// Change the ENV variable below to switch environments across the entire app.
+// [CONSIDERATION - ENV MANAGEMENT]: Single source of truth for environments.
+// Used by both backend Google Apps Script and frontend API fetchers.
 
 // ENVIRONMENT TOGGLE
 // Options: 'Exp' (Experimental) | 'Dev' (Development) | 'Prod' (Production)
 const ENV = 'Exp';
+const APP_VERSION = '50.0.0'; // Updated to v50 for MPA architecture shift
 
 // ENVIRONMENT API ENDPOINTS (Google Apps Script Web App URLs)
 const EXP_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';

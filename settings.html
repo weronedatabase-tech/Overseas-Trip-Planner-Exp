@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Settings - MYG Overseas Trip</title>
+<link rel="manifest" href="manifest.json">
+<!-- [CONSIDERATION - UI/UX]: Tailwind config ensures Black-based Dark Mode -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="frontend/js/tailwind.config.js"></script>
+<link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen w-full flex flex-col overflow-y-auto overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-200 pb-safe">
+
+<div id="app-header"></div>
+
+<main id="tab-settings" class="flex-1 w-full max-w-5xl mx-auto flex flex-col relative p-4 space-y-4 pb-12">
+    <!-- Settings UI injected here -->
+</main>
+
+<div id="modalContainer"></div>
+
+<!-- Core Scripts -->
+<script src="backend/config.js"></script>
+<script src="frontend/js/core.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/settings.js"></script>
+
+<script>
+// [CONSIDERATION - HYDRATION & ISOLATION]
+document.addEventListener('DOMContentLoaded', async () => {
+    AppCore.renderHeader("System Settings");
+    
+    document.getElementById('modalContainer').innerHTML = `
+        <div id="tripSetupModal" class="fixed inset-0 bg-black/60 z-[95] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity overflow-y-auto">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl w-full max-w-sm p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800 m-auto">
+                <h3 class="text-xl font-bold mb-2 text-zinc-900 dark:text-white border-b border-zinc-200 dark:border-zinc-700 pb-2">Initialize Trip Setup</h3>
+                <div class="space-y-3 mb-6 mt-4">
+                    <div><label class="block text-[10px] uppercase font-bold mb-1 text-zinc-500 dark:text-zinc-400 tracking-wider">Trip Title</label><input type="text" id="tripTitleInput" value="MYG Overseas Trip" class="w-full p-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+                    <div><label class="block text-[10px] uppercase font-bold mb-1 text-zinc-500 dark:text-zinc-400 tracking-wider">Trip Year</label><input type="number" id="tripYearInput" class="w-full p-2.5 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+                    <div class="grid grid-cols-2 gap-2 mt-2">
+                        <div><label class="block text-[10px] uppercase font-bold mb-1 text-zinc-500 dark:text-zinc-400 tracking-wider">Start Date</label><input type="date" id="tripStartInput" class="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]"></div>
+                        <div><label class="block text-[10px] uppercase font-bold mb-1 text-zinc-500 dark:text-zinc-400 tracking-wider">End Date</label><input type="date" id="tripEndInput" class="w-full p-2 border border-zinc-300 dark:border-zinc-700 rounded-lg font-medium bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary [color-scheme:light] dark:[color-scheme:dark]"></div>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="cancelTripSetup()" class="flex-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 py-2.5 rounded-lg font-bold border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition focus:outline-none">Cancel</button>
+                    <button onclick="confirmTripSetup(this)" class="flex-1 bg-primary text-white py-2.5 rounded-lg font-bold shadow-sm flex justify-center items-center hover:bg-blue-600 transition focus:outline-none transform active:scale-95"><span class="btn-text">Open Reg</span><div class="btn-spinner spinner-white hidden-force ml-2 border-2"></div></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="colorPickerModal" class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-zinc-200 dark:border-zinc-800">
+                <div class="flex justify-between items-center mb-4 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+                    <h3 class="text-lg font-bold text-zinc-900 dark:text-white">Select Color</h3>
+                    <button type="button" onclick="closeColorPicker()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-2xl font-bold px-2 focus:outline-none">&times;</button>
+                </div>
+                <div class="grid grid-cols-6 gap-3 mb-2" id="colorPaletteGrid"></div>
+            </div>
+        </div>
+    `;
+    
+    // Ensure settings are latest
+    try {
+        const config = await AppCore.apiFetch('getSettings');
+        AppCore.appSettings = config;
+        localStorage.setItem('appSettings', JSON.stringify(config));
+    } catch(e) {}
+    
+    buildSettingsUI();
+});
+</script>
+</body>
+</html>

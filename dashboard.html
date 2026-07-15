@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Dashboard - MYG Overseas Trip</title>
+<link rel="manifest" href="manifest.json">
+<!-- [CONSIDERATION - UI/UX]: Tailwind config ensures Black-based Dark Mode -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="frontend/js/tailwind.config.js"></script>
+<link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen w-full flex flex-col overflow-y-auto overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-200 pb-safe">
+
+<div id="app-header"></div>
+
+<main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-6 pb-12">
+    
+    <!-- Profile Welcome Banner -->
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-5 md:p-6 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-black tracking-tight text-zinc-900 dark:text-white">Welcome back, <span id="deskUserName" class="text-primary">User</span></h2>
+            <p class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 mt-1">Access Level: <span id="deskUserRole" class="text-zinc-700 dark:text-zinc-300 font-bold uppercase tracking-wider">Loading...</span></p>
+        </div>
+        <button onclick="AppCore.logout()" class="px-5 py-2.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold rounded-xl shadow-sm transition border border-zinc-300 dark:border-zinc-700">Logout</button>
+    </div>
+
+    <h3 class="text-sm font-black uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-4 px-2">Application Modules</h3>
+    
+    <!-- [CONSIDERATION - MPA NAVIGATION]: Native links to separate HTML files instead of hidden SPA divs -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+        
+        <!-- Profile (All Users) -->
+        <a href="./profile.html" class="flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">My Profile</span>
+        </a>
+
+        <!-- Roster (Admin) -->
+        <a href="./roster.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Participant Roster</span>
+        </a>
+
+        <!-- Logistics (Admin) -->
+        <a href="./logistics.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Logistics & Rooms</span>
+        </a>
+
+        <!-- Attendance (Admin) -->
+        <a href="./attendance.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0118 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3l1.5 1.5 3-3.75" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Attendance</span>
+        </a>
+
+        <!-- Finance (Admin) -->
+        <a href="./finance.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Finance</span>
+        </a>
+
+        <!-- Minutes (Admin) -->
+        <a href="./minutes.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Minutes</span>
+        </a>
+
+        <!-- Files (Admin) -->
+        <a href="./files.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-cyan-50 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Drive Files</span>
+        </a>
+
+        <!-- Settings (Admin) -->
+        <a href="./settings.html" class="admin-only flex flex-col items-center justify-center p-6 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm hover:shadow-md hover:border-primary dark:hover:border-primary transition-all group">
+            <div class="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <span class="font-bold text-sm text-zinc-900 dark:text-zinc-100">Settings</span>
+        </a>
+
+    </div>
+</main>
+
+<script src="backend/config.js"></script>
+<script src="frontend/js/core.js"></script>
+<script src="frontend/js/auth.js"></script>
+
+<script>
+// [CONSIDERATION - HYDRATION & SECURITY]: Protect Dashboard natively.
+document.addEventListener('DOMContentLoaded', () => {
+    AppCore.renderHeader("Dashboard", ""); // Empty string = no back button
+    
+    if (AppCore.currentUser) {
+        document.getElementById('deskUserName').textContent = AppCore.currentUser.name || 'User';
+        let roleDisplay = 'Participant';
+        if (AppCore.currentUser.role === 'admin') {
+            roleDisplay = AppCore.currentUser.nric === 'ADMIN' ? 'Main Admin' : 'Committee';
+        } else {
+            // Non-admins shouldn't see admin cards
+            document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden-force'));
+        }
+        document.getElementById('deskUserRole').textContent = roleDisplay;
+    }
+});
+</script>
+</body>
+</html>

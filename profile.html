@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>My Profile - MYG Overseas Trip</title>
+<link rel="manifest" href="manifest.json">
+<!-- [CONSIDERATION - UI/UX]: Tailwind config ensures Black-based Dark Mode -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="frontend/js/tailwind.config.js"></script>
+<link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen w-full flex flex-col overflow-y-auto overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-200 pb-safe">
+
+<div id="app-header"></div>
+
+<main class="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 pb-12">
+    <div id="tab-profile" class="w-full space-y-4">
+        <!-- Profile UI injected here -->
+    </div>
+</main>
+
+<div id="modalContainer"></div>
+
+<!-- Core Scripts -->
+<script src="backend/config.js"></script>
+<script src="frontend/js/core.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/rolodex.js"></script>
+<script src="frontend/js/profile.js"></script>
+
+<script>
+// [CONSIDERATION - HYDRATION & ISOLATION]
+document.addEventListener('DOMContentLoaded', () => {
+    AppCore.renderHeader("My Profile");
+    
+    // Setup generic Datepicker modals used by the Profile edit logic
+    document.getElementById('modalContainer').innerHTML = `
+        <div id="datePickerSheet" class="fixed inset-0 bg-black/60 z-[90] hidden-force flex flex-col justify-end">
+            <div class="bg-white dark:bg-zinc-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-zinc-200 dark:border-zinc-800">
+                <div class="flex justify-between items-center p-5 border-b border-zinc-200 dark:border-zinc-800">
+                    <span class="font-bold text-lg text-zinc-800 dark:text-zinc-100">Select Date</span>
+                    <button type="button" onclick="closePicker()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-2xl font-bold px-2 focus:outline-none">&times;</button>
+                </div>
+                <div class="relative flex h-[200px] text-lg font-bold bg-white dark:bg-zinc-950">
+                    <div class="picker-highlight absolute top-[80px] h-[40px] w-full bg-blue-500/10 border-y border-blue-500/30 pointer-events-none z-10"></div>
+                    <div class="flex-1 picker-col" id="colDay"></div>
+                    <div class="flex-1 picker-col" id="colMonth"></div>
+                    <div class="flex-1 picker-col" id="colYear"></div>
+                </div>
+                <div class="p-5 border-t border-zinc-200 dark:border-zinc-800">
+                    <button type="button" onclick="confirmPicker()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg shadow-md focus:outline-none hover:bg-blue-600 transition transform active:scale-95">Done</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    loadProfileData();
+});
+</script>
+</body>
+</html>

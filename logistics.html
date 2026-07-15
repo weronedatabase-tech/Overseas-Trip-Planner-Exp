@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Logistics & Rooms - MYG Overseas Trip</title>
+<link rel="manifest" href="manifest.json">
+<!-- [CONSIDERATION - UI/UX]: Tailwind config ensures Black-based Dark Mode -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="frontend/js/tailwind.config.js"></script>
+<link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 min-h-screen w-full flex flex-col overflow-y-auto overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-200 pb-safe">
+
+<!-- Standardized App Header injected here -->
+<div id="app-header"></div>
+
+<main id="tab-logistics" class="flex-1 w-full max-w-6xl mx-auto flex flex-col relative h-[calc(100vh-64px)] min-h-[500px]">
+    <!-- Logistics UI will be injected here via JS -->
+</main>
+
+<div id="modalContainer"></div>
+
+<!-- Core Scripts -->
+<script src="backend/config.js"></script>
+<script src="frontend/js/core.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/Pairing_Grouping.js"></script>
+
+<script>
+// [CONSIDERATION - HYDRATION & ISOLATION]: Initialize page-specific logic 
+// independently for the MPA architecture.
+document.addEventListener('DOMContentLoaded', async () => {
+    AppCore.renderHeader("Logistics & Rooms");
+    
+    // Inject the global modal containers needed for the bottom sheets
+    document.getElementById('modalContainer').innerHTML = `
+        <div id="selectionBottomSheet" class="fixed inset-0 bg-black/60 z-[95] hidden-force flex flex-col justify-end">
+            <div class="bg-white dark:bg-zinc-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-zinc-200 dark:border-zinc-800 h-[80vh] flex flex-col">
+                <div class="flex justify-between items-center p-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0">
+                    <span id="sheetTitle" class="font-bold text-base md:text-lg text-zinc-800 dark:text-zinc-100 truncate pr-2">Select</span>
+                    <button type="button" onclick="closeSelectionSheet()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-2xl font-bold px-2 focus:outline-none shrink-0">&times;</button>
+                </div>
+                <div class="p-3 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-zinc-50 dark:bg-zinc-900">
+                    <input type="text" id="sheetSearchInput" oninput="filterBottomSheet()" placeholder="Search by name..." class="w-full p-2.5 border border-zinc-300 dark:border-zinc-700 rounded-xl bg-white dark:bg-zinc-950 font-medium text-sm focus:outline-none focus:border-primary text-zinc-900 dark:text-white shadow-sm">
+                </div>
+                <div class="flex-grow overflow-y-auto p-3 space-y-2 bg-zinc-50/50 dark:bg-zinc-900/50 custom-scrollbar" id="sheetListContainer"></div>
+            </div>
+        </div>
+        <!-- Sleeping Request Info Modal -->
+        <div id="sleepingInfoModal" class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity overflow-y-auto">
+            <div class="bg-white dark:bg-zinc-900 rounded-xl w-full max-w-sm p-5 shadow-2xl border border-zinc-200 dark:border-zinc-700 m-auto animate-slide-up">
+                <div class="flex justify-between items-center mb-3 border-b border-zinc-200 dark:border-zinc-700 pb-2">
+                    <h3 class="text-base font-black text-zinc-900 dark:text-white flex items-center gap-2 min-w-0 pr-2">
+                        <svg class="w-5 h-5 text-indigo-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+                        <span id="sleepingModalTitle" class="truncate leading-tight">Sleeping Request</span>
+                    </h3>
+                    <button type="button" onclick="closeSleepingModal()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 text-2xl font-bold px-1 focus:outline-none shrink-0">&times;</button>
+                </div>
+                <div class="text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-950 p-4 rounded-lg border border-zinc-100 dark:border-zinc-800 whitespace-pre-wrap max-h-[40vh] overflow-y-auto custom-scrollbar leading-snug" id="sleepingModalContent"></div>
+                <div class="mt-4 flex justify-end">
+                    <button onclick="closeSleepingModal()" class="bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-white py-2 px-5 rounded-lg font-bold shadow-sm hover:bg-zinc-200 dark:hover:bg-zinc-700 transition focus:outline-none border border-zinc-200 dark:border-zinc-700">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    buildLogisticsUI();
+    await loadLogisticsData();
+});
+</script>
+</body>
+</html>
