@@ -1,7 +1,7 @@
 // ==========================================
 // config.js - Application Configuration (SHARED)
 // ==========================================
-const ENV = 'Prod';
+const ENV = 'Exp';
 
 // ENVIRONMENT API ENDPOINTS
 const EXP_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
