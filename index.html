@@ -3,121 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>MYG Overseas Trip Planner - Login</title>
+<title>Overseas Trip Planner</title>
 <link rel="manifest" href="manifest.json">
-<!-- [CONSIDERATION - UI/UX]: Load Tailwind via CDN and apply custom config (Black-based Dark Mode) -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="frontend/js/tailwind.config.js"></script>
 <link rel="stylesheet" href="frontend/css/styles.css">
 </head>
-<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 h-[100dvh] w-full flex flex-col overflow-y-auto overflow-x-hidden selection:bg-primary selection:text-white transition-colors duration-200 pb-safe">
+<body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
-<header class="flex items-center justify-between px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 shrink-0 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-sm sticky top-0 z-50">
-    <div class="flex flex-col">
-        <h1 class="font-black text-xl text-primary tracking-tight leading-tight">Trip Planner</h1>
-    </div>
-    <div class="flex gap-1.5">
-        <button onclick="AppCore.toggleTheme()" class="p-2 rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition focus:outline-none" title="Toggle Theme">🌗</button>
-    </div>
+<div id="devModeBar" class="hidden-force"></div>
+<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border border-gray-700 dark:border-gray-200"></div>
+<div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
+
+<div id="unauthLayout" class="flex-1 flex flex-col w-full relative overflow-y-auto">
+<header class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-sm">
+<div class="flex flex-col">
+  <h1 class="font-black text-xl text-primary tracking-tight leading-tight">Trip Planner</h1>
+  <span id="unauthTripName" class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden-force"></span>
+</div>
+<div class="flex gap-1.5">
+  <button onclick="updateApp(this)" class="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">
+     <svg class="w-5 h-5 transition-transform duration-500 active:rotate-180 btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+     <div class="btn-spinner spinner-primary dark:spinner-white hidden-force !w-4 !h-4 border-2 absolute inset-0 m-auto"></div>
+  </button>
+  <button onclick="toggleTheme()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">🌗</button>
+</div>
 </header>
 
-<main class="flex-1 flex flex-col p-4 w-full max-w-lg mx-auto pb-20 relative">
-    
-    <!-- Landing View -->
-    <div id="viewLanding" class="mt-10 space-y-4 w-full animate-slide-up">
-        <div class="text-center mb-6">
-            <h2 class="text-3xl font-extrabold mb-2 text-zinc-900 dark:text-white">Welcome</h2>
-            <p class="text-zinc-500 dark:text-zinc-400 font-medium">Please select an option below.</p>
-        </div>
-        
-        <div id="landingRegBox" class="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 text-center border-t-4 border-t-green-500 hidden-force">
-            <h3 class="text-xl font-bold mb-1 text-zinc-900 dark:text-white">Join the Trip</h3>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Registration is currently open.</p>
-            <button onclick="navToAuth('register')" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 shadow-md transition transform active:scale-95">Register Now</button>
-        </div>
-        
-        <div class="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 text-center border-t-4 border-t-primary">
-            <h3 class="text-xl font-bold mb-1 text-zinc-900 dark:text-white">Participant Portal</h3>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-5">Already registered? Log in here.</p>
-            <button onclick="navToAuth('login')" class="w-full bg-primary text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-700 shadow-md transition transform active:scale-95">Log In</button>
-        </div>
-    </div>
-
-    <!-- Registration View -->
-    <div id="viewRegister" class="hidden-force mt-2 space-y-4 w-full animate-slide-up">
-        <div class="flex justify-between items-center pb-2 border-b border-zinc-200 dark:border-zinc-800 mb-4">
-            <div>
-                <h3 class="text-xl font-bold text-zinc-900 dark:text-white">New Registration</h3>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Person 1 is the Main POC.</p>
-            </div>
-            <button onclick="navToAuth('landing')" class="text-sm font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-4 py-2 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-700 transition shadow-sm">Cancel</button>
-        </div>
-        <form id="regForm" onsubmit="event.preventDefault(); submitRegistration(this.querySelector('button[type=submit]'));" class="space-y-6">
-            <div id="membersContainer" class="space-y-6"></div>
-            <button type="button" onclick="addRegMember()" class="w-full bg-transparent text-primary dark:text-blue-400 font-bold py-4 rounded-xl border-2 border-primary/50 dark:border-blue-500/50 border-dashed hover:bg-blue-50 dark:hover:bg-zinc-800 transition">+ Add Group Member</button>
-            <div class="pt-6">
-                <button type="submit" class="w-full bg-green-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-green-700 flex justify-center items-center shadow-lg transition transform active:scale-95">
-                    <span class="btn-text">Submit Registration</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Login View -->
-    <div id="viewLogin" class="hidden-force mt-10 bg-white dark:bg-zinc-900 p-8 rounded-3xl shadow-lg border border-zinc-200 dark:border-zinc-800 w-full animate-slide-up">
-        <div class="flex justify-between items-center mb-6 border-b border-zinc-100 dark:border-zinc-800 pb-4">
-            <h2 class="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Secure Login</h2>
-            <button onclick="navToAuth('landing')" class="text-sm font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 transition focus:outline-none">Cancel</button>
-        </div>
-        <div id="loginError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border border-red-200 dark:border-red-800"></div>
-        
-        <div class="mb-5">
-            <label class="block text-xs font-bold mb-1.5 text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Full NRIC / FIN</label>
-            <input type="text" id="loginNric" class="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-xl uppercase font-bold text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-950 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="S1234567A" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
-        </div>
-        
-        <div class="mb-8 relative">
-            <label class="block text-xs font-bold mb-1.5 text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Password</label>
-            <input type="password" id="loginPass" class="w-full p-3 border border-zinc-300 dark:border-zinc-700 rounded-xl pr-12 font-bold text-zinc-900 dark:text-white bg-zinc-50 dark:bg-zinc-950 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="••••••••" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
-            <button type="button" onclick="togglePassword('loginPass')" class="absolute right-3 top-[28px] p-2 text-zinc-400 hover:text-primary transition focus:outline-none">
-                <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                <svg id="eyeClosed" class="hidden-force" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
-            </button>
-        </div>
-        
-        <button id="loginSubmitBtn" onclick="attemptLogin(this)" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg hover:bg-blue-600 transition flex justify-center items-center shadow-lg focus:outline-none transform active:scale-95">
-            <span class="btn-text">Login</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>
-        </button>
-    </div>
+<main id="unauthMain" class="flex-1 flex flex-col p-4 w-full max-w-lg mx-auto pb-20 relative">
+<div id="viewLanding" class="mt-10 space-y-4 w-full animate-slide-up">
+ <div class="text-center mb-6">
+   <h2 class="text-3xl font-extrabold mb-2 text-gray-900 dark:text-white">Welcome</h2>
+   <p class="text-gray-500 dark:text-gray-400 font-medium">Please select an option below.</p>
+ </div>
+ <div id="landingRegBox" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 text-center border-t-4 border-t-green-500 hidden-force">
+   <h3 class="text-xl font-bold mb-1 text-gray-900 dark:text-white">Join the Trip</h3>
+   <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Registration is currently open.</p>
+   <button onclick="window.location.href='register.html'" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 shadow-md transition">Register Now</button>
+ </div>
+ <div id="viewLogin" class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 w-full animate-slide-up">
+   <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+     <h2 class="text-xl font-black text-gray-900 dark:text-white tracking-tight">Secure Login</h2>
+   </div>
+   <div id="loginError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border border-red-200 dark:border-red-800"></div>
+   <div class="mb-5 text-left">
+     <label class="block text-xs font-bold mb-1.5 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Full NRIC / FIN</label>
+     <input type="text" id="loginNric" class="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-xl uppercase font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="S1234567A" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
+   </div>
+   <div class="mb-8 relative text-left">
+     <label class="block text-xs font-bold mb-1.5 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Password</label>
+     <input type="password" id="loginPass" class="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-xl pr-12 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="••••••••" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
+     <button type="button" onclick="togglePassword('loginPass')" class="absolute right-3 top-[28px] p-2 text-gray-400 hover:text-primary transition focus:outline-none">
+       <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+       <svg id="eyeClosed" class="hidden-force" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+     </button>
+   </div>
+   <button id="loginSubmitBtn" onclick="attemptLogin(this)" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg hover:bg-blue-600 transition flex justify-center items-center shadow-lg focus:outline-none">
+     <span class="btn-text">Login</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>
+   </button>
+ </div>
+</div>
 </main>
+</div>
 
 <script src="backend/config.js"></script>
-<script src="frontend/js/core.js"></script>
-<script src="frontend/js/auth.js"></script>
-<script src="frontend/js/registration.js"></script>
+<script src="frontend/js/api.js"></script>
+<script src="frontend/js/state.js"></script>
 <script src="frontend/js/ui.js"></script>
-<script src="frontend/js/rolodex.js"></script>
-
+<script src="frontend/js/main.js"></script>
+<script src="frontend/js/auth.js"></script>
 <script>
-// [CONSIDERATION - HYDRATION & AUTH]: Redirect immediately if session exists.
-document.addEventListener('DOMContentLoaded', async () => {
-    if (AppCore.currentUser) {
-        window.location.href = './dashboard.html';
-        return;
-    }
-    
-    try {
-        if (!AppCore.appSettings) {
-            const config = await AppCore.apiFetch('getSettings');
-            AppCore.appSettings = config;
-            localStorage.setItem('appSettings', JSON.stringify(config));
-        }
-        const regBox = document.getElementById('landingRegBox');
-        if (AppCore.appSettings && AppCore.appSettings.registrationOpen) {
-            regBox.classList.remove('hidden-force');
-        }
-    } catch(e) { console.error("Failed to load settings on landing."); }
-});
+  window.initPage = () => {
+    if(currentUser) window.location.href = 'dashboard.html';
+  };
 </script>
 </body>
 </html>

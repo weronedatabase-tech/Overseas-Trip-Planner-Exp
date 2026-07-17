@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Register | Overseas Trip Planner</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="frontend/js/tailwind.config.js"></script>
+<link rel="stylesheet" href="frontend/css/styles.css">
+</head>
+<body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
+
+<div id="devModeBar" class="hidden-force"></div>
+<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border border-gray-700 dark:border-gray-200"></div>
+<div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
+
+<div id="unauthLayout" class="flex-1 flex flex-col w-full relative overflow-y-auto">
+<header class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-sm">
+<div class="flex flex-col">
+  <h1 class="font-black text-xl text-primary tracking-tight leading-tight">Trip Planner</h1>
+  <span id="unauthTripName" class="text-[10px] font-bold text-gray-500 uppercase tracking-wider hidden-force"></span>
+</div>
+<div class="flex gap-1.5">
+  <button onclick="updateApp(this)" class="relative p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">
+     <svg class="w-5 h-5 transition-transform duration-500 active:rotate-180 btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+     <div class="btn-spinner spinner-primary dark:spinner-white hidden-force !w-4 !h-4 border-2 absolute inset-0 m-auto"></div>
+  </button>
+  <button onclick="toggleTheme()" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">🌗</button>
+</div>
+</header>
+
+<main class="flex-1 flex flex-col p-4 w-full max-w-2xl mx-auto pb-20 relative">
+<div id="viewRegister" class="mt-2 space-y-4 w-full animate-slide-up">
+ <div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-800 mb-4">
+   <div>
+     <h3 class="text-xl font-bold text-gray-900 dark:text-white">New Registration</h3>
+     <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Person 1 is the Main POC.</p>
+   </div>
+   <button onclick="window.location.href='index.html'" class="text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm">Cancel</button>
+ </div>
+ <form id="regForm" onsubmit="event.preventDefault(); submitRegistration(this.querySelector('button[type=submit]'));" class="space-y-6">
+   <div id="membersContainer" class="space-y-6"></div>
+   <button type="button" onclick="addRegMember()" class="w-full bg-transparent text-primary dark:text-blue-400 font-bold py-4 rounded-xl border-2 border-primary dark:border-blue-400 border-dashed hover:bg-blue-50 dark:hover:bg-gray-800 transition">+ Add Group Member</button>
+   <div class="pt-6">
+     <button type="submit" class="w-full bg-green-600 text-white font-bold text-lg py-4 rounded-xl hover:bg-green-700 flex justify-center items-center shadow-lg transition">
+       <span class="btn-text">Submit Registration</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>
+     </button>
+   </div>
+ </form>
+</div>
+</main>
+</div>
+
+<!-- DATE PICKER MODAL -->
+<div id="datePickerSheet" class="fixed inset-0 bg-black/60 z-[90] hidden-force flex flex-col justify-end">
+<div class="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-gray-200 dark:border-gray-800">
+<div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-800"><span class="font-bold text-lg text-gray-800 dark:text-gray-100">Select Date</span><button type="button" onclick="closePicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none">&times;</button></div>
+<div class="relative flex h-[200px] text-lg font-bold bg-white dark:bg-gray-950"><div class="picker-highlight"></div><div class="flex-1 picker-col" id="colDay"></div><div class="flex-1 picker-col" id="colMonth"></div><div class="flex-1 picker-col" id="colYear"></div></div>
+<div class="p-5 border-t border-gray-200 dark:border-gray-800"><button type="button" onclick="confirmPicker()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg shadow-md focus:outline-none hover:bg-blue-600 transition">Done</button></div>
+</div>
+</div>
+
+<script src="backend/config.js"></script>
+<script src="frontend/js/api.js"></script>
+<script src="frontend/js/state.js"></script>
+<script src="frontend/js/ui.js"></script>
+<script src="frontend/js/main.js"></script>
+<script src="frontend/js/rolodex.js"></script>
+<script src="frontend/js/registration.js"></script>
+<script>
+  window.initPage = () => {
+    if(!appSettings.registrationOpen) {
+      window.location.href = 'index.html';
+      return;
+    }
+    document.getElementById('membersContainer').innerHTML = '';
+    regMemberCount = 0;
+    addRegMember();
+  };
+</script>
+</body>
+</html>
