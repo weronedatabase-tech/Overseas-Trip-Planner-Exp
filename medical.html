@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Profile Dashboard | Overseas Trip Planner</title>
+<title>Medical & Dietary | Overseas Trip Planner</title>
 <link rel="manifest" href="manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="frontend/js/tailwind.config.js"></script>
@@ -17,7 +17,6 @@
 
 <div id="authLayout" class="flex-1 flex flex-col md:flex-row w-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
 
-<!-- Navigation Sidebar -->
 <nav class="order-2 md:order-1 w-full md:w-56 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t md:border-t-0 md:border-r border-gray-200 dark:border-gray-800 flex flex-col pb-safe z-30 shrink-0 md:shadow-none transition-colors shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]">
 <div class="hidden md:flex flex-col p-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
     <h1 class="font-black text-xl text-primary leading-tight tracking-tight mb-1">Trip Planner</h1>
@@ -31,12 +30,12 @@
 </div>
 
 <div class="flex md:flex-col w-full md:p-3 md:gap-1.5 justify-around md:justify-start items-center md:items-stretch overflow-x-auto md:overflow-visible scrollbar-hide">
-    <a href="dashboard.html" id="nav-profile" class="nav-item flex-1 md:flex-none flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 py-2 md:px-4 md:py-3 transition-all focus:outline-none text-primary dark:text-blue-400 font-bold border-t-2 md:border-t-0 md:border-l-2 border-primary md:bg-blue-50 md:dark:bg-gray-800 md:rounded-xl shrink-0">
+    <a href="dashboard.html" id="nav-profile" class="nav-item flex-1 md:flex-none flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 py-2 md:px-4 md:py-3 transition-all focus:outline-none text-gray-500 dark:text-gray-400 font-medium border-t-2 md:border-t-0 md:border-l-2 border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 md:rounded-xl shrink-0">
        <svg class="w-[20px] h-[20px] md:w-5 md:h-5 shrink-0 mb-0.5 md:mb-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
        <span class="text-[10px] md:text-sm whitespace-nowrap">Profile</span>
     </a>
 
-    <a href="roster.html" id="nav-participants" class="nav-item admin-only flex-1 md:flex-none flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 py-2 md:px-4 md:py-3 transition-all focus:outline-none text-gray-500 dark:text-gray-400 font-medium border-t-2 md:border-t-0 md:border-l-2 border-transparent hover:bg-gray-50 dark:hover:bg-gray-800 md:rounded-xl shrink-0">
+    <a href="roster.html" id="nav-participants" class="nav-item admin-only flex-1 md:flex-none flex flex-col md:flex-row items-center md:justify-start justify-center gap-0.5 md:gap-3 py-2 md:px-4 md:py-3 transition-all focus:outline-none text-primary dark:text-blue-400 font-bold border-t-2 md:border-t-0 md:border-l-2 border-primary md:bg-blue-50 md:dark:bg-gray-800 md:rounded-xl shrink-0">
        <svg class="w-[20px] h-[20px] md:w-5 md:h-5 shrink-0 mb-0.5 md:mb-0" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>
        <span class="text-[10px] md:text-sm whitespace-nowrap">Roster</span>
     </a>
@@ -90,6 +89,9 @@
    <div id="headerLegend" class="hidden md:flex flex-wrap gap-1 flex-1 px-4 min-w-0"></div>
    
    <div class="flex items-center gap-1.5 md:gap-3 shrink-0 justify-end w-1/2 md:w-auto">
+       <button onclick="window.location.href='roster.html'" class="relative p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none flex items-center gap-1 text-xs font-bold border border-transparent hover:border-gray-300 dark:hover:border-gray-600">
+           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg> Back to Roster
+       </button>
        <button onclick="updateApp(this)" class="relative p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">
           <svg class="w-5 h-5 md:w-5 md:h-5 transition-transform duration-500 active:rotate-180 btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
           <div class="btn-spinner spinner-primary dark:spinner-white hidden-force !w-4 !h-4 border-2 absolute inset-0 m-auto"></div>
@@ -104,19 +106,10 @@
 <div id="mobHeaderLegend" class="md:hidden bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 px-3 py-1.5 flex flex-wrap gap-1 shrink-0 empty:hidden"></div>
 
 <main id="tabContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-2 md:p-4 w-full relative custom-scrollbar">
-   <div id="tab-profile" class="pb-10 w-full max-w-5xl mx-auto space-y-4"></div>
+   <div id="tab-medical" class="h-full min-h-full flex flex-col w-full mx-auto relative overflow-hidden"></div>
 </main>
 </div>
 
-</div>
-
-<!-- DATE PICKER MODAL -->
-<div id="datePickerSheet" class="fixed inset-0 bg-black/60 z-[90] hidden-force flex flex-col justify-end">
-<div class="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-gray-200 dark:border-gray-800">
-<div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-800"><span class="font-bold text-lg text-gray-800 dark:text-gray-100">Select Date</span><button type="button" onclick="closePicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none">&times;</button></div>
-<div class="relative flex h-[200px] text-lg font-bold bg-white dark:bg-gray-950"><div class="picker-highlight"></div><div class="flex-1 picker-col" id="colDay"></div><div class="flex-1 picker-col" id="colMonth"></div><div class="flex-1 picker-col" id="colYear"></div></div>
-<div class="p-5 border-t border-gray-200 dark:border-gray-800"><button type="button" onclick="confirmPicker()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg shadow-md focus:outline-none hover:bg-blue-600 transition">Done</button></div>
-</div>
 </div>
 
 <script src="backend/config.js"></script>
@@ -124,11 +117,15 @@
 <script src="frontend/js/state.js"></script>
 <script src="frontend/js/ui.js"></script>
 <script src="frontend/js/main.js"></script>
-<script src="frontend/js/rolodex.js"></script>
-<script src="frontend/js/profile.js"></script>
+<script src="frontend/js/auth.js"></script>
+<script src="frontend/js/medical.js"></script>
 <script>
  window.initPage = () => {
-   loadProfileData();
+   if(currentUser && currentUser.role !== 'admin') {
+     window.location.href = 'dashboard.html';
+     return;
+   }
+   buildMedicalUI();
  };
 </script>
 </body>
