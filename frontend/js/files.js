@@ -31,7 +31,7 @@ document.getElementById('tab-files').innerHTML = `
      </button>
 
      <div class="relative inline-block text-left z-30">
-       <button type="button" id="btnDriveAdd" onclick="toggleDriveAddMenu(event)" class="p-1.5 rounded-lg text-primary hover:bg-blue-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 flex items-center gap-1 font-bold text-xs md:text-sm active:scale-95" title="Add New">
+       <button type="button" id="btnDriveAdd" onclick="toggleDriveAddMenu(event)" class="p-1.5 rounded-lg text-primary hover:bg-green-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 flex items-center gap-1 font-bold text-xs md:text-sm active:scale-95" title="Add New">
           <svg class="w-5 h-5 md:w-6 md:h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
           <span class="hidden md:inline pointer-events-none">Add</span>
        </button>
@@ -41,12 +41,12 @@ document.getElementById('tab-files').innerHTML = `
              <svg class="mr-3 h-5 w-5 text-yellow-500 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> New Folder
            </a>
            <a href="#" onclick="toggleDriveAddMenu(); triggerFileUpload()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-             <svg class="mr-3 h-5 w-5 text-blue-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> File Upload
+             <svg class="mr-3 h-5 w-5 text-green-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> File Upload
            </a>
          </div>
          <div class="py-1.5">
            <a href="#" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('doc')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-             <svg class="mr-3 h-5 w-5 text-blue-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Doc
+             <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Doc
            </a>
            <a href="#" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('sheet')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Sheet
@@ -58,26 +58,26 @@ document.getElementById('tab-files').innerHTML = `
        </div>
      </div>
      
-     <button type="button" onclick="refreshCurrentDriveFolder(this)" class="p-1.5 rounded-lg text-primary hover:bg-blue-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 relative z-30 flex items-center justify-center active:scale-95" title="Refresh">
+     <button type="button" onclick="refreshCurrentDriveFolder(this)" class="p-1.5 rounded-lg text-primary hover:bg-green-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 relative z-30 flex items-center justify-center active:scale-95" title="Refresh">
         <svg class="w-5 h-5 md:w-6 md:h-6 btn-icon pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
         <div class="btn-spinner spinner-primary hidden-force !w-3 !h-3 md:!w-4 md:!h-4 border-2 absolute pointer-events-none"></div>
      </button>
  </div>
 </div>
 
-<div id="driveBulkActions" class="hidden-force bg-blue-50 dark:bg-blue-900/30 p-2 md:p-3 shrink-0 flex justify-between items-center border-b border-blue-200 dark:border-blue-800 z-10 transition-all">
- <span id="driveBulkCount" class="text-xs md:text-sm font-black text-blue-800 dark:text-blue-300">0 selected</span>
+<div id="driveBulkActions" class="hidden-force bg-green-50 dark:bg-green-900/30 p-2 md:p-3 shrink-0 flex justify-between items-center border-b border-green-200 dark:border-green-800 z-10 transition-all">
+ <span id="driveBulkCount" class="text-xs md:text-sm font-black text-green-800 dark:text-green-300">0 selected</span>
  <div class="flex items-center gap-1.5 md:gap-2">
-     <button onclick="bulkCopySelected()" class="px-2 py-1.5 text-[10px] md:text-xs font-bold bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-700 rounded shadow-sm hover:bg-blue-100 transition focus:outline-none">Copy</button>
-     <button onclick="bulkMoveSelected()" class="px-2 py-1.5 text-[10px] md:text-xs font-bold bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded shadow-sm hover:bg-orange-50 transition focus:outline-none">Move</button>
-     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-[10px] md:text-xs font-bold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded shadow-sm hover:bg-red-50 transition focus:outline-none">Delete</button>
-     <button onclick="clearDriveSelection()" class="px-2 py-1.5 text-[10px] md:text-xs font-bold bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-100 transition focus:outline-none ml-2">Cancel</button>
+     <button onclick="bulkCopySelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 rounded shadow-sm hover:bg-green-100 transition focus:outline-none">Copy</button>
+     <button onclick="bulkMoveSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded shadow-sm hover:bg-orange-50 transition focus:outline-none">Move</button>
+     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded shadow-sm hover:bg-red-50 transition focus:outline-none">Delete</button>
+     <button onclick="clearDriveSelection()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-100 transition focus:outline-none ml-2">Cancel</button>
  </div>
 </div>
 
 <div id="driveLoadingOverlay" class="absolute inset-0 top-[50px] bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-20 hidden-force flex flex-col justify-center items-center">
   <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-  <span id="driveLoadingText" class="text-primary dark:text-blue-400 font-bold text-[10px] tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
+  <span id="driveLoadingText" class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
 </div>
 
 <div id="driveContentsList" class="flex-grow overflow-y-auto p-2 md:p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 custom-scrollbar pb-10">
@@ -433,7 +433,7 @@ return;
 
 const copyIcon = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
 const moveIcon = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"></path></svg>`;
-const trashIcon = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+const trashIcon = `<svg class="w-4 h-4 text-red-500 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
 const pencilIcon = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`;
 
 folders.forEach(f => {
@@ -457,7 +457,7 @@ html += `
         <button onclick="actionSingleMove('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Move Folder">
            ${moveIcon}
         </button>
-        <button onclick="promptRenameDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename Folder">
+        <button onclick="promptRenameDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename Folder">
            ${pencilIcon}
         </button>
         <button onclick="promptDeleteDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Delete Folder">
@@ -481,8 +481,8 @@ if (f.mimeType.includes('folder')) {
    bgClass = 'bg-green-50 dark:bg-green-900/30';
    iconHtml = `<svg class="w-5 h-5 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`;
 } else if (f.mimeType.includes('document')) {
-   bgClass = 'bg-blue-50 dark:bg-blue-900/30';
-   iconHtml = `<svg class="w-5 h-5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`;
+   bgClass = 'bg-green-50 dark:bg-green-900/30';
+   iconHtml = `<svg class="w-5 h-5 text-green-600 dark:text-green-400" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`;
 } else if (f.mimeType.includes('presentation')) {
    bgClass = 'bg-yellow-50 dark:bg-yellow-900/30';
    iconHtml = `<svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400" viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM10 8v8l6-4z"/></svg>`;
@@ -493,9 +493,9 @@ if (f.mimeType.includes('folder')) {
    iconHtml = `<svg class="w-5 h-5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm6 1.5L18.5 9H12V3.5z"/></svg>`;
 }
 
-const shortcutBadge = f.isShortcut ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-sm p-0.5"><svg class="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>` : '';
+const shortcutBadge = f.isShortcut ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-sm p-0.5"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>` : '';
 const nameHtml = f.isShortcut 
-  ? `<div class="flex flex-col min-w-0"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span><span class="text-[9px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
+  ? `<div class="flex flex-col min-w-0"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
   : `<span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>`;
 
 html += `
@@ -517,7 +517,7 @@ html += `
         <button onclick="actionSingleMove('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Move File">
            ${moveIcon}
         </button>
-        <button onclick="promptRenameDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename File">
+        <button onclick="promptRenameDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename File">
            ${pencilIcon}
         </button>
         <button onclick="promptDeleteDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Delete File">

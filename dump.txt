@@ -1,0 +1,61 @@
+ if(appSettings.projectGroups) { 
+   appSettings.projectGroups.forEach(g => { groupOpts += `<option value="${g}" ${m.group === g ? 'selected' : ''}>${g}</option>`; }); 
+ }
+ if(m.group && (!appSettings.projectGroups || !appSettings.projectGroups.includes(m.group))) { 
+   groupOpts += `<option value="${m.group}" selected>${m.group} (Archived)</option>`; 
+ }
+ const dynColor = getProjectColor(m.group);
+
+let familyArr = loadedFamily.filter(f => f.nric !== m.nric);
+let familyHtml = '';
+if (familyArr.length > 0) {
+    familyHtml = `
+    <div class="md:col-span-2 border-t border-gray-100 dark:border-gray-800 pt-3 mt-1">
+        <p class="font-bold text-gray-500 dark:text-gray-400 text-[9px] uppercase tracking-wider mb-2">Family Members</p>
+        <div class="flex flex-col gap-2">
+            ${familyArr.map(f => {
+                 const fRoleColor = f.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (f.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
+                 return `<div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded border border-gray-200 dark:border-gray-700">
+                     <div class="flex items-center gap-2 mb-1 md:mb-0">
+                        <span class="text-[8px] font-black ${fRoleColor} bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 uppercase tracking-wider shrink-0">${f.role.substring(0,3)}</span>
+                        <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${f.fullName}</span>
+                     </div>
+                     <div class="text-[11px] font-mono text-gray-600 dark:text-gray-400 font-semibold bg-white dark:bg-gray-900 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-700">
+                        ${f.contact || 'No Contact'}
+                     </div>
+                 </div>`;
+            }).join('')}
+        </div>
+    </div>`;
+}
+
+
+ let expiryHighlight = false;
+ if (m.passportExpiry && minExpiry) {
+   const expD = new Date(m.passportExpiry);
+   if (!isNaN(expD.getTime()) && expD < minExpiry) {
+     expiryHighlight = true;
+   }
+ }
+
+ const mRoleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
+ profilesHtml += `
+   <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm relative" id="profCard_${i}">
+     <div class="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-2 mb-3">
+       <div class="flex items-center flex-wrap gap-1.5">
+         <span class="font-extrabold text-[13px] md:text-sm px-2 py-0.5 rounded shadow-sm border ${dynColor} leading-tight">${m.fullName}</span> 
+         <span class="text-[9px] font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
+       </div>
+       ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-sm">Edit</button>` : ''}
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2.5 text-xs text-gray-800 dark:text-gray-200">
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || '-'}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${m.dob}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Contact & Email</p><p class="font-semibold">${m.contact} | ${m.email || 'N/A'}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-1">Project</p><span class="font-bold text-[10px] px-1.5 py-0.5 rounded border inline-block shadow-sm ${dynColor}">${m.group || 'None'}</span></div>
+       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? 'font-bold text-red-600 dark:text-red-400' : 'font-semibold'}">${m.passportExpiry || '-'}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ''}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[9px] uppercase tracking-wider mb-0.5">Emerg. Contact</p><p class="font-semibold">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${m.emergencyContact}</span></p></div>

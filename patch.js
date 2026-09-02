@@ -1,0 +1,9 @@
+import fs from 'fs';
+let code = fs.readFileSync('backend/Code.js', 'utf8');
+
+const target3 = `let family = [];\nconst targetPoc = currentUserRecord.pocNric || currentUserRecord.nric;\ndata.forEach(row => { \n const rowPoc = row.pocNric || row.nric;\n if (rowPoc === targetPoc) {\n     let expRaw = row.passportExpiry;`;
+
+const replacement = `let family = [];\nconst targetPoc = currentUserRecord.pocNric || currentUserRecord.nric;\nlet myRelatedNames = [];\nif (currentUserRecord.relatedTrainee) {\n    myRelatedNames = String(currentUserRecord.relatedTrainee).split(/[\\|,]/).map(n => n.replace(/\\s+/g, '').toLowerCase()).filter(n => n);\n}\nlet myName = (currentUserRecord.fullName || '').replace(/\\s+/g, '').toLowerCase();\nlet myShortName = (currentUserRecord.shortName || '').replace(/\\s+/g, '').toLowerCase();\ndata.forEach(row => { \n const rowPoc = row.pocNric || row.nric;\n let isRelated = (rowPoc === targetPoc && targetPoc) ? true : false;\n if (!isRelated) {\n     let rowName = (row.fullName || '').replace(/\\s+/g, '').toLowerCase();\n     let rowShortName = (row.shortName || '').replace(/\\s+/g, '').toLowerCase();\n     if (myRelatedNames.length > 0 && myRelatedNames.some(d => d.includes(rowName) || rowName.includes(d) || (rowShortName && d.includes(rowShortName)))) {\n         isRelated = true;\n     } else if (row.role === 'CAREGIVER' && row.relatedTrainee) {\n         let theirRelated = String(row.relatedTrainee).split(/[\\|,]/).map(n => n.replace(/\\s+/g, '').toLowerCase()).filter(n => n);\n         if (theirRelated.some(d => d.includes(myName) || myName.includes(d) || (myShortName && d.includes(myShortName)))) {\n             isRelated = true;\n         }\n     }\n }\n if (isRelated) {\n     let expRaw = row.passportExpiry;`;
+
+code = code.replace(target3, replacement);
+fs.writeFileSync('backend/Code.js', code);

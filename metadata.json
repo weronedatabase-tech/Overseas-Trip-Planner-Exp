@@ -1,0 +1,6 @@
+{
+  "name": "Overseas Trip Planner",
+  "description": "An overseas trip planning, registration, attendance, logistics, diet, and participant management system",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
