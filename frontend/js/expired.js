@@ -12,7 +12,7 @@ let medCols = JSON.parse(localStorage.getItem('expiredCols')) || [
 let traineeShortNames = {};
 
 function buildExpiredUI() {
-document.getElementById('tab-expired').innerHTML = `
+const el_tab_expired = document.getElementById('tab-expired'); if(el_tab_expired) el_tab_expired.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
    <div class="py-1.5 px-2 md:px-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
@@ -220,7 +220,7 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Passport Details</div>
    </th>
 </tr>`;
-thead.innerHTML = headHtml;
+if (thead) thead.innerHTML = headHtml;
 
 const tbody = document.getElementById('medicalTableBody');
 let html = '';
@@ -270,5 +270,5 @@ data.forEach(p => {
    html += `</div></td></tr>`;
 });
 
-tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+if (tbody) tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }

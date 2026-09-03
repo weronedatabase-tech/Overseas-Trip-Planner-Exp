@@ -884,7 +884,7 @@ try {
 // UI RENDERERS
 // ==========================================
 function buildLogisticsUI() {
-document.getElementById('tab-logistics').innerHTML = `
+const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_logistics) el_tab_logistics.innerHTML = `
 <div class="sticky top-0 z-40 flex overflow-x-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 scrollbar-hide shrink-0 rounded-t-xl md:rounded-none px-2 pt-1">
     <button onclick="switchLogisticsSubTab('pairings')" id="subTab-pairings" class="px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none">1. Pairings</button>
     <button onclick="switchLogisticsSubTab('rooms')" id="subTab-rooms" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">2. Rooms</button>
@@ -1108,7 +1108,7 @@ let unHtml = '';
     unassigned.forEach(item => {
         unHtml += generateGroupCardHtml(item);
     });
-    document.getElementById('groupUnassignedPool').innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
+    const el_groupUnassignedPool = document.getElementById('groupUnassignedPool'); if(el_groupUnassignedPool) el_groupUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
     let grpHtml = '';
     activeGroupsList.forEach(gName => {
@@ -1132,7 +1132,7 @@ let unHtml = '';
         </div>
         `;
     });
-    document.getElementById('groupListContainer').innerHTML = grpHtml;
+    const el_groupListContainer = document.getElementById('groupListContainer'); if(el_groupListContainer) el_groupListContainer.innerHTML = grpHtml;
 }
 
 function generateGroupCardHtml(item) {
@@ -1189,7 +1189,7 @@ let unHtml = '';
     unassigned.forEach(item => {
         unHtml += generateBusCardHtml(item);
     });
-    document.getElementById('busUnassignedPool').innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
+    const el_busUnassignedPool = document.getElementById('busUnassignedPool'); if(el_busUnassignedPool) el_busUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
     let busHtml = '';
     activeBusesList.forEach(bName => {
@@ -1213,7 +1213,7 @@ let unHtml = '';
         </div>
         `;
     });
-    document.getElementById('busListContainer').innerHTML = busHtml;
+    const el_busListContainer = document.getElementById('busListContainer'); if(el_busListContainer) el_busListContainer.innerHTML = busHtml;
 }
 
 function generateBusCardHtml(item) {
@@ -1638,18 +1638,18 @@ const targetTitle = document.getElementById('dnd-target-title');
 const volLabel = `<div class="flex items-center justify-between px-2 w-full"><span class="w-16"></span><span class="flex-1 text-center">Volunteers</span><label class="flex items-center gap-1 cursor-pointer w-16 justify-end" onclick="event.stopPropagation()"><input type="checkbox" ${hidePairedVols ? 'checked' : ''} onchange="toggleHidePaired('VOLUNTEER', this)" class="w-3 h-3 text-orange-600 focus:ring-orange-500 rounded-sm cursor-pointer border-orange-300 dark:border-orange-700 bg-white dark:bg-gray-800"><span class="text-[9px] font-bold tracking-normal normal-case opacity-80 mt-[1px]">Unpaired</span></label></div>`;
 const traineeLabel = `<div class="flex items-center justify-between px-2 w-full"><span class="w-16"></span><span class="flex-1 text-center">Trainees</span><label class="flex items-center gap-1 cursor-pointer w-16 justify-end" onclick="event.stopPropagation()"><input type="checkbox" ${hidePairedTrainees ? 'checked' : ''} onchange="toggleHidePaired('TRAINEE', this)" class="w-3 h-3 text-green-600 focus:ring-green-500 rounded-sm cursor-pointer border-green-300 dark:border-green-700 bg-white dark:bg-gray-800"><span class="text-[9px] font-bold tracking-normal normal-case opacity-80 mt-[1px]">Unpaired</span></label></div>`;
 
-sourceTitle.innerHTML = isSourceVol ? volLabel : traineeLabel;
-targetTitle.innerHTML = isSourceVol ? traineeLabel : volLabel;
+if (sourceTitle) sourceTitle.innerHTML = isSourceVol ? volLabel : traineeLabel;
+if (targetTitle) targetTitle.innerHTML = isSourceVol ? traineeLabel : volLabel;
 sourceTitle.className = `font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b ${isSourceVol ? volTitleClass : traineeTitleClass}`;
 targetTitle.className = `font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b ${!isSourceVol ? volTitleClass : traineeTitleClass}`;
 
 let sourceHtml = '';
 sourceArr.forEach(item => { sourceHtml += generateCardHtml(item, traineesWithCaregivers, activePairings, vols, trainees); });
-document.getElementById('dnd-source-pool').innerHTML = sourceHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">No items.</p>';
+const el_dnd_source_pool = document.getElementById('dnd-source-pool'); if(el_dnd_source_pool) el_dnd_source_pool.innerHTML = sourceHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">No items.</p>';
 
 let targetHtml = '';
 targetArr.forEach(item => { targetHtml += generateCardHtml(item, traineesWithCaregivers, activePairings, vols, trainees); });
-document.getElementById('dnd-target-list').innerHTML = targetHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">No items.</p>';
+const el_dnd_target_list = document.getElementById('dnd-target-list'); if(el_dnd_target_list) el_dnd_target_list.innerHTML = targetHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">No items.</p>';
 }
 
 function renderRooms() {
@@ -1695,7 +1695,7 @@ filteredUnassigned.forEach(item => {
     </div>
     `;
 });
-document.getElementById('roomUnassignedPool').innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
+const el_roomUnassignedPool = document.getElementById('roomUnassignedPool'); if(el_roomUnassignedPool) el_roomUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
 let roomsToRender = activeRooms;
 if (query) {
@@ -1765,7 +1765,7 @@ roomsToRender.forEach(room => {
     `;
 });
 
-document.getElementById('roomListContainer').innerHTML = roomHtml || '<div class="flex justify-center items-center h-20 text-xs font-bold text-gray-400">No rooms match criteria.</div>';
+const el_roomListContainer = document.getElementById('roomListContainer'); if(el_roomListContainer) el_roomListContainer.innerHTML = roomHtml || '<div class="flex justify-center items-center h-20 text-xs font-bold text-gray-400">No rooms match criteria.</div>';
 }
 
 function openSleepingModal(nric) {
@@ -1805,7 +1805,7 @@ if (sourcePerson) {
     titleHtml = `Pair with <span class="ml-1 font-bold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-sm border ${dynColor}">${dName}</span>`;
 }
 
-document.getElementById('sheetTitle').innerHTML = titleHtml;
+const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = titleHtml;
 const searchInput = document.getElementById('sheetSearchInput');
 if(searchInput) searchInput.value = '';
 document.getElementById('selectionBottomSheet').classList.remove('hidden-force');
@@ -1835,7 +1835,7 @@ targets.forEach(t => {
     </div>
     </div>`;
 });
-document.getElementById('sheetListContainer').innerHTML = html || `<p class="text-xs font-bold text-gray-400 p-2 text-center mt-2">No available options.</p>`;
+const el_sheetListContainer = document.getElementById('sheetListContainer'); if(el_sheetListContainer) el_sheetListContainer.innerHTML = html || `<p class="text-xs font-bold text-gray-400 p-2 text-center mt-2">No available options.</p>`;
 }
 
 function openRoomAddSheet(roomId) {
@@ -1843,7 +1843,7 @@ activeRoomTargetId = roomId;
 dndState.type = 'rooming';
 
 const room = globalLogistics.rooms.find(r => r.id === roomId);
-document.getElementById('sheetTitle').innerHTML = `Add to <span class="ml-1 font-black text-primary">${room.name}</span>`;
+const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Add to <span class="ml-1 font-black text-primary">${room.name}</span>`;
 const searchInput = document.getElementById('sheetSearchInput');
 if(searchInput) searchInput.value = '';
 document.getElementById('selectionBottomSheet').classList.remove('hidden-force');
@@ -1868,7 +1868,7 @@ unassignedArr.forEach(t => {
     </div>
     </div>`;
 });
-document.getElementById('sheetListContainer').innerHTML = html || `<p class="text-xs font-bold text-gray-400 p-2 text-center mt-2">Everyone is assigned.</p>`;
+const el_sheetListContainer = document.getElementById('sheetListContainer'); if(el_sheetListContainer) el_sheetListContainer.innerHTML = html || `<p class="text-xs font-bold text-gray-400 p-2 text-center mt-2">Everyone is assigned.</p>`;
 }
 
 function filterBottomSheet() {
@@ -1970,7 +1970,7 @@ function openGroupAssignSheet(nric) {
     const p = globalLogistics.participants.find(x => x.nric === nric);
     if (!p) return;
     
-    document.getElementById('sheetTitle').innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
+    const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     
@@ -1985,7 +1985,7 @@ function openBusAssignSheet(nric) {
     const p = globalLogistics.participants.find(x => x.nric === nric);
     if (!p) return;
     
-    document.getElementById('sheetTitle').innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
+    const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     
@@ -2035,7 +2035,7 @@ function renderGroupBusOptions() {
     
     html += `</div>`;
     
-    document.getElementById('sheetListContainer').innerHTML = html;
+    const el_sheetListContainer = document.getElementById('sheetListContainer'); if(el_sheetListContainer) el_sheetListContainer.innerHTML = html;
 }
 
 function selectGroupBusOption(value) {
@@ -2122,7 +2122,7 @@ function removeGroupBusFromPopup(val) {
 function openManageGroupsSheet() {
     activeAssignNric = null; // No assignment
     activeAssignType = 'group';
-    document.getElementById('sheetTitle').innerHTML = `Manage <span class="text-primary">Groups</span>`;
+    const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Manage <span class="text-primary">Groups</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     renderGroupBusOptions();
@@ -2132,7 +2132,7 @@ function openManageGroupsSheet() {
 function openManageBusesSheet() {
     activeAssignNric = null; // No assignment
     activeAssignType = 'bus';
-    document.getElementById('sheetTitle').innerHTML = `Manage <span class="text-primary">Buses</span>`;
+    const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Manage <span class="text-primary">Buses</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     renderGroupBusOptions();
@@ -2155,7 +2155,7 @@ function removeBusList(bName) {
 function openManageRoomsSheet() {
     activeAssignNric = null; // No assignment
     activeAssignType = 'room';
-    document.getElementById('sheetTitle').innerHTML = `Manage <span class="text-primary">Rooms</span>`;
+    const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = `Manage <span class="text-primary">Rooms</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     renderGroupBusOptions();

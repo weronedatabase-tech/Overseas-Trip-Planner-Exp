@@ -13,7 +13,7 @@ if (menu && !menu.classList.contains('hidden-force')) {
 });
 
 function buildFilesUI() {
-document.getElementById('tab-files').innerHTML = `
+const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_tab_files.innerHTML = `
 <div class="flex flex-col h-full w-full relative">
 <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-2 md:p-3 shrink-0 flex items-center gap-2 shadow-sm rounded-t-xl md:rounded-none relative z-20">
  <button type="button" id="btnDriveBack" onclick="navigateDriveBack()" class="hidden-force p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 active:scale-95">

@@ -513,8 +513,10 @@ async function checkDuplicateField(inputEl, fieldType) {
     
     if (fieldType === 'nric' && typeof isValidNRIC === 'function' && !isValidNRIC(val)) {
         const warnEl = inputEl.previousElementSibling;
-        warnEl.innerHTML = "Invalid NRIC/FIN.";
-        warnEl.classList.remove('hidden-force');
+        if (warnEl) {
+            warnEl.innerHTML = "Invalid NRIC/FIN.";
+            warnEl.classList.remove('hidden-force');
+        }
         inputEl.classList.add('border-red-500', 'ring-red-500');
         inputEl.setAttribute('data-invalid', 'true');
         return;
@@ -530,8 +532,10 @@ async function checkDuplicateField(inputEl, fieldType) {
         if (inp.value.trim().toUpperCase() === val) count++;
     });
     if (count > 1) {
-        warnEl.innerHTML = fieldType === "nric" ? "This NRIC/FIN is already entered in another participant block within this unsubmitted form." : "This Passport No. is already entered in another participant block within this unsubmitted form.";
-        warnEl.classList.remove('hidden-force');
+        if (warnEl) {
+            warnEl.innerHTML = fieldType === "nric" ? "This NRIC/FIN is already entered in another participant block within this unsubmitted form." : "This Passport No. is already entered in another participant block within this unsubmitted form.";
+            warnEl.classList.remove('hidden-force');
+        }
         inputEl.classList.add('border-red-500', 'ring-red-500');
         inputEl.setAttribute('data-invalid', 'true');
         return;
@@ -544,12 +548,14 @@ async function checkDuplicateField(inputEl, fieldType) {
         
         const res = await apiCall('checkDuplicateParticipant', payload);
         if (res.status === 'error' && res.conflictType) {
-            warnEl.innerHTML = `${res.conflictType} already exists. If you have already registered before, <a href="index.html" class="underline text-blue-600 hover:text-blue-800">login here</a> to make the necessary changes. Login format: NRIC/FIN + Year of Birth (e.g. S1234567A1989).`;
-            warnEl.classList.remove('hidden-force');
+            if (warnEl) {
+                warnEl.innerHTML = `${res.conflictType} already exists. If you have already registered before, <a href="index.html" class="underline text-blue-600 hover:text-blue-800">login here</a> to make the necessary changes. Login format: NRIC/FIN + Year of Birth (e.g. S1234567A1989).`;
+                warnEl.classList.remove('hidden-force');
+            }
             inputEl.classList.add('border-red-500', 'ring-red-500');
             inputEl.setAttribute('data-invalid', 'true');
         } else {
-            warnEl.classList.add('hidden-force');
+            if (warnEl) warnEl.classList.add('hidden-force');
             inputEl.classList.remove('border-red-500', 'ring-red-500');
             inputEl.removeAttribute('data-invalid');
         }
@@ -565,7 +571,7 @@ window.handleFieldInput = function(inputEl, fieldType) {
     // Auto-clear invalid format errors if it becomes valid
     if (fieldType === 'nric' && typeof isValidNRIC === 'function') {
         if (isValidNRIC(val)) {
-            if (warnEl.innerHTML === "Invalid NRIC/FIN.") {
+            if (warnEl && warnEl.innerHTML === "Invalid NRIC/FIN.") {
                 warnEl.classList.add('hidden-force');
                 inputEl.classList.remove('border-red-500', 'ring-red-500');
                 inputEl.removeAttribute('data-invalid');

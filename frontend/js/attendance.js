@@ -8,7 +8,7 @@ let savedAttJuncture = null;
 let savedAttAssignment = 'ALL';
 
 function buildAttendanceUI() {
-document.getElementById('tab-attendance').innerHTML = `
+const el_tab_attendance = document.getElementById('tab-attendance'); if(el_tab_attendance) el_tab_attendance.innerHTML = `
 <div class="admin-only flex flex-col h-full min-h-0 w-full relative">
 
 <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-sm rounded-t-xl md:rounded-none">
@@ -82,7 +82,7 @@ async function promptNewJuncture() {
       appSettings.junctures = res.junctures;
       
       const juncSel = document.getElementById('attJunctureSelect');
-      juncSel.innerHTML = '';
+      if (juncSel) juncSel.innerHTML = '';
       appSettings.junctures.forEach(j => juncSel.innerHTML += `<option value="${j}">${j}</option>`);
       
       juncSel.value = name.trim();
@@ -102,11 +102,11 @@ async function renderAttendanceChecklist() {
 if(!document.getElementById('attJunctureSelect')) return;
 
 const juncSel = document.getElementById('attJunctureSelect');
-juncSel.innerHTML = '';
+if (juncSel) juncSel.innerHTML = '';
 if(appSettings.junctures && appSettings.junctures.length > 0) {
   appSettings.junctures.forEach(j => juncSel.innerHTML += `<option value="${j}">${j}</option>`);
 } else {
-  juncSel.innerHTML = `<option value="">No Junctures Defined</option>`;
+  if (juncSel) juncSel.innerHTML = `<option value="">No Junctures Defined</option>`;
 }
 
 if(savedAttJuncture && appSettings.junctures && appSettings.junctures.includes(savedAttJuncture)) {
@@ -124,7 +124,7 @@ if(!globalLogistics) {
 }
 
 const asgnSel = document.getElementById('attAssignmentSelect');
-asgnSel.innerHTML = `<option value="ALL">All Participants</option>`;
+if (asgnSel) asgnSel.innerHTML = `<option value="ALL">All Participants</option>`;
 
 // Populate Projects
 if(appSettings.activeProjects && appSettings.activeProjects.length > 0) {
@@ -221,8 +221,8 @@ const checkedList = document.getElementById('attCheckedList');
 if(!notCheckedList || !checkedList) return;
 
 if(!globalLogistics) {
-  notCheckedList.innerHTML = '<div class="flex justify-center p-6"><div class="loader !w-6 !h-6 border-gray-400"></div></div>';
-  checkedList.innerHTML = '<div class="flex justify-center p-6"><div class="loader !w-6 !h-6 border-gray-400"></div></div>';
+  if (notCheckedList) notCheckedList.innerHTML = '<div class="flex justify-center p-6"><div class="loader !w-6 !h-6 border-gray-400"></div></div>';
+  if (checkedList) checkedList.innerHTML = '<div class="flex justify-center p-6"><div class="loader !w-6 !h-6 border-gray-400"></div></div>';
   document.getElementById('attNotCheckedCount').textContent = '0';
   document.getElementById('attCheckedCount').textContent = '0';
   return;
@@ -255,8 +255,8 @@ participants.forEach(p => {
   }
 });
 
-notCheckedList.innerHTML = notCheckedHtml || '<p class="text-xs text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
-checkedList.innerHTML = checkedHtml || '<p class="text-xs text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
+if (notCheckedList) notCheckedList.innerHTML = notCheckedHtml || '<p class="text-xs text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
+if (checkedList) checkedList.innerHTML = checkedHtml || '<p class="text-xs text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
 
 document.getElementById('attNotCheckedCount').textContent = notCheckedCount;
 document.getElementById('attCheckedCount').textContent = checkedCount;
@@ -320,7 +320,7 @@ participants.forEach(p => {
   </li>`;
 });
 
-resultsContainer.innerHTML = html || '<li class="px-3 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">No matches found.</li>';
+if (resultsContainer) resultsContainer.innerHTML = html || '<li class="px-3 py-2 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">No matches found.</li>';
 resultsContainer.classList.remove('hidden-force');
 }
 

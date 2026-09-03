@@ -803,7 +803,9 @@ window.openDatePicker = function openDatePicker(targetId, type) {
   } 
   yHtml += spacer;
   
-  colD.innerHTML = dHtml; colM.innerHTML = mHtml; colY.innerHTML = yHtml;
+  if (colD) colD.innerHTML = dHtml; 
+  if (colM) colM.innerHTML = mHtml; 
+  if (colY) colY.innerHTML = yHtml;
   colD.onscroll = () => highlightCenterItem('colDay'); 
   colM.onscroll = () => highlightCenterItem('colMonth'); 
   colY.onscroll = () => highlightCenterItem('colYear');

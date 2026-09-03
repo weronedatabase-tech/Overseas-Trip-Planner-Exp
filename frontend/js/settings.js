@@ -2,10 +2,10 @@ function applyAdminVisuals() {
   const rBtn = document.getElementById('toggleRegBtn'); 
   if(rBtn) { 
     if(appSettings.registrationOpen) { 
-      rBtn.innerHTML = `<span class="btn-text">OPEN (Click to Close)</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>`; 
+      if (rBtn) rBtn.innerHTML = `<span class="btn-text">OPEN (Click to Close)</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>`; 
       rBtn.className = "w-full px-3 py-2 text-xs md:text-sm bg-green-600 text-white font-bold rounded-lg shadow-sm border border-green-700 transition flex justify-center items-center"; 
     } else { 
-      rBtn.innerHTML = `<span class="btn-text">CLOSED (Click to Open)</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>`; 
+      if (rBtn) rBtn.innerHTML = `<span class="btn-text">CLOSED (Click to Open)</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>`; 
       rBtn.className = "w-full px-3 py-2 text-xs md:text-sm bg-red-500 text-white font-bold rounded-lg shadow-sm border border-red-600 transition flex justify-center items-center"; 
     } 
   }
@@ -29,7 +29,9 @@ function applyAdminVisuals() {
 }
 
 function buildSettingsUI() {
-  document.getElementById('tab-settings').innerHTML = `
+  const tabSettings = document.getElementById('tab-settings');
+  if (!tabSettings) return;
+  if (tabSettings) tabSettings.innerHTML = `
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
    
    <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 lg:col-span-1">
@@ -228,8 +230,8 @@ async function confirmTripSetup(btn) {
   document.getElementById('tripSetupModal').classList.add('hidden-force'); 
   await executeToggleRegistration(
     true, 
-    document.getElementById('tripTitleInput').value.trim() || 'MYG Overseas Trip', 
-    document.getElementById('tripYearInput').value.trim() || new Date().getFullYear(), 
+    String(document.getElementById('tripTitleInput').value).trim() || 'MYG Overseas Trip', 
+    String(document.getElementById('tripYearInput').value).trim() || new Date().getFullYear().toString(), 
     document.getElementById('tripStartInput').value,
     document.getElementById('tripEndInput').value,
     btn
@@ -243,7 +245,8 @@ async function executeToggleRegistration(newState, title = '', year = '', start 
   
   try { 
     const res = await apiCall('toggleRegistration', { status: newState, tripTitle: title, tripYear: year, tripStart: start, tripEnd: end }); 
-    appSettings.registrationOpen = newState; 
+    appSettings.registrationOpen = newState;
+    localStorage.setItem('appSettings', JSON.stringify(appSettings)); 
     if(start) appSettings.tripStartDate = start;
     if(end) appSettings.tripEndDate = end;
     
@@ -330,7 +333,7 @@ async function removeProjectGroup(name, btn) {
 function renderGroupList(list) {
   const ul = document.getElementById('groupList'); 
   if(!ul) return; 
-  ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No projects defined yet.</li>' : '';
+  if (ul) ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No projects defined yet.</li>' : '';
   if(list) list.forEach(g => { 
     const safeGroup = g.replace(/'/g, "\\'"); 
     const dynColor = getProjectColor(g); 
@@ -412,7 +415,7 @@ function renderDriveAccessList(listObj) {
   const ul = document.getElementById('driveAccessList');
   if(!ul) return;
   const emails = Object.keys(listObj || {});
-  ul.innerHTML = (emails.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No external access granted via app yet.</li>' : '';
+  if (ul) ul.innerHTML = (emails.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No external access granted via app yet.</li>' : '';
 
   emails.forEach(email => {
     const role = listObj[email];
@@ -466,7 +469,7 @@ async function editJuncture(oldName) {
 function renderJunctureList(list) { 
   const ul = document.getElementById('junctureList'); 
   if(!ul) return; 
-  ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No junctures defined yet.</li>' : ''; 
+  if (ul) ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No junctures defined yet.</li>' : ''; 
   if(list) list.forEach(j => { 
     const safeName = j.replace(/'/g, "\\'"); 
     ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm"><span class="font-bold text-xs text-gray-900 dark:text-white truncate mr-2">${j}</span><div class="flex space-x-1.5 shrink-0"><button onclick="editJuncture('${safeName}')" title="Edit" class="text-green-600 dark:text-green-400 font-bold p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm flex items-center justify-center focus:outline-none hover:bg-green-50 dark:hover:bg-gray-700 transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button><button onclick="removeJuncture('${safeName}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></div></li>`; 
@@ -506,7 +509,7 @@ async function removeCommittee(nric, btn) {
 function renderCommList(list) { 
   const ul = document.getElementById('commList'); 
   if(!ul) return; 
-  ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No committee members assigned yet.</li>' : ''; 
+  if (ul) ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No committee members assigned yet.</li>' : ''; 
   if(list) list.forEach(m => { 
     ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${m.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${m.nric} | ${renderPhoneLink(m.phone)}</div></div><button onclick="removeCommittee('${m.nric}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-sm shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`; 
   }); 
@@ -543,7 +546,7 @@ async function removeHelpline(id, btn) {
 function renderHelplineList(list) {
   const ul = document.getElementById('helplineList');
   if(!ul) return;
-  ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No helpline contacts yet.</li>' : '';
+  if (ul) ul.innerHTML = (!list || list.length === 0) ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No helpline contacts yet.</li>' : '';
   if(list) list.forEach(h => {
     ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border border-gray-200 dark:border-gray-800 shadow-sm"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${h.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${renderPhoneLink(h.phone)}</div></div><button onclick="removeHelpline('${h.id}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-sm shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
   });
@@ -611,7 +614,7 @@ function renderColorPickerGrid() {
 
     html += `<div ${onclick} class="w-10 h-10 rounded-full border border-gray-300 dark:border-gray-600 shadow-sm transition-all ${bgClass} ${opacity} ${ring}"></div>`;
   });
-  grid.innerHTML = html;
+  if (grid) grid.innerHTML = html;
 }
 
 async function selectColor(colorClass) {

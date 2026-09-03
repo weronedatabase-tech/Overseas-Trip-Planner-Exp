@@ -151,7 +151,7 @@ async function showParticipantSummaryModal(nric) {
 
   modal.classList.remove('hidden-force');
   const cont = document.getElementById('gpm-content');
-  cont.innerHTML = `<div class="flex justify-center py-6"><div class="loader !w-8 !h-8 border-primary"></div></div>`;
+  if (cont) cont.innerHTML = `<div class="flex justify-center py-6"><div class="loader !w-8 !h-8 border-primary"></div></div>`;
 
     try {
     let m = null;
@@ -256,7 +256,7 @@ async function showParticipantSummaryModal(nric) {
 
     window._currentModalParticipant = m;
 
-    cont.innerHTML = `
+    if (cont) cont.innerHTML = `
       <div id="gpm-view">
         <div class="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-2 mb-3">
           <div class="flex items-center flex-wrap gap-1.5">
@@ -327,7 +327,7 @@ async function showParticipantSummaryModal(nric) {
       </form>
     `;
   } catch(e) {
-    cont.innerHTML = `<p class="text-xs font-bold text-red-500 text-center py-4">${e.message || 'Failed to load details.'}</p>`;
+    if (cont) cont.innerHTML = `<p class="text-xs font-bold text-red-500 text-center py-4">${e.message || 'Failed to load details.'}</p>`;
   }
   
   if (typeof setupTokenInput === 'function') {
@@ -658,9 +658,9 @@ window.handleGpmRelatedSearch = function(fullQuery) {
     const results = trainees.filter(t => (t.fullName || '').toLowerCase().includes(query) || (t.shortName || '').toLowerCase().includes(query));
     
     if(results.length === 0) {
-        dd.innerHTML = '<div class="p-2 text-xs text-gray-500 text-center">No trainees found.</div>';
+        if (dd) dd.innerHTML = '<div class="p-2 text-xs text-gray-500 text-center">No trainees found.</div>';
     } else {
-        dd.innerHTML = results.map(t => {
+        if (dd) dd.innerHTML = results.map(t => {
             const escName = (t.fullName || '').replace(/'/g, "\\'");
             return '<div class="p-2 border-b border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" onclick="selectGpmRelatedTrainee(\'' + escName + '\')"><div class="font-bold text-xs text-gray-800 dark:text-gray-200">' + t.fullName + '</div><div class="text-xs text-gray-500">' + (t.shortName || '-') + '</div></div>';
         }).join('');

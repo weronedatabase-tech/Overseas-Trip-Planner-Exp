@@ -11,7 +11,7 @@ let otherCols = JSON.parse(localStorage.getItem('otherCols_v2')) || [
 let traineeShortNames = {};
 
 function buildOtherUI() {
-document.getElementById('tab-other').innerHTML = `
+const el_tab_other = document.getElementById('tab-other'); if(el_tab_other) el_tab_other.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
    <div class="py-1.5 px-2 md:px-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
@@ -203,7 +203,7 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Other Notes</div>
    </th>
 </tr>`;
-thead.innerHTML = headHtml;
+if (thead) thead.innerHTML = headHtml;
 
 const tbody = document.getElementById('otherTableBody');
 let html = '';
@@ -243,5 +243,5 @@ data.forEach(p => {
    html += `</div></td></tr>`;
 });
 
-tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+if (tbody) tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }
