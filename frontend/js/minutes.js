@@ -61,9 +61,13 @@ loadInitialMinutes();
 }
 
 async function loadInitialMinutes() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (minutesMap.size > 0) {
   renderAllMinutes();
   startMinutesPolling();
+  const loader = document.getElementById('minutesLoadingOverlay');
+  if(loader) loader.classList.add('hidden-force');
   return;
 }
 const overlay = document.getElementById('minutesLoadingOverlay');

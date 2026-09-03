@@ -61,6 +61,8 @@ loadDietData();
 }
 
 async function loadDietData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (window.adminRosterData && window.adminRosterData.length > 0) {
     dietRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(dietRosterData);
@@ -71,6 +73,8 @@ if (window.adminRosterData && window.adminRosterData.length > 0) {
         }
     });
     renderDietTable();
+    const loader = document.getElementById('dietLoading');
+    if(loader) loader.classList.add('hidden-force');
     return;
 }
 const loader = document.getElementById('dietLoading');

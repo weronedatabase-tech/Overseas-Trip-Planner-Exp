@@ -259,10 +259,14 @@ window.showRosterBreakdownModal = function() {
 };
 
 async function loadParticipantsData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (adminRosterData && adminRosterData.length > 0) {
     if (typeof processDisplayNames === "function") processDisplayNames(adminRosterData);
     if (typeof applyGlobalSorting === "function") adminRosterData = applyGlobalSorting(adminRosterData);
-    renderRoster();
+    renderRosterTable();
+    const loader = document.getElementById('rosterLoading');
+    if(loader) loader.classList.add('hidden-force');
     return;
 }
 const loader = document.getElementById('rosterLoading');

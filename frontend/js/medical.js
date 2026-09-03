@@ -63,6 +63,8 @@ loadMedicalData();
 }
 
 async function loadMedicalData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (window.adminRosterData && window.adminRosterData.length > 0) {
     medicalRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
@@ -73,6 +75,8 @@ if (window.adminRosterData && window.adminRosterData.length > 0) {
         }
     });
     renderMedicalTable();
+    const loader = document.getElementById('medicalLoading');
+    if(loader) loader.classList.add('hidden-force');
     return;
 }
 const loader = document.getElementById('medicalLoading');

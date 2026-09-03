@@ -1498,7 +1498,20 @@ const targetBtn = document.getElementById(`subTab-${tabId}`);
 if(targetBtn) { targetBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400'); targetBtn.classList.add('border-primary', 'text-primary'); } 
 }
 
-async function loadLogisticsData() { 
+async function loadLogisticsData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+ 
+if (globalLogistics && globalLogistics.rooms) {
+    if (typeof processDisplayNames === "function") processDisplayNames(globalLogistics.participants);
+    if (typeof applyGlobalSorting === "function") globalLogistics.participants = applyGlobalSorting(globalLogistics.participants);
+    renderPairings();
+    renderRooms();
+    renderGroups();
+    renderBuses();
+    const overlay = document.getElementById('logLoadingOverlay');
+    if(overlay) overlay.classList.add('hidden-force');
+    return;
+}
 const overlay = document.getElementById('logLoadingOverlay');
 if (overlay) overlay.classList.remove('hidden-force');
 setSyncButtonState('loading');

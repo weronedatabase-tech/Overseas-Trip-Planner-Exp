@@ -62,6 +62,8 @@ return globalFinanceRates[currency] || 1;
 }
 
 async function buildFinanceUI() {
+    await new Promise(resolve => setTimeout(resolve, 10));
+
 document.getElementById('tab-finance').innerHTML = `
 <div class="sticky top-0 z-40 flex items-center justify-between bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shrink-0 rounded-t-xl md:rounded-none pr-2">
     <div class="flex overflow-x-auto scrollbar-hide flex-1 px-2 pt-1">
@@ -102,6 +104,19 @@ try {
         } catch(e) {}
     }
 
+    if (window.financeConfig && window.financeConfig.ts) {
+        financeConfig = window.financeConfig;
+        financeOptions = window.financeOptions;
+        globalFinanceRates = window.globalFinanceRates;
+        globalReceipts = window.globalReceipts;
+        
+        renderAllFinanceTabs();
+        startFinancePolling();
+        const loader = document.getElementById('finLoadingOverlay');
+        if(loader) loader.classList.add('hidden-force');
+        return;
+    }
+
     const [finRes, recRes] = await Promise.all([
         apiCall('fetchFinance').catch(e => { console.warn("fetchFinance failed", e); return { data: { options: [], config: {} }, rates: { "SGD": 1 } }; }),
         apiCall('fetchReceipts').catch(e => { console.warn("fetchReceipts failed", e); return { receipts: [] }; })
@@ -137,6 +152,11 @@ try {
         if(opt._isCollapsed === undefined) opt._isCollapsed = isFinanceCollapsed;
         return opt;
     });
+    
+    window.financeConfig = financeConfig;
+    window.financeOptions = financeOptions;
+    window.globalFinanceRates = globalFinanceRates;
+    window.globalReceipts = globalReceipts;
 
     if (financeOptions.length === 0) {
         addFinanceOption("Option 1", false);

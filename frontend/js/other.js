@@ -61,6 +61,8 @@ loadOtherData();
 }
 
 async function loadOtherData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (window.adminRosterData && window.adminRosterData.length > 0) {
     otherRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(otherRosterData);
@@ -71,6 +73,8 @@ if (window.adminRosterData && window.adminRosterData.length > 0) {
         }
     });
     renderOtherTable();
+    const loader = document.getElementById('otherLoading');
+    if(loader) loader.classList.add('hidden-force');
     return;
 }
 const loader = document.getElementById('otherLoading');

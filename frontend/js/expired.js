@@ -62,6 +62,8 @@ loadExpiredData();
 }
 
 async function loadExpiredData() {
+    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+
 if (window.adminRosterData && window.adminRosterData.length > 0) {
     expiredRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(expiredRosterData);
@@ -72,6 +74,8 @@ if (window.adminRosterData && window.adminRosterData.length > 0) {
         }
     });
     renderExpiredTable();
+    const loader = document.getElementById('expiredLoading');
+    if(loader) loader.classList.add('hidden-force');
     return;
 }
 const loader = document.getElementById('medicalLoading');
