@@ -1,15 +1,12 @@
-/**
- * API Caller Wrapper
- * Uses API_URL globally defined in backend/config.js
- */
+/** * API Caller Wrapper * Uses API_URL globally defined in backend/config.js */
 async function apiCall(action, payload = {}, retries = 2) {
   for (let i = 0; i <= retries; i++) {
     try {
-      const response = await fetch(API_URL, {
+      // Use proxy on the server to prevent concurrent execution limits and handle caching
+      const response = await fetch('/api', {
         method: 'POST',
-        body: JSON.stringify({ action: action, ...payload }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow'
+        body: JSON.stringify({ action: action, payload: payload, API_URL: typeof API_URL !== 'undefined' ? API_URL : '' }),
+        headers: { 'Content-Type': 'application/json' },
       });
       
       const text = await response.text();
@@ -21,7 +18,7 @@ async function apiCall(action, payload = {}, retries = 2) {
         throw new Error("SERVER_PARSE_ERROR");
       }
       
-      if (data.status === 'error') {
+      if (data && data.status === 'error') {
         throw new Error(data.message);
       }
       return data;

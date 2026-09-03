@@ -171,17 +171,19 @@ if(fromIdx > -1 && toIdx > -1) {
 
 function renderOtherTable() {
 let data = otherRosterData.filter(p => {
-    if (!p.otherPoints) return false;
-    const notes = p.otherPoints.trim().toLowerCase();
-    if (notes === '' || notes === '-' || notes === 'nil' || notes === 'na' || notes === 'n/a' || notes === 'none' || notes === 'no') return false;
-    return true;
+    const notes = p.otherPoints ? p.otherPoints.trim().toLowerCase() : '';
+    const sleep = p.sleeping ? p.sleeping.trim().toLowerCase() : '';
+    const hasNotes = notes !== '' && notes !== '-' && notes !== 'nil' && notes !== 'na' && notes !== 'n/a' && notes !== 'none' && notes !== 'no';
+    const hasSleep = sleep !== '' && sleep !== '-' && sleep !== 'nil' && sleep !== 'na' && sleep !== 'n/a' && sleep !== 'none' && sleep !== 'no';
+    return hasNotes || hasSleep;
 });
 if (otherSearchQuery) {
    data = data.filter(p => {
        return (p.fullName && p.fullName.toLowerCase().includes(otherSearchQuery)) ||
               (p.shortName && p.shortName.toLowerCase().includes(otherSearchQuery)) ||
               (p.diet && p.diet.toLowerCase().includes(otherSearchQuery)) ||
-              (p.otherPoints && p.otherPoints.toLowerCase().includes(otherSearchQuery));
+              (p.otherPoints && p.otherPoints.toLowerCase().includes(otherSearchQuery)) ||
+              (p.sleeping && p.sleeping.toLowerCase().includes(otherSearchQuery));
    });
 }
 data.sort((a, b) => {
@@ -225,10 +227,16 @@ data.forEach(p => {
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
 
+   
    const hasNotes = p.otherPoints && p.otherPoints.trim() && p.otherPoints.trim().toLowerCase() !== 'nil' && p.otherPoints.trim().toLowerCase() !== 'none';
-   if (hasNotes) {
-       html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.otherPoints}</span></div>`;
+   const hasSleep = p.sleeping && p.sleeping.trim() && p.sleeping.trim().toLowerCase() !== 'nil' && p.sleeping.trim().toLowerCase() !== 'none';
+   if (hasSleep) {
+       html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.sleeping}</span></div>`;
    }
+   if (hasNotes) {
+       html += `<div><span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.otherPoints}</span></div>`;
+   }
+
    
    
    
