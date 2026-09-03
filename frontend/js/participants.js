@@ -269,7 +269,7 @@ try {
        p.room = roomsMap[p.nric] || 'UNASSIGNED';
        let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
        if (p.role === 'CAREGIVER' && p.relatedTrainee) {
-           const rNames = p.relatedTrainee.split(',').map(n => n.trim().toLowerCase());
+           const rNames = p.relatedTrainee.split('|').map(n => n.trim().toLowerCase());
            const relatedList = adminRosterData.filter(x => rNames.includes((x.fullName||'').toLowerCase()) && x.role === 'TRAINEE');
            relatedList.forEach(related => {
                if (related && pairingsMap[related.nric]) {

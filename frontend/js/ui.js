@@ -87,35 +87,58 @@ function renderHeaderLegend() {
 window.getFamilyMembers = function(nric, allParticipants) {
     const target = allParticipants.find(p => p.nric === nric);
     if (!target) return [];
-    const targetPoc = target.pocNric || target.nric;
-    
-    let myRelatedNames = [];
-    if (target.relatedTrainee) {
-        myRelatedNames = String(target.relatedTrainee).split(/[\|,]/).map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
-    }
-    let myName = (target.fullName || '').replace(/\s+/g, '').toLowerCase();
-    let myShortName = (target.shortName || '').replace(/\s+/g, '').toLowerCase();
 
-    return allParticipants.filter(p => {
-        if (p.pocNric === targetPoc && targetPoc) return true;
+    let family = new Set();
+    family.add(target);
+    
+    let changed = true;
+    while (changed) {
+        changed = false;
         
-        let pName = (p.fullName || '').replace(/\s+/g, '').toLowerCase();
-        let pShortName = (p.shortName || '').replace(/\s+/g, '').toLowerCase();
-        
-        // Am I a Caregiver for them?
-        if (myRelatedNames.length > 0 && myRelatedNames.some(d => d.includes(pName) || pName.includes(d) || (pShortName && d.includes(pShortName)))) {
-            return true;
-        }
-        
-        // Are they a Caregiver for me?
-        if (p.role === 'CAREGIVER' && p.relatedTrainee) {
-            let theirRelated = String(p.relatedTrainee).split(/[\|,]/).map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
-            if (theirRelated.some(d => d.includes(myName) || myName.includes(d) || (myShortName && d.includes(myShortName)))) {
-                return true;
+        for (let p of allParticipants) {
+            if (family.has(p)) continue;
+            
+            let pName = (p.fullName || p.name || '').replace(/\s+/g, '').toLowerCase();
+            let pShortName = (p.shortName || '').replace(/\s+/g, '').toLowerCase();
+            
+            let pRelated = [];
+            if (p.role === 'CAREGIVER' && p.relatedTrainee) {
+                pRelated = String(p.relatedTrainee).split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(Boolean);
+            }
+
+            for (let f of family) {
+                let fName = (f.fullName || f.name || '').replace(/\s+/g, '').toLowerCase();
+                let fShortName = (f.shortName || '').replace(/\s+/g, '').toLowerCase();
+                
+                let fRelated = [];
+                if (f.role === 'CAREGIVER' && f.relatedTrainee) {
+                    fRelated = String(f.relatedTrainee).split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(Boolean);
+                }
+
+                let match = (p.pocNric && f.pocNric && p.pocNric === f.pocNric);
+                
+                if (!match && pRelated.length > 0) {
+                    if (pRelated.some(d => d.includes(fName) || fName.includes(d) || (fShortName && d.includes(fShortName)))) {
+                        match = true;
+                    }
+                }
+                
+                if (!match && fRelated.length > 0) {
+                    if (fRelated.some(d => d.includes(pName) || pName.includes(d) || (pShortName && d.includes(pShortName)))) {
+                        match = true;
+                    }
+                }
+                
+                if (match) {
+                    family.add(p);
+                    changed = true;
+                    break;
+                }
             }
         }
-        return false;
-    });
+    }
+    
+    return Array.from(family);
 };
 
 window.isFamily = function(nric, allParticipants) {
@@ -304,7 +327,7 @@ window.applyCaregiverLabels = function(participants) {
     participants.forEach(p => {
         if (p.role === 'CAREGIVER') {
             if (p.relatedTrainee) {
-                let parts = String(p.relatedTrainee).split(/[\|,]/).filter(Boolean);
+                let parts = String(p.relatedTrainee).split('|').filter(Boolean);
                 let mapped = parts.map(n => {
                     let raw = n.trim();
                     let k = raw.toLowerCase();
@@ -453,7 +476,7 @@ window.setupTokenInput = function(inputId, getSuggestionsCallback) {
     wrapper.appendChild(chipContainer);
     wrapper.appendChild(inputField);
 
-    let tokens = (originalInput.value || '').split(/[\|,]/).map(s => s.trim()).filter(Boolean);
+    let tokens = (originalInput.value || '').split('|').map(s => s.trim()).filter(Boolean);
     
     function renderTokens() {
         chipContainer.innerHTML = '';

@@ -289,7 +289,7 @@ if (typeof setupTokenInput === 'function') {
 }
 
 if (window._tokenInputs && window._tokenInputs['cgPopupTraineeName']) {
-    window._tokenInputs['cgPopupTraineeName'].tokens = defaultName.split(/[\|,]/).map(s => s.trim()).filter(Boolean);
+    window._tokenInputs['cgPopupTraineeName'].tokens = defaultName.split('|').map(s => s.trim()).filter(Boolean);
     window._tokenInputs['cgPopupTraineeName'].render();
 }
 
@@ -337,7 +337,7 @@ if (currentCaregiverIdx !== null) {
        inlineName.value = nameVal;
        inlineName.dataset.manual = 'true';
        if (window._tokenInputs && window._tokenInputs[`reg-f-related-${currentCaregiverIdx}`]) {
-           window._tokenInputs[`reg-f-related-${currentCaregiverIdx}`].tokens = nameVal.split(/[\|,]/).map(s => s.trim()).filter(Boolean);
+           window._tokenInputs[`reg-f-related-${currentCaregiverIdx}`].tokens = nameVal.split('|').map(s => s.trim()).filter(Boolean);
            window._tokenInputs[`reg-f-related-${currentCaregiverIdx}`].render();
        }
    }

@@ -598,28 +598,39 @@ results.push({
 }
 
   // In-memory self-healing of pocNric based on 'relatedTrainee' column (index 4)
-  results.forEach(r => {
-      if (r.role === 'CAREGIVER' && r.relatedTrainee) {
-          const desiredNames = r.relatedTrainee.split(/[\|,]/).map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
-          
-          results.forEach(j => {
-              if (j !== r) {
-                  const jName = (j.fullName || '').replace(/\s+/g, '').toLowerCase();
-                  const jShort = (j.shortName || '').replace(/\s+/g, '').toLowerCase();
-                  const isDesired = desiredNames.some(d => d.includes(jName) || jName.includes(d) || (jShort && d.includes(jShort)));
-                  
-                  if (isDesired) {
-                      j.pocNric = r.nric; // Override trainee's pocNric in memory
-                      r.pocNric = r.nric; // Ensure caregiver's pocNric is their own NRIC
+  let changed = true;
+  while (changed) {
+      changed = false;
+      results.forEach(r => {
+          if (r.role === 'CAREGIVER' && r.relatedTrainee) {
+              const desiredNames = r.relatedTrainee.split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
+              results.forEach(j => {
+                  if (j !== r) {
+                      const jName = (j.fullName || '').replace(/\s+/g, '').toLowerCase();
+                      const jShort = (j.shortName || '').replace(/\s+/g, '').toLowerCase();
+                      const isDesired = desiredNames.some(d => d.includes(jName) || jName.includes(d) || (jShort && d.includes(jShort)));
+                      if (isDesired) {
+                          const rPoc = r.pocNric || r.nric;
+                          const jPoc = j.pocNric || j.nric;
+                          if (rPoc !== jPoc) {
+                              const targetPoc = rPoc;
+                              results.forEach(x => {
+                                  if ((x.pocNric || x.nric) === jPoc) {
+                                      x.pocNric = targetPoc;
+                                  }
+                              });
+                              changed = true;
+                          }
+                      }
                   }
-              }
-          });
-      }
-  });
+              });
+          }
+      });
+  }
 
   results.forEach(r => {
       if (r.role === 'CAREGIVER') {
-          const dependents = results.filter(x => x !== r && x.pocNric === r.pocNric);
+          const dependents = results.filter(x => x !== r && x.pocNric === r.pocNric && x.role === 'TRAINEE');
           if (dependents.length > 0) {
               r.relatedTrainee = dependents.map(d => `${d.fullName}${d.shortName ? ' (' + d.shortName + ')' : ''}`).join(' | ');
           }
@@ -1543,7 +1554,7 @@ function forceMigratePocNric() {
           const relatedStr = String(data[i][4] || '').trim(); // column E has the names
           
           if (relatedStr) {
-              const desiredNames = relatedStr.split(/[\|,]/).map(n => n.trim().toLowerCase()).filter(n => n);
+              const desiredNames = relatedStr.split('|').map(n => n.trim().toLowerCase()).filter(n => n);
               
               for (let j = 1; j < data.length; j++) {
                   if (String(data[j][2]).trim().toUpperCase() === 'TRAINEE') {
