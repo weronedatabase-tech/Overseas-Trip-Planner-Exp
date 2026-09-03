@@ -803,8 +803,10 @@ try {
 }
 }
 
+let roomPollInterval = null;
 function startRoomPolling() {
-setInterval(async () => {
+if (roomPollInterval) clearInterval(roomPollInterval);
+roomPollInterval = setInterval(async () => {
     const logTab = document.getElementById('tab-logistics');
     const roomSec = document.getElementById('log-rooms');
     if(!logTab || logTab.classList.contains('hidden-force') || !roomSec || roomSec.classList.contains('hidden-force') || isRoomSyncing || pendingRoomUpdates.size > 0 || (dndState.type === 'rooming' && (dndState.el || dndState.isDragging))) return;
