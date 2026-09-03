@@ -39,7 +39,7 @@
  <div id="landingRegBox" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 text-center border-t-4 border-t-green-500 hidden-force">
    <h3 class="text-xl font-bold mb-1 text-gray-900 dark:text-white">Join the Trip</h3>
    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Registration is currently open.</p>
-   <button onclick="window.location.href='register.html'" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 shadow-md transition">Register Now</button>
+   <button onclick="navigateTo('register.html')" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 shadow-md transition">Register Now</button>
  </div>
  <div id="viewLogin" class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 w-full animate-slide-up">
    <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
@@ -145,8 +145,8 @@
 <script>
   window.initPage = () => {
     if(currentUser) {
-        if(currentUser.role === 'admin') window.location.href = 'roster.html';
-        else window.location.href = 'dashboard.html';
+        if(currentUser.role === 'admin') navigateTo('roster.html');
+        else navigateTo('dashboard.html');
     }
   };
 </script>

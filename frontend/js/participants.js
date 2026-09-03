@@ -75,7 +75,7 @@ document.getElementById('tab-participants').innerHTML = `
            </button>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) window.location.href=this.value" class="bg-primary text-white border border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-primary text-white border border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
                <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
                <option value="medical.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Medical</option>
                <option value="diet.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Dietary</option>

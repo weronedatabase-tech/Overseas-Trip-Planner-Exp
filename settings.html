@@ -151,7 +151,7 @@
 <script>
   window.initPage = () => {
     if(currentUser && currentUser.role !== 'admin') {
-      window.location.href = 'dashboard.html';
+      navigateTo('dashboard.html');
       return;
     }
     buildSettingsUI();

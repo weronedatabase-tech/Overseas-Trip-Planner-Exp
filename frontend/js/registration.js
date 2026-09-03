@@ -495,7 +495,7 @@ setBtnLoading(btn, true); const viewLoading = document.getElementById('viewLoadi
 try {
  await apiCall('submitRegistration', { payload: finalData });
  showToast("Registration Successful! Please login.");
- setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+ setTimeout(() => { navigateTo('index.html'); }, 1500);
 } catch (e) {
  showToast(e.message, true);
 } finally {

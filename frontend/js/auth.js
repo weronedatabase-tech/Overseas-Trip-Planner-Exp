@@ -15,9 +15,9 @@ async function attemptLogin(btn) {
    currentUser = { nric: res.nric, role: res.role, name: res.name };
    localStorage.setItem('userSession', JSON.stringify(currentUser));
    if (currentUser.role === 'admin') {
-       window.location.href = 'roster.html';
+       navigateTo('roster.html');
    } else {
-       window.location.href = 'dashboard.html';
+       navigateTo('dashboard.html');
    }
  } catch (error) {
    err.textContent = error.message; 
@@ -31,7 +31,7 @@ function logout(btn) {
  if(btn) setBtnLoading(btn, true);
  localStorage.removeItem('userSession');
  currentUser = null;
- window.location.href = 'index.html';
+ navigateTo('index.html');
 }
 
 function togglePassword(id) {

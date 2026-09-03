@@ -37,7 +37,7 @@
    <h3 class="text-xl font-bold text-gray-900 dark:text-white">New Registration</h3>
    <p class="text-xs font-bold text-red-500 dark:text-red-400 mt-1">If you are registering/adding a caregiver, pls ensure the related trainee(s) has been added/registered first</p>
  </div>
- <button onclick="window.location.href='index.html'" class="text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm">Cancel</button>
+ <button onclick="navigateTo('index.html')" class="text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm">Cancel</button>
 </div>
 <form id="regForm" onsubmit="event.preventDefault(); submitRegistration(this.querySelector('button[type=submit]'));" class="space-y-6">
  <div id="membersContainer" class="space-y-6"></div>
@@ -63,7 +63,7 @@
 <script>
 window.initPage = async () => {
   if(!appSettings.registrationOpen) {
-    window.location.href = 'index.html';
+    navigateTo('index.html');
     return;
   }
   if (regMemberCount === 0) {

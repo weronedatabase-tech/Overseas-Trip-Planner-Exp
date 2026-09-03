@@ -33,7 +33,7 @@ if (devModeBar) {
 const path = window.location.pathname;
 const isPublic = path.endsWith('index.html') || path.endsWith('register.html') || path === '/' || path === '';
 if (!currentUser && !isPublic) {
- window.location.href = 'index.html';
+ navigateTo('index.html');
  return;
 }
 
@@ -685,5 +685,114 @@ document.addEventListener('click', function(e) {
     const dd = document.getElementById('gpmRelatedDropdown');
     if(dd && !e.target.closest('#gpmRelated') && !e.target.closest('#gpmRelatedDropdown')) {
         dd.classList.add('hidden-force');
+    }
+});
+
+// SPA Router
+window.navigateTo = async function(url) {
+    if(window.location.pathname.endsWith(url) || (window.location.pathname.endsWith("/") && url === "index.html")) return;
+    history.pushState(null, "", url);
+    await loadPage(url);
+}
+
+window.addEventListener('popstate', () => {
+    const url = window.location.pathname.split('/').pop() || 'index.html';
+    loadPage(url);
+});
+
+
+window.showLoading = function() {
+    const viewLoading = document.getElementById('viewLoading');
+    if (viewLoading) viewLoading.classList.remove('hidden-force');
+};
+
+window.hideLoading = function() {
+    const viewLoading = document.getElementById('viewLoading');
+    if (viewLoading) viewLoading.classList.add('hidden-force');
+};
+
+async function loadPage(url) {
+    showLoading();
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Page not found");
+        const html = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        document.title = doc.title;
+
+        const oldLayout = document.getElementById('authLayout') || document.getElementById('unauthLayout');
+        const newLayout = doc.getElementById('authLayout') || doc.getElementById('unauthLayout');
+        
+        if (oldLayout && newLayout) {
+            oldLayout.replaceWith(newLayout.cloneNode(true));
+
+        if (currentUser) {
+            const deskUserName = document.getElementById('deskUserName');
+            const deskUserRole = document.getElementById('deskUserRole');
+            const roleStr = currentUser.nric === 'ADMIN' ? 'Main Admin' : (currentUser.role === 'admin' ? 'Committee' : 'Participant');
+            if(deskUserName) deskUserName.textContent = currentUser.name || 'User';
+            if(deskUserRole) deskUserRole.textContent = roleStr;
+            if (currentUser.role !== 'admin') {
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden-force'));
+            }
+            if (currentUser.nric === 'ADMIN') {
+                const navProfile = document.getElementById('nav-profile');
+                if(navProfile) navProfile.classList.add('hidden-force');
+            }
+            const deskTripName = document.getElementById('deskTripName');
+            if(deskTripName && appSettings && appSettings.tripName) deskTripName.textContent = appSettings.tripName;
+        }
+        const unauthTripName = document.getElementById('unauthTripName');
+        if(unauthTripName && typeof appSettings !== 'undefined' && appSettings && appSettings.tripName) {
+            unauthTripName.textContent = appSettings.tripName;
+            unauthTripName.classList.remove('hidden-force');
+        }
+
+        }
+
+        const existingScripts = new Set(Array.from(document.querySelectorAll('script[src]')).map(s => s.getAttribute('src')));
+        const newScripts = Array.from(doc.querySelectorAll('script[src]')).map(s => s.getAttribute('src'));
+        
+        for (const src of newScripts) {
+            if (src && !existingScripts.has(src)) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = src;
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.body.appendChild(script);
+                });
+            }
+        }
+
+        const inlineScripts = Array.from(doc.querySelectorAll('script:not([src])'));
+        for (const script of inlineScripts) {
+            if (script.textContent.includes('window.initPage =')) {
+                const newScript = document.createElement('script');
+                newScript.textContent = script.textContent;
+                document.body.appendChild(newScript);
+                document.body.removeChild(newScript);
+            }
+        }
+
+        if(typeof window.initPage === 'function') {
+            await window.initPage();
+        }
+        
+    } catch(e) {
+        console.error("SPA routing error:", e);
+        window.location.assign(url);
+    } finally {
+        hideLoading();
+    }
+}
+
+document.addEventListener('click', e => {
+    const link = e.target.closest('a');
+    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('#') && !link.getAttribute('target')) {
+        e.preventDefault();
+        navigateTo(link.getAttribute('href'));
     }
 });

@@ -122,7 +122,7 @@
 <script>
  window.initPage = () => {
    if(currentUser && currentUser.role === 'admin') {
-     window.location.href = 'roster.html';
+     navigateTo('roster.html');
      return;
    }
    loadProfileData();

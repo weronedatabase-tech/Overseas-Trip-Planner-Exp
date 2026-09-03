@@ -556,7 +556,7 @@ async function archiveSystem(btn) {
   try { 
     await apiCall('archiveAndReset'); 
     showToast("Reset successful!"); 
-    setTimeout(() => { window.location.href = 'index.html'; }, 2000); 
+    setTimeout(() => { navigateTo('index.html'); }, 2000); 
   } catch (e) { 
     showToast(e.message, true); 
     setBtnLoading(btn, false); 
