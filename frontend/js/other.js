@@ -61,12 +61,24 @@ loadOtherData();
 }
 
 async function loadOtherData() {
+if (window.adminRosterData && window.adminRosterData.length > 0) {
+    otherRosterData = window.adminRosterData;
+    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(otherRosterData);
+    traineeShortNames = {};
+    otherRosterData.forEach(p => {
+        if(p.role === 'TRAINEE' && p.fullName) {
+            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
+        }
+    });
+    renderOtherTable();
+    return;
+}
 const loader = document.getElementById('otherLoading');
 if(loader) loader.classList.remove('hidden-force');
 
 try {
    const res = await apiCall('fetchAdminRoster');
-   otherRosterData = res.roster || [];
+   otherRosterData = res.roster || []; window.adminRosterData = otherRosterData;
    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(otherRosterData);
 
    traineeShortNames = {};

@@ -259,6 +259,12 @@ window.showRosterBreakdownModal = function() {
 };
 
 async function loadParticipantsData() {
+if (adminRosterData && adminRosterData.length > 0) {
+    if (typeof processDisplayNames === "function") processDisplayNames(adminRosterData);
+    if (typeof applyGlobalSorting === "function") adminRosterData = applyGlobalSorting(adminRosterData);
+    renderRoster();
+    return;
+}
 const loader = document.getElementById('rosterLoading');
 if(loader) loader.classList.remove('hidden-force');
 
@@ -268,7 +274,7 @@ try {
         apiCall('fetchLogistics').catch(e => { console.warn("fetchLogistics failed", e); return null; })
     ]);
    
-   adminRosterData = rostRes.roster || []; applyCaregiverLabels(adminRosterData);
+   adminRosterData = rostRes.roster || []; applyCaregiverLabels(adminRosterData); window.adminRosterData = adminRosterData;
    const logisticsData = logRes || { rooms: [], pairings: [] };
    
    traineeShortNames = {};

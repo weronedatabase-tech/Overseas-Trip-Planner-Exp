@@ -61,6 +61,11 @@ loadInitialMinutes();
 }
 
 async function loadInitialMinutes() {
+if (minutesMap.size > 0) {
+  renderAllMinutes();
+  startMinutesPolling();
+  return;
+}
 const overlay = document.getElementById('minutesLoadingOverlay');
 if (overlay) overlay.classList.remove('hidden-force');
 

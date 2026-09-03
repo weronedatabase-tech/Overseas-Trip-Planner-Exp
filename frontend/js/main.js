@@ -711,12 +711,21 @@ window.hideLoading = function() {
     if (viewLoading) viewLoading.classList.add('hidden-force');
 };
 
+const htmlCache = new Map();
+
 async function loadPage(url) {
+    const urlKey = url.split("?")[0];
     showLoading();
     try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Page not found");
-        const html = await response.text();
+        let html;
+        if (htmlCache.has(urlKey)) {
+            html = htmlCache.get(urlKey);
+        } else {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Page not found");
+            html = await response.text();
+            htmlCache.set(urlKey, html);
+        }
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
@@ -727,6 +736,20 @@ async function loadPage(url) {
         
         if (oldLayout && newLayout) {
             oldLayout.replaceWith(newLayout.cloneNode(true));
+            
+        // Cleanup old modals
+        Array.from(document.body.children).forEach(child => {
+            if (child.tagName === 'DIV' && !['authLayout', 'unauthLayout', 'devModeBar', 'toast', 'viewLoading'].includes(child.id)) {
+                child.remove();
+            }
+        });
+
+        // Insert new modals
+        Array.from(doc.body.children).forEach(child => {
+            if (child.tagName === 'DIV' && !['authLayout', 'unauthLayout', 'devModeBar', 'toast', 'viewLoading'].includes(child.id)) {
+                document.body.appendChild(child.cloneNode(true));
+            }
+        });
 
         if (currentUser) {
             const deskUserName = document.getElementById('deskUserName');
@@ -777,6 +800,7 @@ async function loadPage(url) {
             }
         }
 
+        if(typeof applyHydrationDOMUpdates === 'function') applyHydrationDOMUpdates();
         if(typeof window.initPage === 'function') {
             await window.initPage();
         }

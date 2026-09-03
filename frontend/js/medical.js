@@ -63,12 +63,24 @@ loadMedicalData();
 }
 
 async function loadMedicalData() {
+if (window.adminRosterData && window.adminRosterData.length > 0) {
+    medicalRosterData = window.adminRosterData;
+    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
+    traineeShortNames = {};
+    medicalRosterData.forEach(p => {
+        if(p.role === 'TRAINEE' && p.fullName) {
+            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
+        }
+    });
+    renderMedicalTable();
+    return;
+}
 const loader = document.getElementById('medicalLoading');
 if(loader) loader.classList.remove('hidden-force');
 
 try {
    const res = await apiCall('fetchAdminRoster');
-   medicalRosterData = res.roster || [];
+   medicalRosterData = res.roster || []; window.adminRosterData = medicalRosterData;
    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
 
    traineeShortNames = {};

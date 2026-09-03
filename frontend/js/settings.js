@@ -226,7 +226,13 @@ function initiateRegistrationToggle(btn) {
 
 function cancelTripSetup() { document.getElementById('tripSetupModal').classList.add('hidden-force'); }
 
-async function confirmTripSetup(btn) { 
+async function confirmTripSetup(btn) {
+  const start = document.getElementById('tripStartInput').value;
+  const end = document.getElementById('tripEndInput').value;
+  if (!start || !end) {
+      showToast('Please select both start and end dates.', true);
+      return;
+  }
   document.getElementById('tripSetupModal').classList.add('hidden-force'); 
   await executeToggleRegistration(
     true, 
