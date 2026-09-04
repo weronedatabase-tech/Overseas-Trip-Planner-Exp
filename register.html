@@ -67,7 +67,8 @@ window.initPage = async () => {
     return;
   }
   if (regMemberCount === 0) {
-    document.getElementById('membersContainer').innerHTML = '';
+    const el_membersContainer = document.getElementById('membersContainer');
+    if(el_membersContainer) el_membersContainer.innerHTML = '';
     addRegMember();
   }
   await fetchPublicTrainees();

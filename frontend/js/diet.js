@@ -11,7 +11,8 @@ let dietCols = JSON.parse(localStorage.getItem('dietCols_v2')) || [
 let traineeShortNames = {};
 
 function buildDietUI() {
-document.getElementById('tab-diet').innerHTML = `
+const el_tab_diet = document.getElementById('tab-diet');
+if(el_tab_diet) el_tab_diet.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
    <div class="py-1.5 px-2 md:px-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">

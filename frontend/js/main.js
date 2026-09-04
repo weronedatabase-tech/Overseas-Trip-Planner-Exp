@@ -200,7 +200,7 @@ async function showParticipantSummaryModal(nric) {
             <div class="flex flex-col gap-2">
                 ${familyArr.map(f => {
                      const fRoleColor = f.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (f.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-                     return `<div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded border border-gray-200 dark:border-gray-700">
+                     return `<div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer" onclick="showParticipantSummaryModal('${f.nric}')">
                          <div class="flex items-center gap-2 mb-1 md:mb-0">
                             <span class="text-[10px] font-black ${fRoleColor} bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 uppercase tracking-wider shrink-0">${f.role.substring(0,3)}</span>
                             <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${f.fullName}</span>
