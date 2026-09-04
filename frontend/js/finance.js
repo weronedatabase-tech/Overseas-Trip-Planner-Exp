@@ -658,8 +658,11 @@ if (cont) cont.innerHTML = globalSettingsHtml + html;
 function openFinanceRatesModal() {
 const list = document.getElementById('financeRatesList');
 let html = '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. Rates represent the value of 1 foreign unit in SGD.</p>';
-Object.keys(globalFinanceRates).forEach(c => {
-    if(c === 'SGD') return;
+const predefined = ["MYR", "USD", "EUR", "GBP", "AUD", "IDR", "THB", "JPY", "KRW", "TWD", "PHP", "VND"];
+const extra = Object.keys(globalFinanceRates).filter(c => c !== 'SGD' && !predefined.includes(c));
+const allCurrencies = [...predefined, ...extra];
+
+allCurrencies.forEach(c => {
     const live = globalFinanceRates[c] || 0;
     const custom = (financeConfig.customRates && financeConfig.customRates[c]) ? financeConfig.customRates[c] : '';
     html += `
@@ -667,7 +670,7 @@ Object.keys(globalFinanceRates).forEach(c => {
         <div class="font-black text-xs text-gray-800 dark:text-gray-200 w-16 text-center shrink-0">1 ${c}</div>
         <div class="font-bold text-xs text-gray-400 dark:text-gray-500 px-2 shrink-0">=</div>
         <div class="flex-1 min-w-0 pr-2">
-            <input type="number" step="0.0001" placeholder="Live: ${live.toFixed(4)}" value="${custom}" 
+            <input type="number" step="0.0001" placeholder="Live: ${live > 0 ? live.toFixed(4) : 'N/A'}" value="${custom}" 
                 onchange="setCustomRate('${c}', this.value)" 
                 class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400">
         </div>
