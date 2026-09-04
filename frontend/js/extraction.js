@@ -1,9 +1,25 @@
 let extractExcludedNrics = new Set();
 let currentExtractType = '';
+let extractGlobalRoster = [];
 
-function showExtractionPopup(type) {
+async function showExtractionPopup(type) {
     currentExtractType = type;
     extractExcludedNrics.clear();
+    
+    if (typeof showOverlay === 'function') showOverlay("Loading participants...");
+    
+    if (!extractGlobalRoster || extractGlobalRoster.length === 0) {
+        try {
+            const res = await apiCall('fetchAdminRoster', {});
+            if (res.status === 'success') {
+                extractGlobalRoster = res.roster || [];
+            }
+        } catch (e) {
+            console.error("Error fetching roster for extraction", e);
+        }
+    }
+    
+    if (typeof hideOverlay === 'function') hideOverlay();
     
     let modal = document.getElementById('extractionModal');
     if (!modal) {
@@ -67,10 +83,10 @@ function renderExtractSearchResults() {
         return;
     }
     
-    if (!globalRoster) return;
+    if (!extractGlobalRoster) return;
     
     // Fuzzy search same as roster
-    const matches = globalRoster.filter(p => {
+    const matches = extractGlobalRoster.filter(p => {
         if (extractExcludedNrics.has(p.nric)) return false;
         
         const terms = query.split(/\s+/);
@@ -130,7 +146,7 @@ function renderExtractExcluded() {
     
     let html = '';
     extractExcludedNrics.forEach(nric => {
-        const p = globalRoster.find(x => x.nric === nric);
+        const p = extractGlobalRoster.find(x => x.nric === nric);
         if(!p) return;
         
         const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
@@ -176,7 +192,7 @@ function removeExtractExcluded(nric) {
 }
 
 function performExtraction() {
-    if (!globalRoster) {
+    if (!extractGlobalRoster) {
         showToast("Roster data not loaded yet.");
         return;
     }
@@ -187,8 +203,7 @@ function performExtraction() {
     
     const excluded = Array.from(extractExcludedNrics);
     
-    apiCall({
-        action: 'extractData',
+    apiCall('extractData', {
         extractType: currentExtractType,
         excludedNrics: excluded
     }).then(res => {
