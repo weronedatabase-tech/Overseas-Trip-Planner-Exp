@@ -815,7 +815,7 @@ async function loadPage(url) {
 
 document.addEventListener('click', e => {
     const link = e.target.closest('a');
-    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('#') && !link.getAttribute('target')) {
+    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('#') && !link.getAttribute('href').startsWith('javascript:') && !link.getAttribute('target')) {
         e.preventDefault();
         navigateTo(link.getAttribute('href'));
     }

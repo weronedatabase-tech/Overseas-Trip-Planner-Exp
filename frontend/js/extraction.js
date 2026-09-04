@@ -10,9 +10,54 @@ async function showExtractionPopup(type) {
     
     if (!extractGlobalRoster || extractGlobalRoster.length === 0) {
         try {
-            const res = await apiCall('fetchAdminRoster', {});
-            if (res.status === 'success') {
-                extractGlobalRoster = res.roster || [];
+            const [rostRes, logRes] = await Promise.all([
+                apiCall('fetchAdminRoster', {}),
+                (typeof globalLogistics !== 'undefined' && globalLogistics) ? Promise.resolve(globalLogistics) : apiCall('fetchLogistics').catch(e => null)
+            ]);
+            
+            if (rostRes && rostRes.status === 'success') {
+                let tempRoster = rostRes.roster || [];
+                if (typeof applyCaregiverLabels === 'function') applyCaregiverLabels(tempRoster);
+                
+                const logisticsData = logRes || { rooms: [], pairings: [] };
+                
+                const pairingsMap = {};
+                if (logisticsData.pairings) {
+                    logisticsData.pairings.filter(p => p.status === 'ACTIVE').forEach(pair => {
+                        if(!pairingsMap[pair.traineeNric]) pairingsMap[pair.traineeNric] = [];
+                        if(!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+                        
+                        const v = tempRoster.find(x => x.nric === pair.volNric);
+                        const t = tempRoster.find(x => x.nric === pair.traineeNric);
+                        
+                        if(v) pairingsMap[pair.traineeNric].push(((v.shortName || v.fullName) || '').toUpperCase());
+                        if(t) pairingsMap[pair.volNric].push(((t.shortName || t.fullName) || '').toUpperCase());
+                    });
+                }
+                
+                const roomsMap = {};
+                if (logisticsData.rooms) {
+                    logisticsData.rooms.filter(r => !r.isDeleted).forEach(r => {
+                        r.occupants.forEach(n => roomsMap[n] = r.name.toUpperCase());
+                    });
+                }
+                
+                tempRoster.forEach(p => {
+                    p.room = roomsMap[p.nric] || 'UNASSIGNED';
+                    let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
+                    if (p.role === 'CAREGIVER' && p.relatedTrainee) {
+                        const rNames = p.relatedTrainee.split('|').map(n => n.trim().toLowerCase());
+                        const relatedList = tempRoster.filter(x => rNames.includes((x.fullName||'').toLowerCase()) && x.role === 'TRAINEE');
+                        relatedList.forEach(related => {
+                            if (related && pairingsMap[related.nric]) {
+                                myPairings.push(...pairingsMap[related.nric]);
+                            }
+                        });
+                    }
+                    p.pairings = myPairings.length > 0 ? Array.from(new Set(myPairings)).join(', ') : 'NONE';
+                });
+                
+                extractGlobalRoster = tempRoster;
             }
         } catch (e) {
             console.error("Error fetching roster for extraction", e);
@@ -85,23 +130,26 @@ function renderExtractSearchResults() {
     
     if (!extractGlobalRoster) return;
     
-    // Fuzzy search same as roster
-    const matches = extractGlobalRoster.filter(p => {
+    // Fuzzy search identical to roster
+    let matches = extractGlobalRoster.filter(p => {
         if (extractExcludedNrics.has(p.nric)) return false;
         
-        const terms = query.split(/\s+/);
-        const nameMatch = String(p.fullName || '').toLowerCase();
-        const shortMatch = String(p.shortName || '').toLowerCase();
-        const grpMatch = String(p.projectGroup || '').toLowerCase();
-        const roleMatch = String(p.role || '').toLowerCase();
-        const passportMatch = String(p.passport || '').toLowerCase();
-        
-        return terms.every(term => 
-            nameMatch.includes(term) || shortMatch.includes(term) || 
-            grpMatch.includes(term) || roleMatch.includes(term) || 
-            passportMatch.includes(term)
+        return Object.values(p).some(val => 
+            val && val.toString().toLowerCase().includes(query)
         );
-    }).slice(0, 5); // Limit to top 5 results for clarity
+    });
+    
+    // Group family members together
+    matches.sort((a, b) => {
+        if (a.pocNric < b.pocNric) return -1;
+        if (a.pocNric > b.pocNric) return 1;
+        
+        let roleA = a.role === 'TRAINEE' ? 1 : (a.role === 'CAREGIVER' ? 2 : 3);
+        let roleB = b.role === 'TRAINEE' ? 1 : (b.role === 'CAREGIVER' ? 2 : 3);
+        return roleA - roleB;
+    });
+    
+    matches = matches.slice(0, 15); // Limit to top 5 results for clarity
     
     if (matches.length === 0) {
         cont.innerHTML = `<div class="text-xs text-center text-gray-400 py-2">No matching participants found.</div>`;
@@ -199,7 +247,15 @@ function performExtraction() {
     
     document.getElementById('extractionModal').classList.add('hidden-force');
     
-    if (typeof showOverlay === 'function') showOverlay("Extracting data to Drive...");
+    let overlay = document.getElementById('extractOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'extractOverlay';
+        overlay.className = 'fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col justify-center items-center backdrop-blur-sm hidden-force text-gray-800 dark:text-white';
+        overlay.innerHTML = '<div class="loader !w-10 !h-10 border-primary mb-4"></div><div class="font-bold tracking-widest uppercase text-sm">Extracting to Drive...</div>';
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden-force');
     
     const excluded = Array.from(extractExcludedNrics);
     
@@ -207,18 +263,19 @@ function performExtraction() {
         extractType: currentExtractType,
         excludedNrics: excluded
     }).then(res => {
-        if (typeof hideOverlay === 'function') hideOverlay();
+        overlay.classList.add('hidden-force');
         if (res.status === 'success') {
             showToast("Extraction successful!");
-            if (typeof renderDriveList === 'function' && window.currentDrivePath) {
-                // Refresh drive view if we are on the root level or let it be if deeply nested
-                if(window.currentDrivePath.length === 0) refreshCurrentDriveFolder(null);
+            if (typeof refreshCurrentDriveFolder === 'function') {
+                if (typeof currentDrivePath !== 'undefined' && currentDrivePath.length <= 1) {
+                    refreshCurrentDriveFolder(null);
+                }
             }
         } else {
             showToast("Extraction failed: " + res.message, 'error');
         }
     }).catch(err => {
-        if (typeof hideOverlay === 'function') hideOverlay();
+        overlay.classList.add('hidden-force');
         showToast("Error extracting data.", 'error');
     });
 }
