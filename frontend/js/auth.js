@@ -149,10 +149,49 @@ async function submitLandingReceipt(e) {
 
 function landingCurChange() {
     let cur = document.getElementById('landingRecCurrency').value;
-    let rate = 1;
-    if (cur === 'MYR') rate = 0.28;
-    // can add more default rates here if needed
-    document.getElementById('landingRecRate').value = rate;
+    const rateContainer = document.getElementById('landingReceiptBidirectionalRate');
+    
+    if (cur === 'SGD') {
+        rateContainer.classList.add('hidden-force');
+        document.getElementById('landingRecRate').value = 1;
+    } else {
+        rateContainer.classList.remove('hidden-force');
+        document.getElementById('landingRecCurLabel1').innerText = cur;
+        document.getElementById('landingRecCurLabel2').innerText = cur;
+        
+        let rate = 1;
+        if (cur === 'MYR') rate = 0.28;
+        // You can add more defaults here if needed
+        
+        document.getElementById('landingRecRate').value = rate;
+        document.getElementById('landingRecRateToSgd').value = rate.toFixed(2);
+        document.getElementById('landingRecRateFromSgd').value = (1 / rate).toFixed(2);
+    }
+    landingCalcSgd();
+}
+
+function handleLandingRateInputSync(mode, value) {
+    const val = parseFloat(value);
+    const inputToSgd = document.getElementById('landingRecRateToSgd');
+    const inputFromSgd = document.getElementById('landingRecRateFromSgd');
+    const hiddenRate = document.getElementById('landingRecRate');
+
+    if (isNaN(val) || val <= 0 || value.trim() === '') {
+        if (value.trim() === '') {
+            if (mode === 'to_sgd' && inputFromSgd) inputFromSgd.value = '';
+            if (mode === 'from_sgd' && inputToSgd) inputToSgd.value = '';
+        }
+        hiddenRate.value = 1; // fallback
+    } else {
+        const inverse = 1 / val;
+        if (mode === 'to_sgd') {
+            if (inputFromSgd) inputFromSgd.value = inverse.toFixed(2);
+            hiddenRate.value = val;
+        } else if (mode === 'from_sgd') {
+            if (inputToSgd) inputToSgd.value = inverse.toFixed(2);
+            hiddenRate.value = inverse; // 1 Foreign = X SGD
+        }
+    }
     landingCalcSgd();
 }
 

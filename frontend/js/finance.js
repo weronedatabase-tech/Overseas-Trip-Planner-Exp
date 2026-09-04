@@ -657,21 +657,52 @@ if (cont) cont.innerHTML = globalSettingsHtml + html;
 
 function openFinanceRatesModal() {
 const list = document.getElementById('financeRatesList');
-let html = '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. Rates represent the value of 1 foreign unit in SGD.</p>';
-Object.keys(globalFinanceRates).forEach(c => {
-    if(c === 'SGD') return;
+let html = '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. You can input the rate in either direction.</p>';
+const predefined = ["MYR", "USD", "EUR", "GBP", "AUD", "IDR", "THB", "JPY", "KRW", "TWD", "PHP", "VND"];
+const extra = Object.keys(globalFinanceRates).filter(c => c !== 'SGD' && !predefined.includes(c));
+const allCurrencies = [...predefined, ...extra];
+
+allCurrencies.forEach(c => {
     const live = globalFinanceRates[c] || 0;
-    const custom = (financeConfig.customRates && financeConfig.customRates[c]) ? financeConfig.customRates[c] : '';
+    let customToSgd = '';
+    let customFromSgd = '';
+    
+    if (financeConfig.customRates && financeConfig.customRates[c]) {
+        const val = financeConfig.customRates[c];
+        customToSgd = val;
+        customFromSgd = parseFloat((1 / val).toFixed(2));
+    }
+    
+    let liveToSgdText = live > 0 ? live.toFixed(2) : 'N/A';
+    let liveFromSgdText = live > 0 ? (1 / live).toFixed(2) : 'N/A';
+
     html += `
-    <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-        <div class="font-black text-xs text-gray-800 dark:text-gray-200 w-16 text-center shrink-0">1 ${c}</div>
-        <div class="font-bold text-xs text-gray-400 dark:text-gray-500 px-2 shrink-0">=</div>
-        <div class="flex-1 min-w-0 pr-2">
-            <input type="number" step="0.0001" placeholder="Live: ${live.toFixed(4)}" value="${custom}" 
-                onchange="setCustomRate('${c}', this.value)" 
-                class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400">
+    <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col gap-2 mb-2">
+        <div class="font-black text-sm text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-700 pb-1 mb-1">${c}</div>
+        
+        <div class="flex items-center justify-between">
+            <div class="font-black text-xs text-gray-500 w-14 shrink-0">1 ${c}</div>
+            <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+            <div class="flex-1 min-w-0 pr-2">
+                <input type="number" step="0.000001" id="rate_${c}_to_sgd" placeholder="Live: ${liveToSgdText}" value="${customToSgd}" 
+                    oninput="handleRateInputSync('${c}', 'to_sgd', this.value)" 
+                    onchange="handleRateChange('${c}', 'to_sgd', this.value)" 
+                    class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400">
+            </div>
+            <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">SGD</div>
         </div>
-        <div class="font-black text-xs text-gray-800 dark:text-gray-200 shrink-0">SGD</div>
+
+        <div class="flex items-center justify-between">
+            <div class="font-black text-xs text-gray-500 w-14 shrink-0">1 SGD</div>
+            <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+            <div class="flex-1 min-w-0 pr-2">
+                <input type="number" step="0.000001" id="rate_sgd_to_${c}" placeholder="Live: ${liveFromSgdText}" value="${customFromSgd}" 
+                    oninput="handleRateInputSync('${c}', 'from_sgd', this.value)" 
+                    onchange="handleRateChange('${c}', 'from_sgd', this.value)" 
+                    class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400">
+            </div>
+            <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">${c}</div>
+        </div>
     </div>`;
 });
 if (list) list.innerHTML = html;
@@ -682,10 +713,38 @@ function closeFinanceRatesModal() {
 document.getElementById('financeRatesModal').classList.add('hidden-force');
 }
 
-function setCustomRate(currency, value) {
-if (!financeConfig.customRates) financeConfig.customRates = {};
-if (value.trim() === '') delete financeConfig.customRates[currency];
-else financeConfig.customRates[currency] = parseFloat(value);
+function handleRateInputSync(currency, mode, value) {
+const val = parseFloat(value);
+const inputToSgd = document.getElementById(`rate_${currency}_to_sgd`);
+const inputFromSgd = document.getElementById(`rate_sgd_to_${currency}`);
+
+if (isNaN(val) || val <= 0 || value.trim() === '') {
+    if (value.trim() === '') {
+        if (mode === 'to_sgd' && inputFromSgd) inputFromSgd.value = '';
+        if (mode === 'from_sgd' && inputToSgd) inputToSgd.value = '';
+    }
+} else {
+    const inverse = 1 / val;
+    if (mode === 'to_sgd' && inputFromSgd) {
+        inputFromSgd.value = parseFloat(inverse.toFixed(2));
+    } else if (mode === 'from_sgd' && inputToSgd) {
+        inputToSgd.value = parseFloat(inverse.toFixed(2));
+    }
+}
+}
+
+function handleRateChange(currency, mode, value) {
+const val = parseFloat(value);
+handleRateInputSync(currency, mode, value);
+
+if (isNaN(val) || val <= 0 || value.trim() === '') {
+    if (financeConfig.customRates) delete financeConfig.customRates[currency];
+} else {
+    const finalToSgdVal = mode === 'to_sgd' ? val : (1 / val);
+    if (!financeConfig.customRates) financeConfig.customRates = {};
+    financeConfig.customRates[currency] = finalToSgdVal;
+}
+
 financeOptions.forEach(o => updateTotals(o.id));
 renderFinanceOptions();
 queueFinanceUpdate();

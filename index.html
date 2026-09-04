@@ -103,15 +103,31 @@
                     <input type="number" step="0.01" id="landingRecAmount" oninput="landingCalcSgd()" required class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-right" placeholder="0.00">
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ex. Rate</label>
-                    <input type="number" step="0.0001" id="landingRecRate" oninput="landingCalcSgd()" required class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-right" value="1">
+            
+            <div id="landingReceiptBidirectionalRate" class="hidden-force flex flex-col gap-2 p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 pb-1 mb-1">Exchange Rate</label>
+                <div class="flex items-center justify-between">
+                    <div class="font-black text-xs text-gray-500 w-12 shrink-0">1 <span id="landingRecCurLabel1">MYR</span></div>
+                    <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+                    <div class="flex-1 min-w-0 pr-2">
+                        <input type="number" step="0.01" id="landingRecRateToSgd" placeholder="0.00" oninput="handleLandingRateInputSync('to_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400 text-right">
+                    </div>
+                    <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">SGD</div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">SGD Equiv</label>
-                    <input type="number" step="0.01" id="landingRecSgd" readonly class="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-right" placeholder="0.00">
+                <div class="flex items-center justify-between">
+                    <div class="font-black text-xs text-gray-500 w-12 shrink-0">1 SGD</div>
+                    <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+                    <div class="flex-1 min-w-0 pr-2">
+                        <input type="number" step="0.01" id="landingRecRateFromSgd" placeholder="0.00" oninput="handleLandingRateInputSync('from_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400 text-right">
+                    </div>
+                    <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right"><span id="landingRecCurLabel2">MYR</span></div>
                 </div>
+                <input type="hidden" id="landingRecRate" value="1">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">SGD Equiv</label>
+                <input type="number" step="0.01" id="landingRecSgd" readonly class="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-right" placeholder="0.00">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</label>
