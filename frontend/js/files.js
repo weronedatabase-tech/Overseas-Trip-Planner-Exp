@@ -37,10 +37,10 @@ const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_t
        </button>
        <div id="driveExtractMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
          <div class="py-1.5">
-           <a href="#" onclick="document.getElementById('driveExtractMenu').classList.add('hidden-force'); showExtractionPopup('insurance')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="document.getElementById('driveExtractMenu').classList.add('hidden-force'); showExtractionPopup('insurance')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-blue-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Insurance Extraction
            </a>
-           <a href="#" onclick="document.getElementById('driveExtractMenu').classList.add('hidden-force'); showExtractionPopup('bus')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="document.getElementById('driveExtractMenu').classList.add('hidden-force'); showExtractionPopup('bus')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-purple-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg> Bus for ICA Extraction
            </a>
          </div>
@@ -54,21 +54,21 @@ const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_t
        </button>
        <div id="driveAddMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
          <div class="py-1.5">
-           <a href="#" onclick="toggleDriveAddMenu(); promptCreateFolder()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateFolder()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-yellow-500 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> New Folder
            </a>
-           <a href="#" onclick="toggleDriveAddMenu(); triggerFileUpload()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); triggerFileUpload()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-green-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg> File Upload
            </a>
          </div>
          <div class="py-1.5">
-           <a href="#" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('doc')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('doc')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Doc
            </a>
-           <a href="#" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('sheet')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('sheet')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Sheet
            </a>
-           <a href="#" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('slide')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+           <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('slide')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-yellow-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM10 8v8l6-4z"/></svg> Google Slides
            </a>
          </div>

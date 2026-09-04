@@ -1,4 +1,4 @@
-const CACHE_NAME = 'otp-mpa-v3';
+const CACHE_NAME = 'otp-mpa-v4';
 const urlsToCache = [
  './',
  './index.html',
@@ -29,7 +29,7 @@ const urlsToCache = [
  './frontend/js/attendance.js',
  './frontend/js/finance.js',
  './frontend/js/minutes.js',
- './frontend/js/files.js',
+ './frontend/js/files.js', './frontend/js/extraction.js',
  './frontend/js/settings.js',
  './frontend/js/medical.js'
 ];
