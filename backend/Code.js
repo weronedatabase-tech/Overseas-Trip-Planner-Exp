@@ -1625,7 +1625,7 @@ function extractData(extractType, excludedNrics) {
         if (dobStr) {
           const d = new Date(dobStr);
           if (!isNaN(d.getTime())) {
-            formattedDob = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd/MM/yyyy");
+            formattedDob = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd MMM yyyy");
             const today = new Date();
             let a = today.getFullYear() - d.getFullYear();
             const m = today.getMonth() - d.getMonth();
@@ -1639,7 +1639,7 @@ function extractData(extractType, excludedNrics) {
         rows.push([
           index + 1,
           p.fullName || '',
-          p.passportNo || p.nric || '',
+          p.nric || '',
           formattedDob,
           age,
           p.nationality || '',
@@ -1647,11 +1647,33 @@ function extractData(extractType, excludedNrics) {
           p.contact || '',
           "Friend",
           "Bus",
-          p.group || ''
+          "West End & RSPID (WGS)"
         ]);
       });
       
-      sheet.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
+      const dataRange = sheet.getRange(1, 1, rows.length, rows[0].length);
+      dataRange.setValues(rows);
+      
+      // 1. Column Widths
+      sheet.setColumnWidth(1, 40); // No.
+      sheet.setColumnWidth(2, 250); // Name
+      sheet.setColumnWidth(3, 150); // NRIC
+      sheet.setColumnWidth(4, 120); // DOB
+      sheet.setColumnWidth(5, 50); // Age
+      sheet.setColumnWidth(6, 120); // Nationality
+      sheet.setColumnWidth(7, 80); // Gender
+      sheet.setColumnWidth(8, 120); // Contact No
+      sheet.setColumnWidth(9, 150); // Relationship
+      sheet.setColumnWidth(10, 100); // Transport
+      sheet.setColumnWidth(11, 200); // Project Group
+      
+      // 2. Justify left and wrap text
+      dataRange.setHorizontalAlignment("left");
+      dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
+      
+      // 5. Bold row 1
+      sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
+      
       DriveApp.getFileById(fileId).moveTo(folder);
       
     } else if (extractType === 'bus') {
