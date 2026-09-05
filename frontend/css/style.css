@@ -1,0 +1,150 @@
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+
+.loader { 
+border: 3px solid rgba(255,255,255,0.1); 
+border-top: 3px solid #3b82f6; 
+border-radius: 50%; 
+width: 24px; 
+height: 24px; 
+animation: spin 1s linear infinite; 
+}
+
+@keyframes spin { 
+0% { transform: rotate(0deg); } 
+100% { transform: rotate(360deg); } 
+}
+
+.fade-in { 
+animation: fadeIn 0.3s ease-in-out; 
+}
+
+@keyframes fadeIn { 
+from { opacity: 0; transform: translateY(10px); } 
+to { opacity: 1; transform: translateY(0); } 
+}
+
+.search-results { 
+max-height: 250px; 
+overflow-y: auto; 
+}
+
+.modal-content { 
+max-height: 80vh; 
+}
+
+body { 
+-webkit-tap-highlight-color: transparent; 
+}
+
+/* Prevent text selection, tap highlights, and iOS callouts on ALL interactive elements */
+button, 
+a, 
+select, 
+[role="button"], 
+[onclick], 
+.cursor-pointer,
+.comm-att-card,
+.bus-att-card,
+.grouping-card,
+.dnd-draggable {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Explicitly allow selection in inputs and textareas */
+input, textarea {
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}
+
+/* Perfected Red 'X' Pill Overlay */
+.remove-x {
+position: absolute;
+right: 4px;
+width: auto; height: 100%;
+cursor: pointer; z-index: 20;
+transition: transform 0.1s, color 0.1s;
+}
+
+/* Drag & Drop Core Styling */
+.locked-for-drag { opacity: 0.4; filter: grayscale(50%); }
+.dragging-clone {
+position: fixed !important;
+top: 0 !important;
+left: 0 !important;
+pointer-events: none !important;
+z-index: 99999 !important;
+opacity: 0.95;
+box-shadow: 0 20px 40px rgba(0,0,0,0.4) !important;
+display: flex;
+align-items: center;
+justify-content: center;
+margin: 0 !important;
+will-change: transform;
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 6px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #4b5563; }
+
+/* Card Pulse Highlight Classes */
+.pulse-green {
+ background-color: #dcfce7 !important;
+ border-color: #22c55e !important;
+ box-shadow: 0 0 0 2px #22c55e !important;
+ transform: scale(1.02) !important;
+ z-index: 10 !important;
+}
+.dark .pulse-green { 
+ background-color: rgba(34, 197, 94, 0.25) !important; 
+ border-color: #22c55e !important; 
+ box-shadow: 0 0 0 2px #22c55e !important; 
+}
+
+.pulse-red {
+ background-color: #fee2e2 !important;
+ border-color: #ef4444 !important;
+ box-shadow: 0 0 0 2px #ef4444 !important;
+ transform: scale(1.02) !important;
+ z-index: 10 !important;
+}
+.dark .pulse-red { 
+ background-color: rgba(239, 68, 68, 0.25) !important; 
+ border-color: #ef4444 !important; 
+ box-shadow: 0 0 0 2px #ef4444 !important; 
+}
+
+.pulse-blue {
+ background-color: #dbeafe !important;
+ border-color: #3b82f6 !important;
+ box-shadow: 0 0 0 2px #3b82f6 !important;
+ transform: scale(1.02) !important;
+ z-index: 10 !important;
+}
+.dark .pulse-blue { 
+ background-color: rgba(59, 130, 246, 0.25) !important; 
+ border-color: #3b82f6 !important; 
+ box-shadow: 0 0 0 2px #3b82f6 !important; 
+}
+
+/* Skeleton Loading Shimmer Extension */
+.skeleton-shimmer {
+ background: #f6f7f8;
+ background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+ background-repeat: no-repeat;
+ background-size: 800px 100%; 
+ animation: shimmer 1.5s infinite linear forwards;
+}
+.dark .skeleton-shimmer {
+ background: #18181b;
+ background-image: linear-gradient(to right, #18181b 0%, #27272a 20%, #18181b 40%, #18181b 100%);
+}
+@keyframes shimmer {
+ 0% { background-position: -468px 0; }
+ 100% { background-position: 468px 0; }
+}

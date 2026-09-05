@@ -1,894 +1,840 @@
-function showToast(msg, isError = false) {
- const t = document.getElementById('toast');
- if(!t) return;
- t.textContent = msg;
- t.className = `fixed top-12 left-1/2 transform -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-2xl z-[100] transition-opacity duration-300 text-sm font-bold border ${isError ? 'bg-red-600 text-white border-red-700' : 'bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-700 dark:border-gray-200'}`;
- t.classList.remove('opacity-0');
- setTimeout(() => t.classList.add('opacity-0'), 4000);
-}
-
-window.cleanTrailingComma = function(input) { setTimeout(() => { if (document.activeElement === input) return; if (input && input.value) { const names = input.value.split("|").map(x => x.trim()).filter(x => x !== ""); input.value = names.join(" | "); } }, 250); };
-function setBtnLoading(btn, isLoading) {
- if (!btn) return;
- const spinner = btn.querySelector('.btn-spinner');
- const icon = btn.querySelector('.btn-icon');
- const text = btn.querySelector('.btn-text');
-
- if (isLoading) {
-   btn.disabled = true; btn.classList.add('opacity-80', 'cursor-not-allowed');
-   if (spinner) spinner.classList.remove('hidden-force');
-   if (icon) icon.classList.add('opacity-0');
-   // if (text) text.classList.add('opacity-0');
- } else {
-   btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed');
-   if (spinner) spinner.classList.add('hidden-force');
-   if (icon) icon.classList.remove('opacity-0');
-   // if (text) text.classList.remove('opacity-0');
+// Navigates securely handling Base URL and Query parameters
+window.navigateTo = function(page, params = {}) {
+ let url = new URL(page, window.location.origin + window.location.pathname);
+ for (let key in params) {
+     url.searchParams.set(key, params[key]);
  }
-}
-
-function toggleTheme() {
- document.documentElement.classList.toggle('dark');
- localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-}
-
-const projectColorPalette =[
- 'bg-slate-100 border-slate-400 text-slate-900 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100',
- 'bg-gray-100 border-gray-400 text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-slate-100',
- 'bg-zinc-100 border-zinc-400 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-600 dark:text-zinc-100',
- 'bg-neutral-100 border-neutral-400 text-neutral-900 dark:bg-neutral-900 dark:border-neutral-600 dark:text-neutral-100',
- 'bg-stone-100 border-stone-400 text-stone-900 dark:bg-stone-900 dark:border-stone-600 dark:text-stone-100',
- 'bg-amber-100 border-amber-400 text-amber-900 dark:bg-amber-900 dark:border-amber-600 dark:text-amber-100',
- 'bg-yellow-100 border-yellow-400 text-yellow-900 dark:bg-yellow-900 dark:border-yellow-600 dark:text-yellow-100',
- 'bg-lime-100 border-lime-400 text-lime-900 dark:bg-lime-900 dark:border-lime-600 dark:text-lime-100',
- 'bg-green-100 border-green-400 text-green-900 dark:bg-green-900 dark:border-green-600 dark:text-green-100',
- 'bg-emerald-100 border-emerald-400 text-emerald-900 dark:bg-emerald-900 dark:border-emerald-600 dark:text-emerald-100',
- 'bg-teal-100 border-teal-400 text-teal-900 dark:bg-teal-900 dark:border-teal-600 dark:text-teal-100',
- 'bg-cyan-100 border-cyan-400 text-cyan-900 dark:bg-cyan-900 dark:border-cyan-600 dark:text-cyan-100',
- 'bg-sky-100 border-sky-400 text-sky-900 dark:bg-sky-900 dark:border-sky-600 dark:text-sky-100',
- 'bg-green-100 border-green-400 text-green-900 dark:bg-green-900 dark:border-green-600 dark:text-green-100',
- 'bg-indigo-100 border-indigo-400 text-indigo-900 dark:bg-indigo-900 dark:border-indigo-600 dark:text-indigo-100',
- 'bg-violet-100 border-violet-400 text-violet-900 dark:bg-violet-900 dark:border-violet-600 dark:text-violet-100',
- 'bg-purple-100 border-purple-400 text-purple-900 dark:bg-purple-900 dark:border-purple-600 dark:text-purple-100',
- 'bg-fuchsia-100 border-fuchsia-400 text-fuchsia-900 dark:bg-fuchsia-900 dark:border-fuchsia-600 dark:text-fuchsia-100'
-];
-
-function getProjectColor(groupName) {
- if (!groupName || groupName === 'None') return 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100';
- if (appSettings && appSettings.projectColors && appSettings.projectColors[groupName]) return appSettings.projectColors[groupName];
- return 'bg-gray-100 border-gray-300 text-gray-900 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-100';
-}
-
-function getProjectAbbreviation(name) {
- const match = name.match(/\((.*?)\)/); if (match && match[1]) return match[1].substring(0,3).toUpperCase();
- const words = name.split(' ').filter(w => w.length > 0);
- if (words.length > 1) return words.slice(0,3).map(w => w[0]).join('').toUpperCase();
- return name.substring(0,3).toUpperCase();
-}
-
-function renderHeaderLegend() {
- const deskCont = document.getElementById('headerLegend');
- const mobCont = document.getElementById('mobHeaderLegend');
- if (!appSettings || !appSettings.activeProjects || appSettings.activeProjects.length === 0) {
-   if(deskCont) deskCont.innerHTML = '';
-   if(mobCont) mobCont.innerHTML = '';
-   return;
- }
- let html = '';
- appSettings.activeProjects.forEach(proj => {
-   if(!proj) return;
-   const colorCls = getProjectColor(proj); const shortName = getProjectAbbreviation(proj);
-   html += `<span class="px-1.5 py-0.5 rounded text-[11px] md:text-xs font-bold border shadow-sm cursor-help ${colorCls}" title="${proj}">${shortName}</span>`;
- });
- if(deskCont) deskCont.innerHTML = html;
- if(mobCont) mobCont.innerHTML = html;
-}
-
-window.getFamilyMembers = function(nric, allParticipants) {
-    const target = allParticipants.find(p => p.nric === nric);
-    if (!target) return [];
-
-    let family = new Set();
-    family.add(target);
-    
-    let changed = true;
-    while (changed) {
-        changed = false;
-        
-        for (let p of allParticipants) {
-            if (family.has(p)) continue;
-            
-            let pName = (p.fullName || p.name || '').replace(/\s+/g, '').toLowerCase();
-            let pShortName = (p.shortName || '').replace(/\s+/g, '').toLowerCase();
-            
-            let pRelated = [];
-            if (p.role === 'CAREGIVER' && p.relatedTrainee) {
-                pRelated = String(p.relatedTrainee).split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(Boolean);
-            }
-
-            for (let f of family) {
-                let fName = (f.fullName || f.name || '').replace(/\s+/g, '').toLowerCase();
-                let fShortName = (f.shortName || '').replace(/\s+/g, '').toLowerCase();
-                
-                let fRelated = [];
-                if (f.role === 'CAREGIVER' && f.relatedTrainee) {
-                    fRelated = String(f.relatedTrainee).split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(Boolean);
-                }
-
-                let match = (p.pocNric && f.pocNric && p.pocNric === f.pocNric);
-                
-                if (!match && pRelated.length > 0) {
-                    if (pRelated.some(d => d.includes(fName) || fName.includes(d) || (fShortName && d.includes(fShortName)))) {
-                        match = true;
-                    }
-                }
-                
-                if (!match && fRelated.length > 0) {
-                    if (fRelated.some(d => d.includes(pName) || pName.includes(d) || (pShortName && d.includes(pShortName)))) {
-                        match = true;
-                    }
-                }
-                
-                if (match) {
-                    family.add(p);
-                    changed = true;
-                    break;
-                }
-            }
-        }
-    }
-    
-    return Array.from(family);
+ window.location.href = url.toString();
 };
 
-window.isFamily = function(nric, allParticipants) {
-    return window.getFamilyMembers(nric, allParticipants).length > 1;
-};
+async function refreshApp() { 
+ const icon = document.getElementById('refreshIcon'); 
+ if(icon) icon.classList.add('fa-spin'); 
+ 
+ // Provide UX feedback since a deep sync takes a few seconds
+ if (typeof showOverlay === 'function') {
+     showOverlay('loading', 'Syncing Google Drive & Purging Cache...');
+ }
 
-function applyGlobalSorting(participants) {
- if(!appSettings) return participants;
- const rules = appSettings.sortingRules || ['project', 'family', 'role', 'name'];
- const familyCounts = {};
- participants.forEach(p => { 
-    const poc = p.pocNric;
-    familyCounts[poc] = (familyCounts[poc] || 0) + 1; 
- });
+ // 1. Save admin login session and user theme
+ const adminKey = localStorage.getItem('adminKey');
+ const theme = localStorage.getItem('theme');
 
- return participants.sort((a, b) => {
-   for (let rule of rules) {
-       if (rule === 'none') continue;
-       if (rule === 'project') {
-           const aG = a.group || 'ZZZ';
-           const bG = b.group || 'ZZZ';
-           const cmp = aG.localeCompare(bG);
-           if (cmp !== 0) return cmp;
-       }
-       if (rule === 'family') {
-           const aPoc = a.pocNric;
-           const bPoc = b.pocNric;
-           const aFam = familyCounts[aPoc] > 1 ? 1 : 0;
-           const bFam = familyCounts[bPoc] > 1 ? 1 : 0;
-           if (aFam !== bFam) return bFam - aFam;
-           if (aFam === 1 && bFam === 1) {
-               const cmp = aPoc.localeCompare(bPoc);
-               if (cmp !== 0) return cmp;
-           }
-       }
-       if (rule === 'role') {
-           const rW = { 'CAREGIVER': 1, 'TRAINEE': 2, 'VOLUNTEER': 3 };
-           const aR = rW[a.role] || 9;
-           const bR = rW[b.role] || 9;
-           if (aR !== bR) return aR - bR;
-       }
-       if (rule === 'name') {
-           const cmp = (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '');
-           if (cmp !== 0) return cmp;
-       }
-   }
-   return 0;
- });
-}
+ // 2. Full frontend cache purge (wipe localStorage & sessionStorage)
+ try { localStorage.clear(); } catch(e) {}
+ try { sessionStorage.clear(); } catch(e) {}
 
-function processDisplayNames(participants) {
- if(!participants) return;
- const nameCounts = {};
- participants.forEach(p => {
-     p.shortName = p.shortName ? p.shortName.trim() : '';
-     p.name = p.name ? p.name.trim() : '';
-     const sName = p.shortName || p.name;
-     nameCounts[sName] = (nameCounts[sName] || 0) + 1;
- });
- participants.forEach(p => {
-     const sName = p.shortName || p.name;
-     if (nameCounts[sName] > 1) {
-         const roleChar = p.role ? p.role.charAt(0).toUpperCase() : 'U';
-         const projAcr = p.group ? getProjectAbbreviation(p.group) : 'N/A';
-         p.displayName = `${sName} (${roleChar}) (${projAcr})`;
-     } else {
-         p.displayName = sName;
-     }
- });
- const displayCounts = {};
- participants.forEach(p => { displayCounts[p.displayName] = (displayCounts[p.displayName] || 0) + 1; });
- participants.forEach(p => {
-     if (displayCounts[p.displayName] > 1) {
-         const sName = p.shortName || p.name;
-         const roleChar = p.role ? p.role.charAt(0).toUpperCase() : 'U';
-         const projAcr = p.group ? getProjectAbbreviation(p.group) : 'N/A';
-         const words = p.name.split(' ');
-         let extraChar = '';
-         if (words.length > 1) {
-             const diffWord = words.find(w => w.toLowerCase() !== sName.toLowerCase());
-             if(diffWord) extraChar = diffWord.charAt(0).toUpperCase() + '.';
-             else extraChar = words[1].charAt(0).toUpperCase() + '.';
-         } else {
-             extraChar = p.name.charAt(0).toUpperCase() + '.';
-         }
-         p.displayName = `${sName} ${extraChar} (${roleChar}) (${projAcr})`;
-     }
- });
- const finalCounts = {};
- participants.forEach(p => { finalCounts[p.displayName] = (finalCounts[p.displayName] || 0) + 1; });
- participants.forEach(p => {
-     if (finalCounts[p.displayName] > 1 && p.nric) {
-         p.displayName = `${p.displayName} [${p.nric.slice(-4)}]`;
-     }
- });
-}
+ // Restore admin login session and theme
+ if (adminKey) localStorage.setItem('adminKey', adminKey);
+ if (theme) localStorage.setItem('theme', theme);
 
-async function updateApp(btn) {
- setBtnLoading(btn, true);
- showToast("Clearing global database cache & updating app...");
+ // 3. Determine if a specific sheet is open so we can bust its specific cache too
+ let targetSheetUrl = null;
+ if (typeof currentCommAttSheetUrl !== 'undefined' && currentCommAttSheetUrl) targetSheetUrl = currentCommAttSheetUrl;
+ else if (typeof currentManualPairingSheetUrl !== 'undefined' && currentManualPairingSheetUrl) targetSheetUrl = currentManualPairingSheetUrl;
+ else if (typeof currentGroupingSheetUrl !== 'undefined' && currentGroupingSheetUrl) targetSheetUrl = currentGroupingSheetUrl;
+ else if (document.getElementById('volSheetSelector') && document.getElementById('volSheetSelector').value && document.getElementById('volSheetSelector').value.startsWith('http')) {
+     targetSheetUrl = document.getElementById('volSheetSelector').value;
+ } else if (document.getElementById('actualSheetSelector') && document.getElementById('actualSheetSelector').value && document.getElementById('actualSheetSelector').value.startsWith('http')) {
+     targetSheetUrl = document.getElementById('actualSheetSelector').value;
+ } else if (document.getElementById('commSheetSelector') && document.getElementById('commSheetSelector').value && document.getElementById('commSheetSelector').value.startsWith('http')) {
+     targetSheetUrl = document.getElementById('commSheetSelector').value;
+ }
+
+ // 4. Command backend to bust and rebuild Google Drive caches
  try {
-   await apiCall('clearCache');
-   if ('caches' in window) {
-     const cacheNames = await caches.keys();
-     await Promise.all(cacheNames.map(name => caches.delete(name)));
-   }
-   if ('serviceWorker' in navigator) {
-     const regs = await navigator.serviceWorker.getRegistrations();
-     for (let r of regs) await r.unregister();
-   }
- } catch(e) { console.error(e); }
- setTimeout(() => {
-   const url = new URL(window.location.href);
-   url.searchParams.set('v', new Date().getTime());
-   window.location.replace(url.toString());
- }, 500);
+     await apiCall('forceBackendRefresh', { sheetUrl: targetSheetUrl });
+ } catch(e) {
+     console.warn("Backend refresh failed, proceeding with client purge.");
+ }
+
+ // 5. Unregister Service Workers & clear Cache Storage to load latest code version
+ if ('serviceWorker' in navigator) {
+     try {
+         const registrations = await navigator.serviceWorker.getRegistrations();
+         for (let reg of registrations) {
+             await reg.unregister();
+         }
+     } catch(e) {}
+ }
+
+ if ('caches' in window) {
+     try {
+         const names = await caches.keys();
+         await Promise.all(names.map(name => caches.delete(name)));
+     } catch(e) {}
+ }
+
+ // 6. Hard reload with cache-busting timestamp to load latest app version
+ const cleanUrl = new URL(window.location.href);
+ cleanUrl.searchParams.set('_v', Date.now());
+ window.location.href = cleanUrl.toString();
 }
 
-function handleEnter(e, func) { if(e.key === 'Enter') func(); }
+function toggleTheme() { 
+ document.documentElement.classList.toggle('dark'); 
+ localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); 
+}
 
-function clearSearch(inputId, callbackName) {
+function togglePasswordVisibility(inputId) {
  const input = document.getElementById(inputId);
+ const icon = document.getElementById(inputId + 'Icon');
+ if(input.type === 'password') {
+     input.type = 'text';
+     icon.classList.remove('fa-eye');
+     icon.classList.add('fa-eye-slash');
+ } else {
+     input.type = 'password';
+     icon.classList.remove('fa-eye-slash');
+     icon.classList.add('fa-eye');
+ }
+}
+
+// --- OVERLAY LOGIC ---
+function showOverlay(type, msg) {
+ const overlay = document.getElementById('fullPageOverlay');
+ if(!overlay) return;
+ overlay.classList.remove('hidden');
+
+ ['overlayLoading', 'overlaySuccess', 'overlayError'].forEach(id => {
+     const el = document.getElementById(id);
+     if(el) el.classList.add('hidden');
+ });
+
+ if (type === 'loading') {
+     const el = document.getElementById('overlayLoading');
+     if(el) el.classList.remove('hidden');
+     const txt = document.getElementById('overlayLoadingText');
+     if(txt) txt.innerText = msg || "Processing...";
+ } else if (type === 'success') {
+     const el = document.getElementById('overlaySuccess');
+     if(el) el.classList.remove('hidden');
+     const txt = document.getElementById('overlaySuccessText');
+     if(txt) txt.innerText = msg;
+ } else {
+     const el = document.getElementById('overlayError');
+     if(el) el.classList.remove('hidden');
+     const txt = document.getElementById('overlayErrorText');
+     if(txt) txt.innerText = msg;
+ }
+}
+
+function closeOverlay() {
+ const el = document.getElementById('fullPageOverlay');
+ if(el) el.classList.add('hidden');
+}
+
+function showFlashMessage(elementId, message, type) { 
+ const el = document.getElementById(elementId); 
+ if(!el) return;
+ el.innerText = message; 
+ el.classList.remove('hidden', 'bg-green-100', 'dark:bg-green-900/30', 'text-green-600', 'dark:text-green-400', 'border-green-200', 'dark:border-green-800', 'bg-red-100', 'dark:bg-red-900/30', 'text-red-600', 'dark:text-red-400', 'border-red-200', 'dark:border-red-800'); 
+ if (type === 'success') { 
+     el.classList.add('bg-green-100', 'dark:bg-green-900/30', 'text-green-600', 'dark:text-green-400', 'border', 'border-green-200', 'dark:border-green-800'); 
+ } else { 
+     el.classList.add('bg-red-100', 'dark:bg-red-900/30', 'text-red-600', 'dark:text-red-400', 'border', 'border-red-200', 'dark:border-red-800'); 
+ } 
+ el.classList.remove('hidden'); 
+ setTimeout(() => { el.classList.add('hidden'); }, 5000); 
+}
+
+function formatDateDisplay(input) { 
+ const val = input.value; 
+ if(!val) { input.type='text'; return; } 
+ const date = new Date(val); 
+ if(isNaN(date.getTime())) { input.type='text'; return; } 
+ const day = date.getDate().toString().padStart(2, '0'); 
+ const month = date.toLocaleString('default', { month: 'short' }); 
+ const year = date.getFullYear(); 
+ input.type = 'text'; 
+ input.value = `${day} ${month} ${year}`; 
+}
+
+// --- HELPER LOGIC FOR SEARCH CLEAR BUTTONS ---
+window.toggleClearBtn = function(inputId) {
+ const input = document.getElementById(inputId);
+ const btn = document.getElementById('clearBtn-' + inputId);
+ if (input && btn) {
+     if (input.value.length > 0) {
+         btn.classList.remove('hidden');
+     } else {
+         btn.classList.add('hidden');
+     }
+ }
+}
+
+window.clearSearchInput = function(inputId, filterCallbackName) {
+ const input = document.getElementById(inputId);
+ const btn = document.getElementById('clearBtn-' + inputId);
  if (input) {
      input.value = '';
-     if (typeof window[callbackName] === 'function') window[callbackName]();
+     if (btn) btn.classList.add('hidden');
+     input.focus();
+
+     if (filterCallbackName && typeof window[filterCallbackName] === 'function') {
+         window[filterCallbackName]();
+     }
  }
 }
 
-window.formatMoneyInput = function(input, isBlur) {
- let cursorStart = input.selectionStart;
- let oldLen = input.value.length;
- 
-  let val = input.value.replace(/[^0-9.-]/g, '');
- if(val !== '') {
-     let isNegative = val[0] === '-';
-     val = val.replace(/-/g, '');
-     if(isNegative) val = '-' + val;
+function updateUnpairedNotification(count) {
+ // Update Comm Dashboard List
+ if(currentSheetList) {
+     currentSheetList.forEach((item, index) => {
+         if (
+             (typeof currentCommAttSheetUrl !== 'undefined' && item.sheetUrl === currentCommAttSheetUrl) || 
+             (typeof currentManualPairingSheetUrl !== 'undefined' && item.sheetUrl === currentManualPairingSheetUrl) || 
+             (typeof currentGroupingSheetUrl !== 'undefined' && item.sheetUrl === currentGroupingSheetUrl)
+         ) {
+             const pendingDiv = document.getElementById(`pending-badge-${index}`);
+             if (pendingDiv) {
+                 if (count > 0) {
+                     pendingDiv.innerHTML = `<button onclick="navigateTo('pairing.html', { url: '${item.sheetUrl}', filtered: 'true' })" class="bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400 text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800 animate-pulse shadow-sm flex items-center justify-center w-fit pointer-events-auto cursor-pointer">${count} Unpaired</button>`;
+                     pendingDiv.classList.remove('hidden');
+                     pendingDiv.classList.add('flex');
+                 } else {
+                     pendingDiv.classList.add('hidden');
+                     pendingDiv.classList.remove('flex');
+                 }
+             }
+         }
+     });
  }
- if(val === '') {
-     input.value = '';
+
+ // Update Live Tracker
+ const liveBadgeBtn = document.getElementById('liveUnpairedBtn');
+ const liveBadgeCount = document.getElementById('liveUnpairedCount');
+ if (liveBadgeBtn && liveBadgeCount) {
+     if (count > 0) {
+         liveBadgeCount.innerText = `${count} Unpaired`;
+         liveBadgeBtn.classList.remove('hidden');
+         liveBadgeBtn.classList.add('flex');
+     } else {
+         liveBadgeBtn.classList.add('hidden');
+         liveBadgeBtn.classList.remove('flex');
+     }
+ }
+
+ // Update Manual Pairing View
+ const manualBadge = document.getElementById('manualPairingUnpairedCount');
+ if (manualBadge) {
+     if (count > 0) {
+         manualBadge.innerText = `${count} Unpaired`;
+         manualBadge.classList.remove('hidden');
+         manualBadge.classList.add('flex');
+     } else {
+         manualBadge.classList.add('hidden');
+         manualBadge.classList.remove('flex');
+     }
+ }
+}
+
+// --- UNIVERSAL LONG PRESS LOGIC ---
+
+function uiBindLongPress(element, callback) {
+ let pressTimer = null;
+ let startX = 0, startY = 0;
+ let hasFired = false;
+
+ const clearTimer = () => {
+     if (pressTimer !== null) {
+         clearTimeout(pressTimer);
+         pressTimer = null;
+     }
+ };
+
+ const handleStart = (e) => {
+     if (e.button !== undefined && e.button !== 0) return; // Ignore right-click/middle-click
+
+     hasFired = false;
+     if (e.touches && e.touches.length > 0) {
+         startX = e.touches[0].clientX;
+         startY = e.touches[0].clientY;
+     } else {
+         startX = e.clientX;
+         startY = e.clientY;
+     }
+
+     pressTimer = setTimeout(() => {
+         hasFired = true;
+         callback();
+         element.classList.remove('active:scale-95');
+         setTimeout(() => element.classList.add('active:scale-95'), 100);
+     }, 500); 
+ };
+
+ const handleMove = (e) => {
+     if (!pressTimer) return;
+     let currentX, currentY;
+
+     if (e.touches && e.touches.length > 0) {
+         currentX = e.touches[0].clientX;
+         currentY = e.touches[0].clientY;
+     } else {
+         currentX = e.clientX;
+         currentY = e.clientY;
+     }
+
+     if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
+         clearTimer();
+     }
+ };
+
+ const handleEnd = (e) => {
+     clearTimer();
+     if (hasFired) {
+         if (e.cancelable) e.preventDefault();
+         e.stopPropagation();
+
+         const preventClick = (clickEvent) => {
+             clickEvent.preventDefault();
+             clickEvent.stopPropagation();
+             element.removeEventListener('click', preventClick, true);
+         };
+         element.addEventListener('click', preventClick, true);
+         setTimeout(() => element.removeEventListener('click', preventClick, true), 300);
+     }
+ };
+
+ element.addEventListener('touchstart', handleStart, {passive: true});
+ element.addEventListener('touchmove', handleMove, {passive: true});
+ element.addEventListener('touchend', handleEnd);
+ element.addEventListener('touchcancel', handleEnd);
+
+ element.addEventListener('contextmenu', (e) => {
+     e.preventDefault();
+     e.stopPropagation();
+     callback();
+ });
+}
+
+// --- GLOBAL GROUP SELECTOR MODAL ---
+window.renderGlobalGroupGrid = function() {
+ const grid = document.getElementById('globalGroupGrid');
+ if (!grid) return;
+ grid.innerHTML = '';
+ if (window.extractedActiveGroups) {
+     window.extractedActiveGroups.forEach(g => {
+         grid.innerHTML += `
+         <div class="relative group/btn">
+             <button onclick="selectGlobalGroup('${g}')" class="w-full bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-zinc-700 py-2 md:py-3 rounded-lg text-sm font-bold hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors shadow-sm focus:outline-none">Grp ${g}</button>
+             <button onclick="removeGlobalGroupOption('${g}', event)" class="absolute -top-1.5 -right-1.5 bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm border border-gray-300 dark:border-zinc-600 transition-colors z-10"><i class="fa-solid fa-xmark"></i></button>
+         </div>`;
+     });
+ }
+};
+
+window.openGlobalGroupSelect = function(inputId) {
+ if (!isAdminAuthenticated) return requestAccess(null, () => window.openGlobalGroupSelect(inputId));
+ 
+ let modal = document.getElementById('globalGroupSelectModal');
+ if (!modal) {
+     modal = document.createElement('div');
+     modal.id = 'globalGroupSelectModal';
+     modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm hidden z-[120] flex items-center justify-center p-4 transition-opacity duration-300 opacity-0';
+     modal.innerHTML = `
+         <div class="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-2xl border border-gray-200 dark:border-zinc-800 flex flex-col max-h-[90vh] shadow-2xl scale-95 transition-transform duration-300" id="globalGroupSelectPanel">
+             <div class="p-4 border-b border-gray-200 dark:border-zinc-800 flex justify-between items-center shrink-0">
+                 <h3 class="text-gray-900 dark:text-white font-bold text-sm md:text-base">Assign Group</h3>
+                 <button onclick="closeGlobalGroupSelect()" class="text-gray-400 dark:text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+             </div>
+             <div class="p-4 flex-grow overflow-y-auto custom-scrollbar max-h-[60vh] pb-12">
+                 <div id="globalGroupGrid" class="grid grid-cols-3 gap-2"></div>
+                 <div class="mt-4 border-t border-gray-200 dark:border-zinc-800 pt-4 flex gap-2">
+                     <button onclick="selectGlobalGroup('')" class="flex-1 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 py-2 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition">Unassign</button>
+                     <button onclick="selectGlobalNewGroup()" class="flex-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">+ New Group</button>
+                 </div>
+             </div>
+         </div>
+     `;
+     document.body.appendChild(modal);
+ }
+
+ window.globalGroupTargetInput = inputId;
+ window.renderGlobalGroupGrid();
+
+ modal.classList.remove('hidden');
+ setTimeout(() => {
+     modal.classList.remove('opacity-0');
+     document.getElementById('globalGroupSelectPanel').classList.replace('scale-95', 'scale-100');
+ }, 10);
+};
+
+window.closeGlobalGroupSelect = function() {
+ const modal = document.getElementById('globalGroupSelectModal');
+ if (modal) {
+     modal.classList.add('opacity-0');
+     document.getElementById('globalGroupSelectPanel').classList.replace('scale-100', 'scale-95');
+     setTimeout(() => modal.classList.add('hidden'), 300);
+ }
+};
+
+window.selectGlobalGroup = function(g) {
+ const input = document.getElementById(window.globalGroupTargetInput);
+ if (input) {
+     input.value = g;
+ }
+ window.closeGlobalGroupSelect();
+};
+
+window.selectGlobalNewGroup = function() {
+ const g = prompt("Enter new Group Name or Number:");
+ if (g && g.trim()) {
+     const clean = g.trim();
+     if (!window.extractedActiveGroups.includes(clean)) {
+         window.extractedActiveGroups.push(clean);
+     }
+     selectGlobalGroup(clean);
+ }
+};
+
+window.removeGlobalGroupOption = function(g, event) {
+ if (event) event.stopPropagation();
+ window.extractedActiveGroups = window.extractedActiveGroups.filter(x => String(x) !== String(g));
+ if (typeof activeGroups !== 'undefined') {
+     activeGroups = activeGroups.filter(x => String(x) !== String(g));
+ }
+ window.renderGlobalGroupGrid();
+};
+
+
+// --- PERSON INFO & INTEGRATED QUICK EDIT ---
+
+window.lastPersonObj = null;
+window.infoPairingVols = [];
+window.infoAllAvailableVols = [];
+
+function showPersonInfo(personObj) {
+ if (window.navigator && window.navigator.vibrate) {
+     try { window.navigator.vibrate(50); } catch(e){}
+ }
+
+ if (!personObj) return;
+ window.lastPersonObj = personObj;
+
+ const ex = personObj.extra || {};
+ const role = personObj.role || ex.role || 'TRAINEE';
+ let htmlContent = "";
+
+ const nameStr = personObj.name || '-';
+ const htmlSafeNameStr = nameStr.replace(/"/g, '&quot;');
+ const roleBadge = role === 'TRAINEE' 
+ ? `<span class="bg-blue-50 text-blue-600 border border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 px-1.5 py-0.5 rounded text-[10px] uppercase font-black tracking-wider shadow-sm">Trainee</span>`
+ : `<span class="bg-teal-50 text-teal-600 border border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800 px-1.5 py-0.5 rounded text-[10px] uppercase font-black tracking-wider shadow-sm">Volunteer</span>`;
+
+ const infoTitle = document.getElementById('personInfoModalTitle');
+ if (infoTitle) {
+     infoTitle.innerHTML = `<i class="fa-solid fa-circle-info mr-2 text-blue-500 dark:text-blue-400 shrink-0"></i> <span class="truncate flex-1">${htmlSafeNameStr}</span> <div class="shrink-0 ml-2">${roleBadge}</div>`;
+ }
+
+ // Resilient context extraction bypassing URL constraints
+ let sheetUrl = "";
+ let meetingOpts = [];
+ let dismissalOpts = [];
+ let allGroups = new Set(["1", "2", "3", "4", "5"]);
+
+ const extractData = (dataObj) => {
+     if (dataObj?.meetingLocs) meetingOpts = dataObj.meetingLocs;
+     if (dataObj?.dismissalLocs) dismissalOpts = dataObj.dismissalLocs;
+     if (dataObj?.participants || dataObj?.trainees) {
+         const arr = dataObj.participants || dataObj.trainees;
+         arr.forEach(p => { if (p.group) allGroups.add(String(p.group).trim()); });
+     }
+ };
+
+ if (typeof commAttData !== 'undefined' && commAttData) extractData(commAttData);
+ if (typeof manualPairingData !== 'undefined' && manualPairingData) extractData(manualPairingData);
+ if (typeof groupingData !== 'undefined' && groupingData) extractData(groupingData);
+
+ if (typeof currentCommAttSheetUrl !== 'undefined' && currentCommAttSheetUrl) sheetUrl = currentCommAttSheetUrl;
+ if (typeof currentManualPairingSheetUrl !== 'undefined' && currentManualPairingSheetUrl) sheetUrl = currentManualPairingSheetUrl;
+ if (typeof currentGroupingSheetUrl !== 'undefined' && currentGroupingSheetUrl) sheetUrl = currentGroupingSheetUrl;
+
+ window.extractedActiveGroups = Array.from(allGroups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+
+ let attVal = (personObj.attending || '').toLowerCase();
+ if (!attVal) attVal = 'y';
+
+ let meetVal = (personObj.meetingLoc || (role === 'TRAINEE' ? ex.t_meet : ex.v_meet) || '').trim();
+ let disVal = (personObj.dismissalLoc || (role === 'TRAINEE' ? ex.t_dismiss : ex.v_dismiss) || '').trim();
+
+ let groupVal = personObj.group || ex.v_group || '';
+ let pairedVal = personObj.volPaired || ex.t_paired_vol || ex.v_paired_trainee || '';
+
+ const generateOpts = (optsArr, currentVal, placeholder) => {
+     let html = `<option value="">-- ${placeholder} --</option>`;
+     let found = false;
+     optsArr.forEach(opt => {
+         const isSelected = currentVal.toLowerCase() === opt.toLowerCase();
+         if (isSelected) found = true;
+         html += `<option value="${opt.replace(/"/g, '&quot;')}" ${isSelected ? 'selected' : ''}>${opt.replace(/"/g, '&quot;')}</option>`;
+     });
+     if (currentVal && !found) {
+         html += `<option value="${currentVal.replace(/"/g, '&quot;')}" selected>${currentVal.replace(/"/g, '&quot;')} (Current)</option>`;
+     }
+     return html;
+ };
+
+ const meetOptionsHtml = generateOpts(meetingOpts, meetVal, "None");
+ const disOptionsHtml = generateOpts(dismissalOpts, disVal, "None");
+
+ const adminLockHtml = isAdminAuthenticated ? '' : `
+ <div class="absolute inset-0 bg-white/60 dark:bg-black/60 z-20 flex items-center justify-center cursor-pointer rounded-lg backdrop-blur-[1px] transition-all hover:bg-white/40 dark:hover:bg-black/40" onclick="requestAccess(null, () => showPersonInfo(window.lastPersonObj))">
+ <span class="bg-gray-900 dark:bg-gray-100 text-white dark:text-black text-[10px] px-2 py-1 rounded font-bold shadow-md"><i class="fa-solid fa-lock mr-1"></i>Admin Edit</span>
+ </div>`;
+
+ let detailsHtml = `<div class="space-y-3 mt-1 text-sm text-gray-700 dark:text-gray-300">`;
+
+ detailsHtml += `
+ <div class="bg-gray-50/50 dark:bg-zinc-800/30 p-3 rounded-xl border border-gray-200 dark:border-zinc-700/60 space-y-3 shadow-inner">
+ <div class="flex items-center gap-2 mb-1 border-b border-gray-200 dark:border-zinc-700/60 pb-2">
+     <i class="fa-solid fa-pen-to-square text-gray-500"></i>
+     <h4 class="font-bold text-gray-700 dark:text-gray-300 text-xs uppercase tracking-wider">Quick Edit</h4>
+ </div>
+
+ <input type="hidden" id="infoEditSheetUrl" value="${sheetUrl || ''}">
+ <input type="hidden" id="infoEditRole" value="${role}">
+ <input type="hidden" id="infoEditName" value="${htmlSafeNameStr}">
+
+ <div class="grid grid-cols-1 gap-3">
+     <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0"><i class="fa-solid fa-clipboard-user"></i></div>
+          <div class="flex-1">
+              <label class="block text-[10px] font-bold text-blue-700 dark:text-blue-400 mb-0.5 uppercase tracking-wider">Attending</label>
+              <select id="infoEditAttending" class="w-full bg-white dark:bg-black border border-blue-200 dark:border-blue-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-blue-500 shadow-sm outline-none transition-colors">
+                  <option value="Y" ${attVal === 'y' ? "selected" : ""}>Yes (Y)</option>
+                  <option value="N" ${attVal === 'n' ? "selected" : ""}>No (N)</option>
+                  <option value="" ${attVal !== 'y' && attVal !== 'n' ? "selected" : ""}>Unknown</option>
+              </select>
+          </div>
+     </div>
+
+     <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500 shrink-0"><i class="fa-solid fa-location-dot"></i></div>
+          <div class="flex-1">
+              <label class="block text-[10px] font-bold text-green-700 dark:text-green-400 mb-0.5 uppercase tracking-wider">Meeting</label>
+              <select id="infoEditMeeting" class="w-full bg-white dark:bg-black border border-green-200 dark:border-green-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-green-500 shadow-sm outline-none transition-colors">
+                  ${meetOptionsHtml}
+              </select>
+          </div>
+     </div>
+
+     <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 shrink-0"><i class="fa-solid fa-flag-checkered"></i></div>
+          <div class="flex-1">
+              <label class="block text-[10px] font-bold text-purple-700 dark:text-purple-400 mb-0.5 uppercase tracking-wider">Dismissal</label>
+              <select id="infoEditDismissal" class="w-full bg-white dark:bg-black border border-purple-200 dark:border-purple-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-purple-500 shadow-sm outline-none transition-colors">
+                  ${disOptionsHtml}
+              </select>
+          </div>
+     </div>
+     
+     <div class="flex items-center gap-3 relative cursor-pointer group" onclick="openGlobalGroupSelect('infoEditGroup')">
+         ${adminLockHtml}
+         <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-500 shrink-0 group-hover:scale-110 transition-transform"><i class="fa-solid fa-users"></i></div>
+         <div class="flex-1 pointer-events-none">
+             <label class="block text-[10px] font-bold text-orange-700 dark:text-orange-400 mb-0.5 uppercase tracking-wider">Group</label>
+             <input type="text" id="infoEditGroup" value="${groupVal.replace(/"/g, '&quot;')}" class="w-full bg-gray-50 dark:bg-black border border-orange-200 dark:border-orange-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs shadow-sm outline-none transition-colors cursor-pointer" readonly placeholder="Unassigned">
+         </div>
+     </div>`;
+     
+ if (role === 'TRAINEE') {
+     detailsHtml += `
+     <div class="flex items-start gap-3 relative mt-1">
+         ${adminLockHtml}
+         <div class="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-500 shrink-0"><i class="fa-solid fa-handshake-angle"></i></div>
+         <div class="flex-1 relative">
+             <label class="block text-[10px] font-bold text-teal-700 dark:text-teal-400 mb-0.5 uppercase tracking-wider">Paired Vol(s)</label>
+             <input type="hidden" id="infoEditPairingHidden" value="${pairedVal.replace(/"/g, '&quot;')}">
+             <div id="infoEditPairingTags" class="flex flex-wrap gap-1 mb-1"></div>
+             <input type="text" id="infoEditPairingInput" class="w-full bg-white dark:bg-black border border-teal-200 dark:border-teal-800/50 text-gray-900 dark:text-white rounded-lg p-1.5 text-xs focus:border-teal-500 shadow-sm outline-none transition-colors" placeholder="Search active vol..." oninput="window.filterInfoPairing()" onfocus="window.filterInfoPairing()" autocomplete="off" ${isAdminAuthenticated ? '' : 'readonly'}>
+             <ul id="infoEditPairingList" class="absolute z-50 w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg mt-1 shadow-xl hidden max-h-40 overflow-y-auto pb-4 custom-scrollbar"></ul>
+         </div>
+     </div>`;
+ }
+
+ detailsHtml += `
+ </div>
+ </div>
+ `;
+
+ if (role === 'TRAINEE') {
+     const meetFetch = ex.t_meet_fetching || '-';
+     const disFetch = ex.t_dismiss_fetching || '-';
+     const dietary = ex.t_dietary || '-';
+     const cgContact = ex.m_cg_contact || '-';
+
+     if (meetFetch !== '-' && meetFetch !== '') {
+         detailsHtml += `
+         <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+             <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 shrink-0 mt-0.5"><i class="fa-solid fa-car-side"></i></div>
+             <div class="flex-1 min-w-0">
+                 <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Meeting Fetch</div>
+                 <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${meetFetch}</div>
+             </div>
+         </div>`;
+     }
+
+     if (disFetch !== '-' && disFetch !== '') {
+         detailsHtml += `
+         <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+             <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500 shrink-0 mt-0.5"><i class="fa-solid fa-car-side"></i></div>
+             <div class="flex-1 min-w-0">
+                 <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dismissal Fetch</div>
+                 <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${disFetch}</div>
+             </div>
+         </div>`;
+     }
+
+     detailsHtml += `
+     <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+         <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-500 shrink-0 mt-0.5"><i class="fa-solid fa-utensils"></i></div>
+         <div class="flex-1 min-w-0">
+             <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">Dietary Restrictions</div>
+             <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${dietary}</div>
+         </div>
+     </div>
+
+     <div class="flex items-start gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2.5 rounded-lg border border-gray-100 dark:border-zinc-800">
+         <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-500 shrink-0 mt-0.5"><i class="fa-solid fa-phone"></i></div>
+         <div class="flex-1 min-w-0">
+             <div class="text-[10px] uppercase tracking-wider font-bold text-gray-500 mb-0.5">CG Contact</div>
+             <div class="font-medium text-gray-900 dark:text-white break-words whitespace-pre-wrap">${cgContact}</div>
+         </div>
+     </div>
+     `;
+ } 
+
+ detailsHtml += `</div>`; 
+
+ let remarks = ex.remark || '-';
+ let remarksHtml = "";
+ if (remarks && remarks !== '-' && remarks.trim() !== '') {
+     remarksHtml = `
+     <div class="mt-2 mb-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 border-l-4 border-l-yellow-400 dark:border-l-yellow-500 p-3 rounded-r-lg shadow-sm">
+     <div class="flex items-center gap-2 mb-1">
+         <i class="fa-solid fa-triangle-exclamation text-yellow-600 dark:text-yellow-500 text-sm"></i>
+         <span class="font-black text-yellow-800 dark:text-yellow-400 text-[10px] uppercase tracking-wider">Remarks</span>
+     </div>
+     <p class="text-yellow-900 dark:text-yellow-100 text-sm whitespace-pre-wrap font-medium leading-relaxed">${remarks}</p>
+     </div>
+     `;
+ }
+
+ let pairingConsiderationsHtml = "";
+ if (role === 'TRAINEE' && ex.t_one_on_one) {
+     const oneOnOneRaw = String(ex.t_one_on_one).trim().toLowerCase();
+     if (oneOnOneRaw !== '' && !['no', 'n', 'false', '0'].includes(oneOnOneRaw)) {
+         pairingConsiderationsHtml = `
+         <div class="mt-2 mb-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 border-l-4 border-l-blue-400 dark:border-l-blue-500 p-3 rounded-r-lg shadow-sm">
+             <div class="flex items-center gap-2 mb-1">
+                 <i class="fa-solid fa-star text-blue-600 dark:text-blue-500 text-sm"></i>
+                 <span class="font-black text-blue-800 dark:text-blue-400 text-[10px] uppercase tracking-wider">Pairing Considerations</span>
+             </div>
+             <p class="text-blue-900 dark:text-blue-100 text-sm whitespace-pre-wrap font-medium leading-relaxed">${String(ex.t_one_on_one).trim()}</p>
+         </div>
+         `;
+     }
+ }
+
+ htmlContent = `
+ ${remarksHtml}
+ ${pairingConsiderationsHtml}
+ ${detailsHtml}
+ `;
+
+ const infoContent = document.getElementById('personInfoContent');
+ if(infoContent) {
+     infoContent.className = "w-full";
+     infoContent.innerHTML = htmlContent;
+ }
+
+ const footer = document.getElementById('personInfoFooter');
+ if(footer) {
+     footer.innerHTML = `
+     <button onclick="closePersonInfoModal()" class="flex-1 bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-900 dark:text-white font-bold py-3 rounded-xl border border-gray-300 dark:border-zinc-700 shadow-sm transition-colors text-base">Close</button>
+     <button onclick="submitIntegratedQuickEdit()" id="infoSaveBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl border border-blue-600 shadow-sm transition-colors text-base flex items-center justify-center gap-2">
+     <i class="fa-solid fa-save"></i> Save Changes
+     </button>
+     `;
+ }
+
+ if (role === 'TRAINEE') {
+     window.initInfoPairing(pairedVal, sheetUrl);
+ }
+
+ const infoModal = document.getElementById('personInfoModal');
+ if(infoModal) infoModal.classList.remove('hidden');
+}
+
+function closePersonInfoModal() {
+ const infoModal = document.getElementById('personInfoModal');
+ if(infoModal) infoModal.classList.add('hidden');
+ window.lastPersonObj = null;
+}
+
+function submitIntegratedQuickEdit() {
+ const btn = document.getElementById('infoSaveBtn');
+ const sheetUrl = document.getElementById('infoEditSheetUrl').value;
+ const role = document.getElementById('infoEditRole').value;
+ const name = document.getElementById('infoEditName').value;
+
+ const att = document.getElementById('infoEditAttending').value;
+ const meet = document.getElementById('infoEditMeeting').value;
+ const dis = document.getElementById('infoEditDismissal').value;
+
+ const groupEl = document.getElementById('infoEditGroup');
+ const group = groupEl ? groupEl.value.trim() : null;
+
+ const pairingEl = document.getElementById('infoEditPairingHidden');
+ const pairing = pairingEl ? pairingEl.value.trim() : null;
+
+ if (!sheetUrl) return alert("Error: Context URL lost.");
+
+ btn.disabled = true;
+ btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Saving...`;
+
+ const payloadData = {
+     "Name": name,
+     "Attending (Y/N)": att,
+     "Meeting Location": meet,
+     "Dismissal Location": dis
+ };
+
+ if (group !== null) {
+     if (role.toLowerCase() === 'trainee') payloadData["Outing Grouping"] = group;
+     else payloadData["Group"] = group; 
+ }
+
+ if (pairing !== null && role.toLowerCase() === 'trainee') {
+     payloadData["Vol Paired"] = pairing;
+ }
+
+ const payload = { sheetUrl: sheetUrl, type: role.toLowerCase(), data: payloadData, targetName: name };
+
+ apiCall('submitAttendanceData', payload).then(res => {
+     if(res.success) {
+         btn.innerHTML = `<i class="fa-solid fa-check"></i> Saved!`;
+         btn.classList.replace('bg-blue-600', 'bg-green-600');
+         btn.classList.replace('border-blue-600', 'border-green-600');
+         btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
+         
+         setTimeout(() => {
+             closePersonInfoModal();
+             btn.disabled = false;
+             btn.innerHTML = `<i class="fa-solid fa-save"></i> Save Changes`;
+             btn.classList.replace('bg-green-600', 'bg-blue-600');
+             btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
+             btn.classList.replace('border-green-600', 'border-blue-600');
+             
+             if (typeof manualSyncCommAttendance === 'function') {
+                 manualSyncCommAttendance();
+             } else if (typeof manualSyncManualPairing === 'function') {
+                 manualSyncManualPairing();
+             } else if (typeof manualSyncGrouping === 'function') {
+                 manualSyncGrouping();
+             }
+         }, 1500);
+     } else {
+         btn.disabled = false;
+         btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Save Failed`;
+         alert("Error: " + res.message);
+     }
+ });
+}
+
+window.initInfoPairing = function(initialStr, sheetUrl) {
+ window.infoPairingVols = initialStr ? initialStr.split(/[,|\n]+/).map(s=>s.trim()).filter(s=>s) : [];
+ window.updateInfoPairingUI();
+ 
+ // Pulls robust architectural data limiting options to active volunteers
+ apiCall('fetchManualPairingData', { sheetUrl: sheetUrl }).then(res => {
+     if(res.success && res.data && res.data.volunteers) {
+         window.infoAllAvailableVols = res.data.volunteers.map(v => v.name);
+     }
+ });
+};
+
+window.filterInfoPairing = function() {
+ const input = document.getElementById('infoEditPairingInput');
+ const list = document.getElementById('infoEditPairingList');
+ if(!input || !list) return;
+ const filter = input.value.toLowerCase().trim();
+ list.innerHTML = "";
+
+ if(filter.length === 0 && window.infoAllAvailableVols.length === 0) {
+     list.classList.add('hidden');
      return;
  }
- 
- let parts = val.split('.');
- if(parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
- 
- if (isBlur) {
-     let number = parseFloat(val);
-     if(!isNaN(number)) {
-         input.value = number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-     } else {
-         input.value = '0.00';
-     }
- } else {
-     parts = val.split('.');
-     let whole = parts[0] ? parseFloat(parts[0]).toLocaleString('en-US') : '0';
-     
-     if(parts.length > 1) {
-         input.value = whole + '.' + parts[1].substring(0, 2);
-     } else {
-         input.value = whole;
-     }
-     
-     let newLen = input.value.length;
-     let diff = newLen - oldLen;
-     let newCursor = cursorStart + diff;
-     try { input.setSelectionRange(newCursor, newCursor); } catch(e){}
+
+ list.classList.remove('hidden');
+ const matches = window.infoAllAvailableVols.filter(v => 
+     v.toLowerCase().includes(filter) && !window.infoPairingVols.includes(v)
+ );
+
+ matches.forEach(match => {
+     const li = document.createElement('li');
+     li.className = "px-3 py-2 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-zinc-700 hover:bg-teal-600 hover:text-white cursor-pointer text-xs transition-colors last:border-0";
+     li.innerText = match;
+     li.onmousedown = (e) => { e.preventDefault(); window.addInfoPairing(match); };
+     list.appendChild(li);
+ });
+
+ if (matches.length === 0 && filter.length > 0) {
+     const li = document.createElement('li');
+     li.className = "px-3 py-2 text-xs text-gray-500 dark:text-gray-400 italic bg-white dark:bg-zinc-800 cursor-pointer hover:bg-teal-50 dark:hover:bg-zinc-700";
+     li.innerText = `Press Enter or Click to add "${input.value.trim()}"`;
+     li.onmousedown = (e) => { e.preventDefault(); window.addInfoPairing(input.value.trim()); };
+     list.appendChild(li);
  }
 };
 
-window.applyCaregiverLabels = function(participants) {
-    if (!participants) return;
-    const traineeMap = {};
-    participants.forEach(p => {
-        if (p.role === 'TRAINEE') {
-            const nameToUse = p.shortName || p.fullName || p.name;
-            const searchKey = String(p.nric || '').toLowerCase();
-            const searchKey2 = String(p.fullName || p.name || '').toLowerCase();
-            const searchKey3 = String(p.shortName || '').toLowerCase();
-            traineeMap[searchKey] = nameToUse;
-            traineeMap[searchKey2] = nameToUse;
-            traineeMap[searchKey3] = nameToUse;
-        }
-    });
-
-    participants.forEach(p => {
-        if (p.role === 'CAREGIVER') {
-            if (p.relatedTrainee) {
-                let parts = String(p.relatedTrainee).split('|').filter(Boolean);
-                let mapped = parts.map(n => {
-                    let raw = n.trim();
-                    let k = raw.toLowerCase();
-                    let lookupName = raw.replace(/\s*\(.*?\)\s*/g, '').toLowerCase().trim();
-                    if (traineeMap[k]) return traineeMap[k];
-                    if (traineeMap[lookupName]) return traineeMap[lookupName];
-                    const match = raw.match(/\((.*?)\)/);
-                    if (match && match[1]) return match[1].trim();
-                    return raw.replace(/\s*\(.*?\)\s*/g, '').trim();
-                });
-                p.caregiverFor = mapped.join(', ');
-            }
-        }
-    });
+window.addInfoPairing = function(name) {
+ if(!name) return;
+ if(!window.infoPairingVols.includes(name)) {
+     window.infoPairingVols.push(name);
+     window.updateInfoPairingUI();
+ }
+ const input = document.getElementById('infoEditPairingInput');
+ input.value = "";
+ input.focus();
+ window.filterInfoPairing();
 };
 
-window.renderPhoneLink = function(phone, extraClasses = '') {
-    if (!phone || phone === '-' || String(phone).trim() === '' || String(phone).toLowerCase() === 'n/a') return '-';
-    let cleaned = String(phone).replace(/[^\d+]/g, '');
-    let dialNum = cleaned;
-    
-    if (cleaned.length === 8 && (cleaned.startsWith('8') || cleaned.startsWith('9') || cleaned.startsWith('3') || cleaned.startsWith('6'))) {
-        cleaned = '65' + cleaned;
-        dialNum = '+65' + dialNum; // Ensure proper dial format with country code for local numbers
-    } else if (cleaned.startsWith('+')) {
-        cleaned = cleaned.substring(1);
-        // dialNum retains the '+'
-    }
-    
-    return `<span class="inline-flex items-center gap-2 ${extraClasses}">
-        <span class="font-medium truncate">${phone}</span>
-        <span class="inline-flex items-center gap-1.5 shrink-0">
-            <a href="https://wa.me/${cleaned}" target="_blank" class="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors bg-green-50 dark:bg-green-900/30 p-1.5 rounded-md border border-green-200 dark:border-green-800/50 shadow-sm" title="Chat on WhatsApp" onclick="event.stopPropagation()">
-                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-            </a>
-            <a href="tel:${dialNum}" title="Call" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-md border border-blue-200 dark:border-blue-800/50 shadow-sm" onclick="event.stopPropagation()">
-                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-            </a>
-        </span>
-    </span>`;
+window.removeInfoPairing = function(name) {
+ window.infoPairingVols = window.infoPairingVols.filter(v => v !== name);
+ window.updateInfoPairingUI();
+ window.filterInfoPairing();
 };
 
-window.formatDDMmmYYYY = function(dateStr) {
-    if (dateStr instanceof Date) {
-        if (isNaN(dateStr.getTime())) return '-';
-        const day = String(dateStr.getDate()).padStart(2, '0');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return `${day} ${months[dateStr.getMonth()]} ${dateStr.getFullYear()}`;
-    }
-    if (typeof dateStr === 'number') dateStr = new Date(dateStr);
-    if (!dateStr || (typeof dateStr === 'string' && dateStr.trim() === '')) return '-';
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, '0');
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
+window.updateInfoPairingUI = function() {
+ const tags = document.getElementById('infoEditPairingTags');
+ const hidden = document.getElementById('infoEditPairingHidden');
+ if(!tags || !hidden) return;
+
+ tags.innerHTML = window.infoPairingVols.map(v => {
+     const jsSafeVol = v.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
+     return `<span class="bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="window.removeInfoPairing('${jsSafeVol}')"></i></span>`;
+ }).join('');
+
+ hidden.value = window.infoPairingVols.join(', ');
 };
 
-window.sortParticipantsSpecial = function(arr, allParticipants) {
-    if (!arr || !allParticipants) return;
-    const famMap = {};
-    allParticipants.forEach(x => {
-        const poc = x.pocNric;
-        if(!famMap[poc]) famMap[poc] = { count: 0, hasCaregiver: false };
-        famMap[poc].count++;
-            });
+document.addEventListener('keydown', function(e) {
+ if (e.target && e.target.id === 'infoEditPairingInput') {
+     if (e.key === 'Enter' || e.key === ',') {
+         e.preventDefault();
+         if (e.target.value.trim()) {
+             window.addInfoPairing(e.target.value.trim());
+         }
+     }
+ }
+});
 
-    const specialSortMap = new Map();
-    arr.forEach(p => {
-        const poc = p.pocNric;
-        const info = famMap[poc];
-        const isFamily = info ? (info.count > 1) : false;
-        let catScore = 4;
-        if (isFamily) catScore = 1;
-        else if (p.role === 'TRAINEE') catScore = 2;
-        else if (p.role === 'VOLUNTEER') catScore = 3;
-        let roleScore = p.role === 'TRAINEE' ? 1 : (p.role === 'CAREGIVER' ? 2 : 3);
-        specialSortMap.set(p.nric, {
-            group: (p.group || '').toLowerCase(),
-            catScore,
-            poc: poc.toLowerCase(),
-            roleScore,
-            name: (p.fullName || p.name || '').toLowerCase()
-        });
-    });
-
-    arr.sort((a, b) => {
-        let keyA = specialSortMap.get(a.nric);
-        let keyB = specialSortMap.get(b.nric);
-        if (!keyA || !keyB) return 0;
-
-        if (keyA.group < keyB.group) return -1;
-        if (keyA.group > keyB.group) return 1;
-        
-        if (keyA.catScore < keyB.catScore) return -1;
-        if (keyA.catScore > keyB.catScore) return 1;
-        
-        if (keyA.catScore === 1) {
-            if (keyA.poc < keyB.poc) return -1;
-            if (keyA.poc > keyB.poc) return 1;
-        }
-        
-        if (keyA.roleScore < keyB.roleScore) return -1;
-        if (keyA.roleScore > keyB.roleScore) return 1;
-        
-        if (keyA.name < keyB.name) return -1;
-        if (keyA.name > keyB.name) return 1;
-        return 0;
-    });
-};
-
-window.setupTokenInput = function(inputId, getSuggestionsCallback) {
-    const originalInput = document.getElementById(inputId);
-    if (!originalInput || originalInput.dataset.tokenized) return;
-    originalInput.dataset.tokenized = "true";
-
-    // Hide original input but keep its functionality
-    originalInput.style.display = 'none';
-
-    // Create wrapper
-    const wrapper = document.createElement('div');
-    wrapper.className = "flex flex-wrap items-center gap-1.5 w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 focus-within:ring-1 focus-within:ring-primary cursor-text min-h-[42px]";
-    
-    const chipContainer = document.createElement('div');
-    chipContainer.className = "flex flex-wrap gap-1.5 items-center";
-    
-    const inputField = document.createElement('input');
-    inputField.type = "text";
-    inputField.className = "flex-1 bg-transparent border-none focus:outline-none focus:ring-0 text-xs font-semibold text-gray-900 dark:text-white min-w-[60px] p-0";
-    inputField.placeholder = "Search trainee...";
-    
-    const dropdown = document.createElement('div');
-    dropdown.className = "absolute z-50 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl mt-1 hidden-force max-h-48 overflow-y-auto";
-    
-    // Wrapper must be relative for dropdown
-    const outerWrapper = document.createElement('div');
-    outerWrapper.className = "relative w-full";
-    
-    originalInput.parentNode.insertBefore(outerWrapper, originalInput);
-    outerWrapper.appendChild(originalInput);
-    outerWrapper.appendChild(wrapper);
-    outerWrapper.appendChild(dropdown);
-    
-    wrapper.appendChild(chipContainer);
-    wrapper.appendChild(inputField);
-
-    let tokens = (originalInput.value || '').split('|').map(s => s.trim()).filter(Boolean);
-    
-    function renderTokens() {
-        chipContainer.innerHTML = '';
-        const currentTokens = window._tokenInputs[inputId] ? window._tokenInputs[inputId].tokens : tokens;
-        currentTokens.forEach((t, i) => {
-            const chip = document.createElement('span');
-            chip.className = "inline-flex items-center px-2 py-1 rounded-md text-xs font-black bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 uppercase tracking-widest";
-            chip.innerHTML = `
-                ${t}
-                <button type="button" class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 focus:outline-none flex-shrink-0" onclick="event.stopPropagation(); window.removeTokenFromInput('${inputId}', ${i})">
-                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-                </button>
-            `;
-            chipContainer.appendChild(chip);
-        });
-        originalInput.value = currentTokens.join(' | ');
-        originalInput.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    
-    if (!window._tokenInputs) window._tokenInputs = {};
-    window._tokenInputs[inputId] = {
-        tokens,
-        render: renderTokens,
-        getInputField: () => inputField
-    };
-    
-    window.removeTokenFromInput = function(id, index) {
-        if(window._tokenInputs[id]) {
-            window._tokenInputs[id].tokens.splice(index, 1);
-            window._tokenInputs[id].render();
-        }
-    };
-
-    renderTokens();
-
-    wrapper.addEventListener('click', () => {
-        inputField.focus();
-    });
-
-    inputField.addEventListener('input', () => {
-        const query = inputField.value.trim().toLowerCase();
-        if (query) {
-             const suggestions = getSuggestionsCallback(query);
-             renderDropdown(suggestions);
-        } else {
-             dropdown.classList.add('hidden-force');
-        }
-    });
-
-    function renderDropdown(suggestions) {
-        if (!suggestions || suggestions.length === 0) {
-            dropdown.innerHTML = '<div class="p-2 text-xs text-gray-500 text-center italic pointer-events-none">No matches found</div>';
-        } else {
-            dropdown.innerHTML = '';
-            suggestions.forEach(s => {
-                const item = document.createElement('div');
-                item.className = "px-3 py-2 text-sm font-bold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 last:border-0";
-                item.textContent = s.label;
-                item.addEventListener('mousedown', (e) => {
-                    e.preventDefault(); // prevent blur
-                    const currentTokens = window._tokenInputs[inputId].tokens;
-                    if (!currentTokens.includes(s.value)) {
-                        currentTokens.push(s.value);
-                    }
-                    inputField.value = '';
-                    dropdown.classList.add('hidden-force');
-                    renderTokens();
-                });
-                dropdown.appendChild(item);
-            });
-        }
-        dropdown.classList.remove('hidden-force');
-    }
-
-    inputField.addEventListener('focus', () => {
-         const suggestions = getSuggestionsCallback(inputField.value.trim().toLowerCase());
-         renderDropdown(suggestions);
-    });
-
-    inputField.addEventListener('blur', () => {
-        setTimeout(() => dropdown.classList.add('hidden-force'), 150);
-    });
-};
-
-
-window.isValidNRIC = function(str) {
-    if (!str || str.length !== 9) return false;
-    str = str.toUpperCase();
-    const prefix = str.charAt(0);
-    const digits = str.substring(1, 8);
-    const suffix = str.charAt(8);
-
-    if (!['S', 'T', 'F', 'G', 'M'].includes(prefix)) return false;
-    if (!/^\d{7}$/.test(digits)) return false;
-
-    const weights = [2, 7, 6, 5, 4, 3, 2];
-    let sum = 0;
-    for (let i = 0; i < 7; i++) {
-        sum += parseInt(digits.charAt(i), 10) * weights[i];
-    }
-
-    if (prefix === 'T' || prefix === 'G') sum += 4;
-    if (prefix === 'M') sum += 3;
-
-    const remainder = sum % 11;
-
-    const st = ['J', 'Z', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
-    const fgm = ['X', 'W', 'U', 'T', 'R', 'Q', 'P', 'N', 'M', 'L', 'K'];
-
-    let expectedSuffix = '';
-    if (prefix === 'S' || prefix === 'T') expectedSuffix = st[remainder];
-    else if (prefix === 'F' || prefix === 'G' || prefix === 'M') expectedSuffix = fgm[remainder];
-
-    return suffix === expectedSuffix;
-};
-
-const TOP_NATIONALITIES = ["Singaporean", "Malaysian", "Indonesian", "Filipino", "Burmese", "Indian"];
-const ALL_NATIONALITIES = [
-  "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan", "Antiguans", "Argentinean", "Armenian", "Australian", "Austrian", "Azerbaijani",
-  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Barbudans", "Batswana", "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burmese", "Burundian",
-  "Cambodian", "Cameroonian", "Canadian", "Cape Verdean", "Central African", "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese", "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
-  "Danish", "Djibouti", "Dominican", "Dutch",
-  "East Timorese", "Ecuadorean", "Egyptian", "Emirian", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian",
-  "Fijian", "Filipino", "Finnish", "French",
-  "Gabonese", "Gambian", "Georgian", "German", "Ghanaian", "Greek", "Grenadian", "Guatemalan", "Guinea-Bissauan", "Guinean", "Guyanese",
-  "Haitian", "Herzegovinian", "Honduran", "Hungarian",
-  "I-Kiribati", "Icelander", "Indian", "Indonesian", "Iranian", "Iraqi", "Irish", "Israeli", "Italian", "Ivorian",
-  "Jamaican", "Japanese", "Jordanian",
-  "Kazakhstani", "Kenyan", "Kittian and Nevisian", "Kuwaiti", "Kyrgyz",
-  "Laotian", "Latvian", "Lebanese", "Liberian", "Libyan", "Liechtensteiner", "Lithuanian", "Luxembourger",
-  "Macedonian", "Malagasy", "Malawian", "Malaysian", "Maldivan", "Malian", "Maltese", "Marshallese", "Mauritanian", "Mauritian", "Mexican", "Micronesian", "Moldovan", "Monacan", "Mongolian", "Moroccan", "Mosotho", "Motswana", "Mozambican",
-  "Namibian", "Nauruan", "Nepalese", "New Zealander", "Nicaraguan", "Nigerian", "Nigerien", "North Korean", "Northern Irish", "Norwegian",
-  "Omani",
-  "Pakistani", "Palauan", "Palestinian", "Panamanian", "Papua New Guinean", "Paraguayan", "Peruvian", "Polish", "Portuguese",
-  "Qatari",
-  "Romanian", "Russian", "Rwandan",
-  "Saint Lucian", "Salvadoran", "Samoan", "San Marinese", "Sao Tomean", "Saudi", "Scottish", "Senegalese", "Serbian", "Seychellois", "Sierra Leonean", "Singaporean", "Slovakian", "Slovenian", "Solomon Islander", "Somali", "South African", "South Korean", "Spanish", "Sri Lankan", "Sudanese", "Surinamer", "Swazi", "Swedish", "Swiss", "Syrian",
-  "Taiwanese", "Tajik", "Tanzanian", "Thai", "Togolese", "Tongan", "Trinidadian or Tobagonian", "Tunisian", "Turkish", "Tuvaluan",
-  "Ugandan", "Ukrainian", "Uruguayan", "Uzbekistani",
-  "Venezuelan", "Vietnamese",
-  "Welsh",
-  "Yemenite",
-  "Zambian", "Zimbabwean"
-];
-const OTHER_NATIONALITIES = ALL_NATIONALITIES.filter(n => !TOP_NATIONALITIES.includes(n)).sort((a, b) => a.localeCompare(b));
-window.NATIONALITIES_LIST = [...TOP_NATIONALITIES, ...OTHER_NATIONALITIES];
-
-window.setupNationalityDropdown = function(inputId) {
-    const input = document.getElementById(inputId);
-    if (!input || input.dataset.natInit) return;
-    input.dataset.natInit = "true";
-
-    // Hide original input
-    input.classList.add('hidden-force');
-    
-    // Create UI container
-    const wrapper = document.createElement('div');
-    wrapper.className = 'relative w-full';
-    input.parentNode.insertBefore(wrapper, input);
-    wrapper.appendChild(input);
-
-    const displayBtn = document.createElement('button');
-    displayBtn.type = 'button';
-    displayBtn.className = 'w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary flex justify-between items-center text-left min-h-[42px]';
-    
-    const displaySpan = document.createElement('span');
-    displaySpan.className = 'truncate text-sm ' + (input.value ? 'font-semibold' : 'text-gray-400');
-    displaySpan.textContent = input.value || 'Select Nationality';
-    
-    const chevron = document.createElement('div');
-    chevron.innerHTML = '<svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
-    
-    displayBtn.appendChild(displaySpan);
-    displayBtn.appendChild(chevron);
-    wrapper.appendChild(displayBtn);
-
-    const dropdown = document.createElement('div');
-    dropdown.className = 'absolute z-[100] w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl hidden-force flex flex-col max-h-64 overflow-hidden';
-    
-    const searchHeader = document.createElement('div');
-    searchHeader.className = 'p-2 border-b border-gray-100 dark:border-gray-700 flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50';
-    
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.placeholder = 'Search...';
-    searchInput.className = 'flex-1 p-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary';
-    
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.title = "Clear Field";
-    clearBtn.className = 'p-1.5 text-gray-400 hover:text-red-500 transition focus:outline-none';
-    clearBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
-    
-    searchHeader.appendChild(searchInput);
-    searchHeader.appendChild(clearBtn);
-    dropdown.appendChild(searchHeader);
-
-    const listCont = document.createElement('div');
-    listCont.className = 'overflow-y-auto custom-scrollbar flex-1';
-    dropdown.appendChild(listCont);
-    wrapper.appendChild(dropdown);
-
-    const renderList = (query) => {
-        const q = (query || '').toLowerCase();
-        let html = '';
-        const filtered = window.NATIONALITIES_LIST.filter(n => n.toLowerCase().includes(q));
-        
-        if (filtered.length === 0) {
-            html = '<div class="p-3 text-xs text-center text-gray-500">No results found</div>';
-        } else {
-            html = filtered.map(n => {
-                const isTop = TOP_NATIONALITIES.includes(n);
-                const styling = isTop ? 'font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/30' : 'font-medium text-gray-700 dark:text-gray-300';
-                return `<div class="p-2.5 border-b border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${styling} nat-opt" data-val="${n}">${n}</div>`;
-            }).join('');
-        }
-        listCont.innerHTML = html;
-        
-        Array.from(listCont.getElementsByClassName('nat-opt')).forEach(opt => {
-            opt.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const val = opt.dataset.val;
-                input.value = val;
-                input.dispatchEvent(new Event('input', {bubbles:true}));
-                input.dispatchEvent(new Event('change', {bubbles:true}));
-                displaySpan.textContent = val;
-                displaySpan.className = 'truncate text-sm font-semibold';
-                dropdown.classList.add('hidden-force');
-            });
-        });
-    };
-
-    displayBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isHidden = dropdown.classList.contains('hidden-force');
-        document.querySelectorAll('.nat-dropdown-open').forEach(d => {
-            if(d !== dropdown) d.classList.add('hidden-force');
-        });
-        if (isHidden) {
-            dropdown.classList.remove('hidden-force');
-            dropdown.classList.add('nat-dropdown-open');
-            searchInput.value = '';
-            renderList('');
-            setTimeout(() => searchInput.focus(), 50);
-        } else {
-            dropdown.classList.add('hidden-force');
-            dropdown.classList.remove('nat-dropdown-open');
-        }
-    });
-
-    searchInput.addEventListener('input', (e) => {
-        renderList(e.target.value);
-    });
-
-    clearBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        input.value = '';
-        input.dispatchEvent(new Event('input', {bubbles:true}));
-        input.dispatchEvent(new Event('change', {bubbles:true}));
-        displaySpan.textContent = 'Select Nationality';
-        displaySpan.className = 'truncate text-sm text-gray-400';
-        dropdown.classList.add('hidden-force');
-        dropdown.classList.remove('nat-dropdown-open');
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!wrapper.contains(e.target)) {
-            dropdown.classList.add('hidden-force');
-            dropdown.classList.remove('nat-dropdown-open');
-        }
-    });
-};
-
-
-
-function initDatePicker() {
-    if (!document.getElementById('datePickerSheet')) {
-        const div = document.createElement('div');
-        div.id = "datePickerSheet";
-        div.className = "fixed inset-0 bg-black/60 z-[120] hidden-force flex flex-col justify-end";
-        div.innerHTML = `<div class="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md mx-auto overflow-hidden shadow-2xl animate-slide-up border-t border-gray-200 dark:border-gray-800"><div class="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-800"><span class="font-bold text-lg text-gray-800 dark:text-gray-100">Select Date</span><button type="button" onclick="closePicker()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-2 focus:outline-none">&times;</button></div><div class="relative flex h-[200px] text-lg font-bold bg-white dark:bg-gray-950"><div class="picker-highlight"></div><div class="flex-1 picker-col" id="colDay"></div><div class="flex-1 picker-col" id="colMonth"></div><div class="flex-1 picker-col" id="colYear"></div></div><div class="p-5 border-t border-gray-200 dark:border-gray-800"><button type="button" onclick="confirmPicker()" class="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-lg shadow-md focus:outline-none hover:bg-green-600 transition">Done</button></div></div>`;
-        document.body.appendChild(div);
-    }
-}
-initDatePicker();
-
-
-let currentPickerTarget = null; 
-const monthsArr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-
-window.openDatePicker = function openDatePicker(targetId, type) {
-  if (!document.getElementById('datePickerSheet')) initDatePicker();
-
-  currentPickerTarget = targetId; 
-  document.getElementById('datePickerSheet').classList.remove('hidden-force');
-  
-  const colD = document.getElementById('colDay'); 
-  const colM = document.getElementById('colMonth'); 
-  const colY = document.getElementById('colYear');
-  const spacer = '<div style="height: 80px;"></div>'; 
-  
-  let dHtml = spacer; 
-  for(let i=1; i<=31; i++) { 
-    let val = String(i).padStart(2,'0'); 
-    dHtml += `<div class="picker-item text-gray-400" data-val="${val}" onclick="scrollToIndex('colDay', ${i-1})">${val}</div>`; 
-  } 
-  dHtml += spacer;
-  
-  let mHtml = spacer; 
-  monthsArr.forEach((m, i) => { 
-    mHtml += `<div class="picker-item text-gray-400" data-val="${m}" onclick="scrollToIndex('colMonth', ${i})">${m}</div>`; 
-  }); 
-  mHtml += spacer;
-  
-  let yHtml = spacer; 
-  const curYear = new Date().getFullYear(); 
-  let startYear, endYear, step;
-  
-  if(type === 'dob') { 
-    startYear = curYear; endYear = 1920; step = -1; 
-  } else { 
-    startYear = curYear; endYear = curYear + 20; step = 1; 
-  }
-  
-  let idx = 0; 
-  for(let i = startYear; type === 'dob' ? i >= endYear : i <= endYear; i += step) { 
-    yHtml += `<div class="picker-item text-gray-400" data-val="${i}" onclick="scrollToIndex('colYear', ${idx})">${i}</div>`; 
-    idx++; 
-  } 
-  yHtml += spacer;
-  
-  if (colD) colD.innerHTML = dHtml; 
-  if (colM) colM.innerHTML = mHtml; 
-  if (colY) colY.innerHTML = yHtml;
-  colD.onscroll = () => highlightCenterItem('colDay'); 
-  colM.onscroll = () => highlightCenterItem('colMonth'); 
-  colY.onscroll = () => highlightCenterItem('colYear');
-  
-  const curVal = document.getElementById(targetId).value;
-  setTimeout(() => {
-    if(curVal) { 
-      const parts = curVal.split(' '); 
-      if(parts.length === 3) {
-        const dIdx = Array.from(colD.querySelectorAll('.picker-item')).findIndex(el => el.dataset.val === parts[0]); 
-        const mIdx = Array.from(colM.querySelectorAll('.picker-item')).findIndex(el => el.dataset.val === parts[1]); 
-        const yIdx = Array.from(colY.querySelectorAll('.picker-item')).findIndex(el => el.dataset.val === parts[2]);
-        if(dIdx > -1) colD.scrollTop = dIdx * 40; 
-        if(mIdx > -1) colM.scrollTop = mIdx * 40; 
-        if(yIdx > -1) colY.scrollTop = yIdx * 40;
-      } 
-    } else { 
-      colD.scrollTop = 0; colM.scrollTop = 0; colY.scrollTop = 0; 
-    }
-    highlightCenterItem('colMonth'); highlightCenterItem('colYear'); highlightCenterItem('colDay');
-  }, 10);
-}
-
-window.scrollToIndex = function scrollToIndex(colId, index) { 
-  document.getElementById(colId).scrollTo({ top: index * 40, behavior: 'smooth' }); 
-}
-
-function highlightCenterItem(colId) {
-  const col = document.getElementById(colId); 
-  const visibleItems = Array.from(col.querySelectorAll('.picker-item')).filter(i => !i.classList.contains('hidden-force'));
-  if(!visibleItems.length) return; 
-  
-  let index = Math.round(col.scrollTop / 40); 
-  if (index >= visibleItems.length) index = visibleItems.length - 1; 
-  
-  visibleItems.forEach((item, i) => {
-    if(i === index) { 
-      item.classList.remove('text-gray-400'); 
-      item.classList.add('text-primary', 'font-extrabold', 'text-3xl'); 
-      item.dataset.selected = "true"; 
-    } else { 
-      item.classList.add('text-gray-400'); 
-      item.classList.remove('text-primary', 'font-extrabold', 'text-3xl'); 
-      item.dataset.selected = "false"; 
-    }
-  });
-  
-  if(colId === 'colMonth' || colId === 'colYear') updateValidDays();
-}
-
-function updateValidDays() {
-  const mItem = document.querySelector('#colMonth .picker-item[data-selected="true"]'); 
-  const yItem = document.querySelector('#colYear .picker-item[data-selected="true"]'); 
-  if(!mItem || !yItem) return;
-  
-  const maxDays = new Date(parseInt(yItem.dataset.val), monthsArr.indexOf(mItem.dataset.val) + 1, 0).getDate(); 
-  const colD = document.getElementById('colDay');
-  
-  colD.querySelectorAll('.picker-item').forEach((item) => {
-    const shouldHide = parseInt(item.dataset.val) > maxDays;
-    if(shouldHide && !item.classList.contains('hidden-force')) item.classList.add('hidden-force'); 
-    if(!shouldHide && item.classList.contains('hidden-force')) item.classList.remove('hidden-force');
-  });
-  
-  if (colD.scrollTop > (maxDays - 1) * 40) scrollToIndex('colDay', maxDays - 1);
-}
-
-window.confirmPicker = function confirmPicker() {
-  const d = document.querySelector('#colDay .picker-item[data-selected="true"]'); 
-  const m = document.querySelector('#colMonth .picker-item[data-selected="true"]'); 
-  const y = document.querySelector('#colYear .picker-item[data-selected="true"]');
-  if(d && m && y && currentPickerTarget) {
-    document.getElementById(currentPickerTarget).value = `${d.dataset.val} ${m.dataset.val} ${y.dataset.val}`; 
-  }
-  closePicker();
-}
-
-window.closePicker = function closePicker() { 
-  document.getElementById('datePickerSheet').classList.add('hidden-force'); 
-}
+document.addEventListener('click', function(e) {
+ const list = document.getElementById('infoEditPairingList');
+ const input = document.getElementById('infoEditPairingInput');
+ if(list && !list.classList.contains('hidden') && e.target !== input && !list.contains(e.target)) {
+     list.classList.add('hidden');
+ }
+});

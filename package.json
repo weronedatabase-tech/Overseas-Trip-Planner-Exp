@@ -1,15 +1,14 @@
 {
-  "name": "overseas-trip-planner",
+  "name": "myg-outing",
   "version": "1.0.0",
-  "description": "Overseas Trip",
-  "type": "module",
+  "description": "MINDS MYG Outings Organiser",
+  "main": "server.js",
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "echo \"No build required\""
+    "build": "echo 'No build step'"
   },
   "dependencies": {
-    "acorn": "^8.18.0",
-    "express": "^4.21.2"
+    "express": "^4.21.0"
   }
 }
