@@ -52,4 +52,3 @@ for(let l of orig2) {
     fs.writeFileSync(file, fLines.join('\n'));
   }
 }
-

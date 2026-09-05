@@ -18,4 +18,3 @@ function patch(file) {
 }
 
 ['frontend/js/participants.js', 'frontend/js/diet.js', 'frontend/js/expired.js', 'frontend/js/medical.js', 'frontend/js/other.js', 'frontend/js/logistics.js', 'frontend/js/finance.js', 'frontend/js/minutes.js'].forEach(patch);
-

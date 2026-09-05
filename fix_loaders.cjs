@@ -25,4 +25,3 @@ patch('frontend/js/other.js', 'otherLoading');
 patch('frontend/js/logistics.js', 'logLoadingOverlay');
 patch('frontend/js/finance.js', 'finLoadingOverlay');
 patch('frontend/js/minutes.js', 'minutesLoadingOverlay');
-
