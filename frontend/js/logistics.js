@@ -970,7 +970,17 @@ const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_log
         </div>
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
             <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
-                <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Rooms</span>
+                
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Rooms</span>
+                    <button onclick="showRoomInfoPopup()" class="text-gray-400 hover:text-blue-500 focus:outline-none transition-colors" title="Room Info">
+                        <i class="fa-solid fa-circle-info"></i>
+                    </button>
+                    <button onclick="toggleUnfilledRoomsFilter()" id="unfilledRoomsFilterBtn" class="text-gray-400 hover:text-green-500 focus:outline-none transition-colors" title="Show Unfilled Only">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                </div>
+
                 <button onclick="openManageRoomsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
             </div>
             <div id="roomListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
@@ -1673,6 +1683,7 @@ const query = document.getElementById('roomSearchInput') ? document.getElementBy
 
 const allNricsInRooms = new Set();
 const activeRooms = (globalLogistics.rooms || []).filter(r => !r.isDeleted);
+    activeRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
 activeRooms.forEach(r => r.occupants.forEach(n => allNricsInRooms.add(n)));
 
 const unassignedArr = globalLogistics.participants.filter(p => !allNricsInRooms.has(p.nric) && (rFilter === 'ALL' || p.role === rFilter));
@@ -1711,8 +1722,11 @@ filteredUnassigned.forEach(item => {
 const el_roomUnassignedPool = document.getElementById('roomUnassignedPool'); if(el_roomUnassignedPool) el_roomUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
 let roomsToRender = activeRooms;
+if (window.showUnfilledRoomsOnly) {
+    roomsToRender = roomsToRender.filter(r => r.occupants.length < r.capacity);
+}
 if (query) {
-    roomsToRender = activeRooms.filter(r => {
+    roomsToRender = roomsToRender.filter(r => {
         if (r.name.toLowerCase().includes(query)) return true;
         return r.occupants.some(nric => {
             const p = globalLogistics.participants.find(x => x.nric === nric);
@@ -1863,6 +1877,7 @@ document.getElementById('selectionBottomSheet').classList.remove('hidden-force')
 
 const allNricsInRooms = new Set();
 const activeRooms = (globalLogistics.rooms || []).filter(r => !r.isDeleted);
+    activeRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
 activeRooms.forEach(r => r.occupants.forEach(n => allNricsInRooms.add(n)));
 
 const unassignedArr = globalLogistics.participants.filter(p => !allNricsInRooms.has(p.nric));
@@ -2014,6 +2029,7 @@ function renderGroupBusOptions() {
     else if (activeAssignType === 'bus') list = activeBusesList;
     else if (activeAssignType === 'room') {
         const activeRooms = (globalLogistics.rooms || []).filter(r => !r.isDeleted);
+    activeRooms.sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true, sensitivity: 'base'}));
         list = activeRooms.map(r => ({ id: r.id, name: r.name, ts: r.ts })).sort((a,b) => a.name.localeCompare(b.name));
     }
     
@@ -2226,3 +2242,71 @@ function setBusSyncButtonState(state) {
         textSpan.textContent = "Error"; 
     }
 }
+window.showUnfilledRoomsOnly = false;
+window.toggleUnfilledRoomsFilter = function() {
+    window.showUnfilledRoomsOnly = !window.showUnfilledRoomsOnly;
+    const btn = document.getElementById('unfilledRoomsFilterBtn');
+    if (btn) {
+        if (window.showUnfilledRoomsOnly) {
+            btn.classList.remove('text-gray-400');
+            btn.classList.add('text-green-500');
+        } else {
+            btn.classList.add('text-gray-400');
+            btn.classList.remove('text-green-500');
+        }
+    }
+    renderRooms();
+};
+
+window.showRoomInfoPopup = function() {
+    if (!globalLogistics || !globalLogistics.rooms) return;
+    const activeRooms = globalLogistics.rooms.filter(r => !r.isDeleted);
+    
+    const capacityCounts = {};
+    let totalRooms = 0;
+    let totalCapacity = 0;
+    activeRooms.forEach(r => {
+        const cap = r.capacity || 0;
+        capacityCounts[cap] = (capacityCounts[cap] || 0) + 1;
+        totalRooms++;
+        totalCapacity += cap;
+    });
+
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-opacity";
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    
+    let html = `
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 w-full max-w-sm border-2 border-gray-200 dark:border-gray-700 animate-slide-up">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">Room Statistics</h3>
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-bold focus:outline-none text-2xl leading-none" onclick="this.closest('.fixed').remove()">&times;</button>
+        </div>
+        <ul class="space-y-3 mb-4 text-sm">
+    `;
+    
+    Object.keys(capacityCounts).sort((a,b)=>Number(a)-Number(b)).forEach(cap => {
+        const qty = capacityCounts[cap];
+        const paxTotal = cap * qty;
+        html += `
+            <li class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-2">
+                <span class="font-bold text-gray-700 dark:text-gray-300">${cap}-Pax Room</span>
+                <div class="text-right">
+                    <span class="font-black text-gray-900 dark:text-white block">${qty} Room${qty > 1 ? 's' : ''}</span>
+                    <span class="text-xs font-bold text-gray-500">Accomm. ${paxTotal} pax</span>
+                </div>
+            </li>
+        `;
+    });
+    
+    html += `
+        </ul>
+        <div class="flex justify-between items-center font-black text-sm pt-2 text-primary">
+            <span>Total Capacity</span>
+            <span>${totalCapacity} pax in ${totalRooms} rooms</span>
+        </div>
+    </div>
+    `;
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
+};
