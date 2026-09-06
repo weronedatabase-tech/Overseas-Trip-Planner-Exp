@@ -1131,11 +1131,14 @@ function processFeeCard(poc, members) {
     let match = true;
     const searchLower = finSearchQuery.toLowerCase().trim();
     if (searchLower) {
+        const _hash = poc.split('').reduce((a,b)=>(((a<<5)-a)+b.charCodeAt(0))|0,0);
+        const orderNo = poc.substring(0, 4).toUpperCase() + "-" + Math.abs(_hash).toString(10).slice(-4).padStart(4, '0');
+        const orderNoLower = orderNo.toLowerCase();
         match = members.some(m => {
             const dName = String(m.shortName || '').toLowerCase();
             const fullName = String(m.fullName || m.name || '').toLowerCase();
             return dName.includes(searchLower) || fullName.includes(searchLower) || m.nric.toLowerCase().includes(searchLower);
-        });
+        }) || orderNoLower.includes(searchLower);
     }
 
     if (match) cardsData.push({ poc, members, size, dev, rem, isPaid, finalExpected });
