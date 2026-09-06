@@ -1124,7 +1124,7 @@ let unHtml = '';
     activeGroupsList.forEach(gName => {
         let occHtml = '';
         groupMap[gName].forEach(item => {
-            occHtml += generateGroupCardHtml(item);
+            occHtml += generateGroupCardHtml(item, true);
         });
 
         grpHtml += `
@@ -1149,17 +1149,18 @@ let unHtml = '';
     const el_groupListContainer = document.getElementById('groupListContainer'); if(el_groupListContainer) el_groupListContainer.innerHTML = grpHtml;
 }
 
-function generateGroupCardHtml(item) {
+function generateGroupCardHtml(item, isAssigned = false) {
     const dynColor = getProjectColor(item.group);
     const dName = item.displayName || item.name;
     const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     const roleShort = item.role.substring(0,3).toUpperCase();
     return `
-    <div class="dnd-group-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
+    <div class="dnd-group-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
         <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
             <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
         </div>
         <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
+        ${isAssigned ? `<div class="remove-x" onclick="unassignFromGroup('${item.nric}')">×</div>` : ''}
     </div>
     `;
 }
@@ -1209,7 +1210,7 @@ let unHtml = '';
     activeBusesList.forEach(bName => {
         let occHtml = '';
         busMap[bName].forEach(item => {
-            occHtml += generateBusCardHtml(item);
+            occHtml += generateBusCardHtml(item, true);
         });
 
         busHtml += `
@@ -1234,17 +1235,18 @@ let unHtml = '';
     const el_busListContainer = document.getElementById('busListContainer'); if(el_busListContainer) el_busListContainer.innerHTML = busHtml;
 }
 
-function generateBusCardHtml(item) {
+function generateBusCardHtml(item, isAssigned = false) {
     const dynColor = getProjectColor(item.group);
     const dName = item.displayName || item.name;
     const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     const roleShort = item.role.substring(0,3).toUpperCase();
     return `
-    <div class="dnd-bus-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
+    <div class="dnd-bus-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
         <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
             <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
         </div>
         <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
+        ${isAssigned ? `<div class="remove-x" onclick="unassignFromBus('${item.nric}')">×</div>` : ''}
     </div>
     `;
 }
@@ -2439,4 +2441,16 @@ window.promptEditBus = function(oldName) {
     });
     renderBuses();
     if (pendingBusUpdates.size > 0) triggerBusSync();
+};
+
+
+window.unassignFromGroup = function(nric) {
+    if(event) event.stopPropagation();
+    handleGroupDrop(nric, "");
+    renderGroups();
+};
+window.unassignFromBus = function(nric) {
+    if(event) event.stopPropagation();
+    handleBusDrop(nric, "");
+    renderBuses();
 };
