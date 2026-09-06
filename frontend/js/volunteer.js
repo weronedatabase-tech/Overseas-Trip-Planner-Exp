@@ -136,7 +136,7 @@ if(!url || !requestedType || url === "Select an Event") return;
 input.placeholder = "Loading names..."; 
 input.disabled = true; 
 
-list.innerHTML = Array(5).fill('<li class="px-4 py-3 border-b border-gray-200 dark:border-zinc-700"><div class="animate-pulse h-4 bg-gray-200 dark:bg-zinc-700 rounded w-2/3"></div></li>').join('');
+list.innerHTML = Array(5).fill('<li class="px-4 py-3 border-b-2 border-gray-200 dark:border-zinc-700"><div class="animate-pulse h-4 bg-gray-200 dark:bg-zinc-700 rounded w-2/3"></div></li>').join('');
 list.classList.remove('hidden');
 
 apiCall('getNamesList', { url: url, type: requestedType }).then(res => { 
@@ -185,7 +185,7 @@ list.innerHTML = "";
 const matches = allNames.filter(n => n.toLowerCase().includes(filter)); 
 matches.forEach(name => { 
 const li = document.createElement('li'); 
-li.className = "px-4 py-3 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-zinc-700 hover:bg-cyan-600 hover:text-white cursor-pointer text-sm transition-colors last:border-0"; 
+li.className = "px-4 py-3 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-zinc-700 hover:bg-cyan-600 hover:text-white cursor-pointer text-sm transition-colors last:border-0"; 
 li.innerText = name; 
 li.onmousedown = () => selectName(name); 
 list.appendChild(li); 
@@ -252,7 +252,7 @@ list.innerHTML = "";
 const matches = allProjects.filter(p => p.toLowerCase().includes(filter)); 
 matches.forEach(proj => { 
 const li = document.createElement('li'); 
-li.className = "px-4 py-3 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-zinc-700 hover:bg-cyan-600 hover:text-white cursor-pointer text-sm transition-colors last:border-0"; 
+li.className = "px-4 py-3 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-zinc-700 hover:bg-cyan-600 hover:text-white cursor-pointer text-sm transition-colors last:border-0"; 
 li.innerText = proj; 
 li.onmousedown = () => selectProject(proj); 
 list.appendChild(li); 
@@ -292,7 +292,7 @@ list.classList.remove('hidden');
 
 matches.forEach(match => {
  const li = document.createElement('li');
- li.className = "px-3 py-2 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b border-gray-200 dark:border-zinc-700 hover:bg-teal-600 hover:text-white cursor-pointer text-xs transition-colors last:border-0";
+ li.className = "px-3 py-2 bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 border-b-2 border-gray-200 dark:border-zinc-700 hover:bg-teal-600 hover:text-white cursor-pointer text-xs transition-colors last:border-0";
  li.innerText = match;
  li.onmousedown = (e) => { e.preventDefault(); addVolPaired(match); };
  list.appendChild(li);
@@ -333,7 +333,7 @@ if(!tagsContainer || !hiddenInput) return;
 
 tagsContainer.innerHTML = currentVolPairedValue.map(v => {
  const jsSafeVol = v.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
- return `<span class="bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="removeVolPaired('${jsSafeVol}')"></i></span>`;
+ return `<span class="bg-teal-50 text-teal-700 border-2 border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="removeVolPaired('${jsSafeVol}')"></i></span>`;
 }).join('');
 
 if (currentVolPairedValue.length > 0) {
@@ -430,7 +430,7 @@ if(res.success) {
         if (!isNameField && !cleanH.includes("attending")) { wrapperClass += " attendance-dependent"; } 
         
         if (cleanH.includes("attending")) { 
-            inputHtml = ` <select name="${header}" onchange="toggleDependentFields(this)" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded p-2 text-sm focus:border-green-500 shadow-sm"> <option value="" ${val===""?"selected":""}>Select...</option> <option value="Y" ${val.toLowerCase()==="y"?"selected":""}>Y (Yes)</option> <option value="N" ${val.toLowerCase()==="n"?"selected":""}>N (No)</option> </select>`; 
+            inputHtml = ` <select name="${header}" onchange="toggleDependentFields(this)" class="w-full bg-gray-50 dark:bg-black border-2 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded p-2 text-sm focus:border-green-500 shadow-md"> <option value="" ${val===""?"selected":""}>Select...</option> <option value="Y" ${val.toLowerCase()==="y"?"selected":""}>Y (Yes)</option> <option value="N" ${val.toLowerCase()==="n"?"selected":""}>N (No)</option> </select>`; 
         } else if (cleanH.includes("meetinglocation") || cleanH.includes("dismissallocation")) { 
             const isDismissal = cleanH.includes("dismissal"); 
             const optionsList = isDismissal ? dismissalOpts : meetingOpts; 
@@ -446,33 +446,33 @@ if(res.success) {
                     optionsHtml += `<option value="${val.replace(/"/g, '&quot;')}" selected>${val} (Current)</option>`; 
                 } 
             } 
-            inputHtml = ` <select name="${header}" class="w-full bg-gray-50 dark:bg-black border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded p-2 text-sm focus:border-green-500 shadow-sm"> <option value="">${placeholder}</option> ${optionsHtml} </select>`; 
+            inputHtml = ` <select name="${header}" class="w-full bg-gray-50 dark:bg-black border-2 border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white rounded p-2 text-sm focus:border-green-500 shadow-md"> <option value="">${placeholder}</option> ${optionsHtml} </select>`; 
         } else if (cleanH.includes("vol") && cleanH.includes("paired")) {
             currentActiveVols = res.activeVolunteers || [];
             currentVolPairedValue = val.toString().split(/[,|\n]+/).map(s=>s.trim()).filter(s=>s);
             
             inputHtml = `
-            <div class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus-within:border-green-500'} rounded p-2 text-sm shadow-sm">
+            <div class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus-within:border-green-500'} rounded p-2 text-sm shadow-md">
                 <div id="volPairedTags" class="flex flex-wrap gap-1 ${currentVolPairedValue.length > 0 ? 'mb-1' : ''}">
                     ${currentVolPairedValue.map(v => {
                         const jsSafeVol = v.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
-                        return `<span class="bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="removeVolPaired('${jsSafeVol}')"></i></span>`;
+                        return `<span class="bg-teal-50 text-teal-700 border-2 border-teal-200 dark:bg-teal-900/50 dark:text-teal-300 dark:border-teal-700/50 px-2 py-0.5 rounded text-xs flex items-center gap-1">${v} <i class="fa-solid fa-xmark cursor-pointer hover:text-red-500 ml-1" onclick="removeVolPaired('${jsSafeVol}')"></i></span>`;
                     }).join('')}
                 </div>
                 <input type="hidden" name="${header}" id="volPairedHidden" value="${currentVolPairedValue.join(', ').replace(/"/g, '&quot;')}">
                 <div class="relative">
                     <input type="text" id="volPairedInput" ${isReadOnly ? 'readonly' : ''} class="w-full bg-transparent outline-none placeholder-gray-400 dark:placeholder-gray-500 text-sm" placeholder="Search volunteer..." autocomplete="off" oninput="filterActiveVols()" onfocus="filterActiveVols()">
-                    <ul id="activeVolsList" class="absolute z-50 w-full bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg mt-1 shadow-xl hidden max-h-40 overflow-y-auto pb-6"></ul>
+                    <ul id="activeVolsList" class="absolute z-50 w-full bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-zinc-700 rounded-lg mt-1 shadow-xl hidden max-h-40 overflow-y-auto pb-6"></ul>
                 </div>
             </div>
             `;
         } else if (cleanH.includes("remark")) { 
-            inputHtml = `<textarea name="${header}" rows="8" ${isReadOnly ? 'readonly' : ''} class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus:border-green-500'} rounded p-2 text-sm resize-y [color-scheme:light] dark:[color-scheme:dark] shadow-sm">${val}</textarea>`; 
+            inputHtml = `<textarea name="${header}" rows="8" ${isReadOnly ? 'readonly' : ''} class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus:border-green-500'} rounded p-2 text-sm resize-y [color-scheme:light] dark:[color-scheme:dark] shadow-md">${val}</textarea>`; 
         } else { 
             let type = "text"; 
             if(cleanH.includes("date")) type = "date"; 
             if(cleanH.includes("time")) type = "time"; 
-            inputHtml = `<input name="${header}" type="${type}" value="${val.replace(/"/g, '&quot;')}" ${isReadOnly ? 'readonly' : ''} class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus:border-green-500'} rounded p-2 text-sm [color-scheme:light] dark:[color-scheme:dark] shadow-sm">`; 
+            inputHtml = `<input name="${header}" type="${type}" value="${val.replace(/"/g, '&quot;')}" ${isReadOnly ? 'readonly' : ''} class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? 'border-gray-200 dark:border-zinc-800 text-gray-500' : 'border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus:border-green-500'} rounded p-2 text-sm [color-scheme:light] dark:[color-scheme:dark] shadow-md">`; 
         } 
         fieldsDiv.innerHTML += `<div class="${wrapperClass}"><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">${header}</label>${inputHtml}</div>`; 
     }); 

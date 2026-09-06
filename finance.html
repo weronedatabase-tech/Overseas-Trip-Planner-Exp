@@ -12,21 +12,21 @@
 <body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
 <div id="devModeBar" class="hidden-force"></div>
-<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border border-gray-700 dark:border-gray-200"></div>
+<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border-2 border-gray-700 dark:border-gray-200"></div>
 <div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
 
 <div id="authLayout" class="flex-1 flex flex-col md:flex-row w-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
 
-<nav class="order-2 md:order-1 w-full md:w-56 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t md:border-t-0 md:border-r border-gray-200 dark:border-gray-800 flex flex-col pb-safe z-30 shrink-0 md:shadow-none transition-colors shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]">
-<div class="hidden md:flex flex-col p-5 border-b border-gray-200 dark:border-gray-800 shrink-0">
+<nav class="order-2 md:order-1 w-full md:w-56 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t md:border-t-0 md:border-r-2 border-gray-200 dark:border-gray-800 flex flex-col pb-safe z-30 shrink-0 md:shadow-none transition-colors shadow-[0_-4px_15px_-5px_rgba(0,0,0,0.05)]">
+<div class="hidden md:flex flex-col p-5 border-b-2 border-gray-200 dark:border-gray-800 shrink-0">
     <h1 class="font-black text-xl text-primary leading-tight tracking-tight mb-1">Overseas Trip</h1>
     <span id="deskTripName" class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate"></span>
 </div>
 
-<div class="hidden md:flex flex-col p-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+<div class="hidden md:flex flex-col p-5 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
     <span class="text-xs font-semibold text-gray-400 mb-0.5 uppercase tracking-widest">Logged In As</span>
     <span class="font-bold text-sm truncate text-gray-900 dark:text-gray-100" id="deskUserName">User</span>
-    <span class="text-xs font-bold px-2 py-0.5 rounded border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 w-max mt-1.5 shadow-sm" id="deskUserRole">Role</span>
+    <span class="text-xs font-bold px-2 py-0.5 rounded border bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 w-max mt-1.5 shadow-md" id="deskUserRole">Role</span>
 </div>
 
 <div class="flex md:flex-col w-full md:p-3 md:gap-1.5 justify-around md:justify-start items-center md:items-stretch overflow-x-auto md:overflow-visible scrollbar-hide">
@@ -71,8 +71,8 @@
     </a>
 </div>
 
-<div class="hidden md:block mt-auto p-4 border-t border-gray-200 dark:border-gray-800 shrink-0">
-    <button onclick="logout(this)" class="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none border border-gray-300 dark:border-gray-700 shadow-sm">
+<div class="hidden md:block mt-auto p-4 border-t-2 border-gray-200 dark:border-gray-800 shrink-0">
+    <button onclick="logout(this)" class="w-full flex items-center justify-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold py-2.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none border-2 border-gray-300 dark:border-gray-700 shadow-md">
        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
        <span class="btn-text">Logout</span><div class="btn-spinner hidden-force !w-3 !h-3"></div>
     </button>
@@ -80,7 +80,7 @@
 </nav>
 
 <div class="order-1 md:order-2 flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-<header class="flex items-center justify-between bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 px-3 md:px-4 py-1 shrink-0 z-20 shadow-sm">
+<header class="flex items-center justify-between bg-white dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 px-3 md:px-4 py-1 shrink-0 z-20 shadow-md">
    <div class="flex flex-col md:hidden w-1/2 min-w-0">
        <span class="font-black text-lg text-primary leading-tight truncate tracking-tight">Overseas Trip</span>
        <span id="mobTripName" class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate"></span>
@@ -100,7 +100,7 @@
    </div>
 </header>
 
-<div id="mobHeaderLegend" class="md:hidden bg-white dark:bg-gray-950 border-b border-gray-100 dark:border-gray-800 px-3 py-0.5 flex flex-wrap gap-1 shrink-0 empty:hidden"></div>
+<div id="mobHeaderLegend" class="md:hidden bg-white dark:bg-gray-950 border-b-2 border-gray-100 dark:border-gray-800 px-3 py-0.5 flex flex-wrap gap-1 shrink-0 empty:hidden"></div>
 
 <main id="tabContainer" class="flex-1 overflow-hidden flex flex-col overflow-x-hidden p-1 md:p-2 w-full relative custom-scrollbar bg-gray-50 dark:bg-gray-950">
    <div id="tab-finance" class="h-full min-h-full flex flex-col w-full max-w-6xl mx-auto"></div>
@@ -111,8 +111,8 @@
 
 <!-- EXCHANGE RATES MODAL -->
 <div id="financeRatesModal" class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity">
- <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl border border-gray-200 dark:border-gray-700 m-auto animate-slide-up flex flex-col max-h-[90vh]">
-     <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-gray-700 pb-2 shrink-0">
+ <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl border-2 border-gray-200 dark:border-gray-700 m-auto animate-slide-up flex flex-col max-h-[90vh]">
+     <div class="flex justify-between items-center mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-2 shrink-0">
          <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
              <svg class="w-5 h-5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
              Exchange Rates
@@ -120,8 +120,8 @@
          <button type="button" onclick="closeFinanceRatesModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none shrink-0">&times;</button>
      </div>
      <div id="financeRatesList" class="overflow-y-auto custom-scrollbar flex-grow space-y-2 pb-2"></div>
-     <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 shrink-0 flex justify-end">
-         <button onclick="closeFinanceRatesModal()" class="bg-primary text-white py-2 px-6 rounded-lg font-bold shadow-sm hover:bg-green-600 transition focus:outline-none">Done</button>
+     <div class="mt-3 pt-3 border-t-2 border-gray-200 dark:border-gray-700 shrink-0 flex justify-end">
+         <button onclick="closeFinanceRatesModal()" class="bg-primary text-white py-2 px-6 rounded-lg font-bold shadow-md hover:bg-green-600 transition focus:outline-none">Done</button>
      </div>
  </div>
 </div>

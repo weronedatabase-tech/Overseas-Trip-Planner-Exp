@@ -12,11 +12,11 @@
 <body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
 <div id="devModeBar" class="hidden-force"></div>
-<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border border-gray-700 dark:border-gray-200"></div>
+<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border-2 border-gray-700 dark:border-gray-200"></div>
 <div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
 
 <div id="unauthLayout" class="flex-1 flex flex-col w-full relative overflow-y-auto">
-<header class="flex items-center justify-between px-5 py-1 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-sm">
+<header class="flex items-center justify-between px-5 py-1 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-md">
 <div class="flex flex-col">
   <h1 class="font-black text-xl text-primary tracking-tight leading-tight">Overseas Trip</h1>
   <span id="unauthTripName" class="text-xs font-bold text-gray-500 uppercase tracking-wider hidden-force"></span>
@@ -36,23 +36,23 @@
    <h2 class="text-3xl font-extrabold mb-2 text-gray-900 dark:text-white">Welcome</h2>
    <p class="text-gray-500 dark:text-gray-400 font-medium">Please select an option below.</p>
  </div>
- <div id="landingRegBox" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 text-center border-t-4 border-t-green-500 hidden-force">
+ <div id="landingRegBox" class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-700 text-center border-t-4 border-t-green-500 hidden-force">
    <h3 class="text-xl font-bold mb-1 text-gray-900 dark:text-white">Join the Trip</h3>
    <p class="text-sm text-gray-500 dark:text-gray-400 mb-5">Registration is currently open.</p>
    <button onclick="navigateTo('register.html')" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-lg hover:bg-green-700 shadow-md transition">Register Now</button>
  </div>
- <div id="viewLogin" class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 w-full animate-slide-up">
-   <div class="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+ <div id="viewLogin" class="bg-white dark:bg-gray-800 p-8 rounded-3xl shadow-md border-2 border-gray-200 dark:border-gray-700 w-full animate-slide-up">
+   <div class="flex justify-between items-center mb-6 border-b-2 border-gray-100 dark:border-gray-800 pb-4">
      <h2 class="text-xl font-black text-gray-900 dark:text-white tracking-tight">Secure Login</h2>
    </div>
-   <div id="loginError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border border-red-200 dark:border-red-800"></div>
+   <div id="loginError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border-2 border-red-200 dark:border-red-800"></div>
    <div class="mb-8 text-left">
      <div class="flex flex-col mb-1.5">
        <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Password</label>
        <span class="text-sm text-gray-500 dark:text-gray-400 mt-0.5">IC Number + Year of Birth (e.g. <strong class="font-mono text-gray-700 dark:text-gray-300">S1234567A1989</strong>)</span>
      </div>
      <div class="relative">
-       <input type="password" id="loginPass" class="w-full p-3 border border-gray-300 dark:border-gray-700 rounded-xl pr-12 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="e.g. S1234567A1989" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
+       <input type="password" id="loginPass" class="w-full p-3 border-2 border-gray-300 dark:border-gray-700 rounded-xl pr-12 font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 transition outline-none" placeholder="e.g. S1234567A1989" onkeypress="handleEnter(event, () => attemptLogin(document.getElementById('loginSubmitBtn')))">
        <button type="button" onclick="togglePassword('loginPass')" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-primary transition focus:outline-none">
          <svg id="eyeOpen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
          <svg id="eyeClosed" class="hidden-force" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
@@ -64,28 +64,28 @@
    </button>
  </div>
 
- <div id="landingReceiptBox" class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 w-full animate-slide-up mt-6 border-t-4 border-t-purple-500">
+ <div id="landingReceiptBox" class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-md border-2 border-gray-200 dark:border-gray-700 w-full animate-slide-up mt-6 border-t-4 border-t-purple-500">
    <button onclick="toggleLandingReceipt()" class="w-full flex justify-between items-center focus:outline-none">
        <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Upload Receipt</h3>
        <svg id="receiptExpandIcon" class="w-6 h-6 text-gray-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
    </button>
    <div id="landingReceiptFormWrapper" class="hidden-force mt-5 text-left">
        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 font-bold">Please fill in the details of the receipt.</p>
-       <div id="landingReceiptError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border border-red-200 dark:border-red-800"></div>
-       <div id="landingReceiptSuccess" class="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border border-green-200 dark:border-green-800"></div>
+       <div id="landingReceiptError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border-2 border-red-200 dark:border-red-800"></div>
+       <div id="landingReceiptSuccess" class="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border-2 border-green-200 dark:border-green-800"></div>
        <form id="landingReceiptForm" onsubmit="submitLandingReceipt(event)" class="flex flex-col gap-4">
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Uploader NRIC</label>
-                <input type="text" id="landingRecNric" required oninput="if(typeof isValidNRIC === 'function' && isValidNRIC(this.value)){ document.getElementById('landingReceiptError').classList.add('hidden-force'); }" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl uppercase font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="S1234567A">
+                <input type="text" id="landingRecNric" required oninput="if(typeof isValidNRIC === 'function' && isValidNRIC(this.value)){ document.getElementById('landingReceiptError').classList.add('hidden-force'); }" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl uppercase font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="S1234567A">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name (Optional)</label>
-                <input type="text" id="landingRecName" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="John Doe">
+                <input type="text" id="landingRecName" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="John Doe">
             </div>
             <div class="grid grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Currency</label>
-                    <select id="landingRecCurrency" onchange="landingCurChange()" required class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <select id="landingRecCurrency" onchange="landingCurChange()" required class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20">
                        <option value="SGD" selected>SGD</option>
                        <option value="MYR">MYR</option>
                        <option value="USD">USD</option>
@@ -100,17 +100,17 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Amount</label>
-                    <input type="number" step="0.01" id="landingRecAmount" oninput="landingCalcSgd()" required class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-right" placeholder="0.00">
+                    <input type="number" step="0.01" id="landingRecAmount" oninput="landingCalcSgd()" required class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-right" placeholder="0.00">
                 </div>
             </div>
             
-            <div id="landingReceiptBidirectionalRate" class="hidden-force flex flex-col gap-2 p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
-                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 pb-1 mb-1">Exchange Rate</label>
+            <div id="landingReceiptBidirectionalRate" class="hidden-force flex flex-col gap-2 p-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b-2 border-gray-200 dark:border-gray-700 pb-1 mb-1">Exchange Rate</label>
                 <div class="flex items-center justify-between">
                     <div class="font-black text-xs text-gray-500 w-12 shrink-0">1 <span id="landingRecCurLabel1">MYR</span></div>
                     <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
                     <div class="flex-1 min-w-0 pr-2">
-                        <input type="number" step="0.01" id="landingRecRateToSgd" placeholder="0.00" oninput="handleLandingRateInputSync('to_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400 text-right">
+                        <input type="number" step="0.01" id="landingRecRateToSgd" placeholder="0.00" oninput="handleLandingRateInputSync('to_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-md placeholder-gray-400 text-right">
                     </div>
                     <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">SGD</div>
                 </div>
@@ -118,7 +118,7 @@
                     <div class="font-black text-xs text-gray-500 w-12 shrink-0">1 SGD</div>
                     <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
                     <div class="flex-1 min-w-0 pr-2">
-                        <input type="number" step="0.01" id="landingRecRateFromSgd" placeholder="0.00" oninput="handleLandingRateInputSync('from_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-sm placeholder-gray-400 text-right">
+                        <input type="number" step="0.01" id="landingRecRateFromSgd" placeholder="0.00" oninput="handleLandingRateInputSync('from_sgd', this.value)" class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-md placeholder-gray-400 text-right">
                     </div>
                     <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right"><span id="landingRecCurLabel2">MYR</span></div>
                 </div>
@@ -127,11 +127,11 @@
 
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">SGD Equiv</label>
-                <input type="number" step="0.01" id="landingRecSgd" readonly class="w-full p-2.5 border border-gray-200 dark:border-gray-700 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-right" placeholder="0.00">
+                <input type="number" step="0.01" id="landingRecSgd" readonly class="w-full p-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-right" placeholder="0.00">
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Category</label>
-                <select id="landingRecCategory" required class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="" disabled selected>Loading categories...</option></select>
+                <select id="landingRecCategory" required class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"><option value="" disabled selected>Loading categories...</option></select>
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Receipt File</label>
@@ -139,7 +139,7 @@
             </div>
             <div>
                 <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Remarks (Optional)</label>
-                <input type="text" id="landingRecRemarks" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="Details...">
+                <input type="text" id="landingRecRemarks" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" placeholder="Details...">
             </div>
             <button type="submit" id="landingRecBtn" class="w-full bg-purple-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-purple-700 transition flex justify-center items-center shadow-lg focus:outline-none mt-2">
                 <span class="btn-text">Upload</span><div class="btn-spinner spinner-white hidden-force ml-2"></div>

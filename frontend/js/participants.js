@@ -64,18 +64,18 @@ let traineeShortNames = {};
 
 function buildParticipantsUI() {
 document.getElementById('tab-participants').innerHTML = `
-<div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+<div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap min-w-0">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg truncate shrink-0"><span class="hidden md:inline">Participant </span>Roster</h3>
-           <span id="rosterTotalCount" class="text-gray-500 font-black text-sm md:text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-700 shrink-0">(0)</span>
-           <button onclick="showRosterBreakdownModal()" class="flex items-center justify-center bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60 focus:outline-none transition rounded-lg px-2 py-1 md:px-2.5 md:py-1.5 shadow-sm border border-green-200 dark:border-green-800 shrink-0 ml-1" title="View Roster Breakdown">
+           <span id="rosterTotalCount" class="text-gray-500 font-black text-sm md:text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700 shrink-0">(0)</span>
+           <button onclick="showRosterBreakdownModal()" class="flex items-center justify-center bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/60 focus:outline-none transition rounded-lg px-2 py-1 md:px-2.5 md:py-1.5 shadow-md border-2 border-green-200 dark:border-green-800 shrink-0 ml-1" title="View Roster Breakdown">
                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-               <span class="text-xs md:text-xs font-black ml-1.5 uppercase tracking-wider hidden md:inline">Breakdown</span>
+               <span class="text-sm md:text-sm font-black ml-1.5 uppercase tracking-wider hidden md:inline">Breakdown</span>
            </button>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-primary text-white border border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
                <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
                <option value="medical.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Medical</option>
                <option value="diet.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Dietary</option>
@@ -85,29 +85,29 @@ document.getElementById('tab-participants').innerHTML = `
        </div>
    </div>
    
-   <div class="py-1 px-2 md:px-3 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shrink-0 flex items-center gap-2">
+   <div class="py-1 px-2 md:px-3 bg-gray-50 dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 flex items-center gap-2">
        <div class="relative w-full flex-1">
-           <input type="text" id="rosterSearch" oninput="handleRosterSearch()" placeholder="Fuzzy search across all fields..." class="w-full p-2 pl-9 pr-8 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+           <input type="text" id="rosterSearch" oninput="handleRosterSearch()" placeholder="Fuzzy search across all fields..." class="w-full p-2 pl-9 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
            <svg class="w-4 h-4 absolute left-3 top-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
            <button onclick="clearSearch('rosterSearch', 'handleRosterSearch')" class="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
        </div>
        <div class="relative">
-           <button onclick="toggleSortSelector()" class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none flex items-center gap-1">
+           <button onclick="toggleSortSelector()" class="p-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none flex items-center gap-1">
                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" /></svg> Sort
            </button>
-           <div id="sortSelector" class="hidden-force fixed left-4 right-4 top-24 md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-[60] p-4 max-h-[80vh] overflow-y-auto">
-              <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-2 border-b border-gray-100 dark:border-gray-700 pb-1">Advanced Sort</h4>
+           <div id="sortSelector" class="hidden-force fixed left-4 right-4 top-24 md:absolute md:left-auto md:right-0 md:top-auto md:mt-2 md:w-80 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-[60] p-4 max-h-[80vh] overflow-y-auto">
+              <h4 class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider mb-2 border-b-2 border-gray-100 dark:border-gray-700 pb-1">Advanced Sort</h4>
               <div id="sortRulesContainer" class="space-y-2 mb-3"></div>
-              <button onclick="addSortRule()" class="w-full text-xs font-bold text-green-600 dark:text-green-400 border border-dashed border-green-300 dark:border-green-700 rounded py-1 mb-2 hover:bg-green-50 dark:hover:bg-green-900/20 transition">+ Add Level</button>
-              <button onclick="applySortRules(); toggleSortSelector();" class="w-full bg-primary text-white text-xs font-bold py-2 rounded-lg shadow-sm hover:bg-green-600 transition">Apply Sort</button>
+              <button onclick="addSortRule()" class="w-full text-xs font-bold text-green-600 dark:text-green-400 border-2 border-dashed border-green-300 dark:border-green-700 rounded py-1 mb-2 hover:bg-green-50 dark:hover:bg-green-900/20 transition">+ Add Level</button>
+              <button onclick="applySortRules(); toggleSortSelector();" class="w-full bg-primary text-white text-xs font-bold py-2 rounded-lg shadow-md hover:bg-green-600 transition">Apply Sort</button>
            </div>
        </div>
        <div class="relative">
-           <button onclick="toggleColumnSelector()" class="p-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none flex items-center gap-1">
+           <button onclick="toggleColumnSelector()" class="p-2 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 transition focus:outline-none flex items-center gap-1">
                Columns <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
            </button>
-           <div id="columnSelector" class="hidden-force absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-30 p-2 flex flex-col gap-1 max-h-96 overflow-y-auto custom-scrollbar">
-              <div class="px-1.5 pb-2 mb-1 border-b border-gray-100 dark:border-gray-700">
+           <div id="columnSelector" class="hidden-force absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl z-30 p-2 flex flex-col gap-1 max-h-96 overflow-y-auto custom-scrollbar">
+              <div class="px-1.5 pb-2 mb-1 border-b-2 border-gray-100 dark:border-gray-700">
                   <label class="flex items-center gap-2 cursor-pointer transition">
                       <input type="checkbox" id="checkAllRosterColumns" onchange="toggleAllRosterColumns(this.checked)" class="w-4 h-4 text-primary rounded border-gray-300">
                       <span class="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Toggle All</span>
@@ -124,8 +124,8 @@ document.getElementById('tab-participants').innerHTML = `
    </div>
    
    <div class="flex-1 min-h-0 overflow-auto custom-scrollbar relative" id="rosterTableContainer">
-       <table class="w-full table-auto text-left border-collapse border-b border-gray-200 dark:border-gray-700">
-           <thead id="rosterTableHead" class="sticky top-0 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase font-black tracking-wider z-20 shadow-sm border-b border-gray-200 dark:border-gray-700">
+       <table class="w-full table-auto text-left border-collapse border-b-2 border-gray-200 dark:border-gray-700">
+           <thead id="rosterTableHead" class="sticky top-0 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase font-black tracking-wider z-20 shadow-md border-b-2 border-gray-200 dark:border-gray-700">
            </thead>
            <tbody id="rosterTableBody" class="text-sm divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
            </tbody>
@@ -133,7 +133,7 @@ document.getElementById('tab-participants').innerHTML = `
        
        <div id="rosterLoading" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col justify-center items-center z-30">
            <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-           <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Fetching Directory...</span>
+           <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Fetching Directory...</span>
        </div>
    </div>
 </div>
@@ -211,12 +211,12 @@ window.showRosterBreakdownModal = function() {
     });
 
     let totalsHtml = `
-    <div class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 rounded-lg mb-4">
-        <h4 class="font-black text-sm text-gray-900 dark:text-white mb-2 flex items-center justify-between">Total Participants <span class="bg-primary text-white px-2 py-0.5 rounded text-xs font-bold shadow-sm">${grandTotal}</span></h4>
+    <div class="bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 p-3 rounded-lg mb-4">
+        <h4 class="font-black text-base md:text-lg text-gray-900 dark:text-white mb-2 flex items-center justify-between">Total Participants <span class="bg-primary text-white px-2 py-0.5 rounded text-sm font-bold shadow-md">${grandTotal}</span></h4>
         <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <div class="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 p-1.5 rounded font-bold border border-green-200 dark:border-green-800 shadow-sm">TRN: ${totalTrainee}</div>
-            <div class="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 p-1.5 rounded font-bold border border-orange-200 dark:border-orange-800 shadow-sm">VOL: ${totalVolunteer}</div>
-            <div class="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 p-1.5 rounded font-bold border border-purple-200 dark:border-purple-800 shadow-sm">CGV: ${totalCaregiver}</div>
+            <div class="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 p-2 rounded font-bold text-sm md:text-base border-2 border-green-200 dark:border-green-800 shadow-md">TRN: ${totalTrainee}</div>
+            <div class="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 p-2 rounded font-bold text-sm md:text-base border-2 border-orange-200 dark:border-orange-800 shadow-md">VOL: ${totalVolunteer}</div>
+            <div class="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 p-2 rounded font-bold text-sm md:text-base border-2 border-purple-200 dark:border-purple-800 shadow-md">CGV: ${totalCaregiver}</div>
         </div>
     </div>`;
 
@@ -225,12 +225,12 @@ window.showRosterBreakdownModal = function() {
     const projKeys = Object.keys(breakdown).sort((a,b) => a.localeCompare(b));
     projKeys.forEach(proj => {
         const bd = breakdown[proj];
-        html += `<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-            <h4 class="font-black text-sm text-gray-900 dark:text-white mb-2">${proj} <span class="text-gray-500 font-medium">(${bd.total})</span></h4>
+        html += `<div class="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+            <h4 class="font-black text-base md:text-lg text-gray-900 dark:text-white mb-2">${proj} <span class="text-gray-500 font-medium">(${bd.total})</span></h4>
             <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                <div class="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 p-1.5 rounded font-bold border border-green-200 dark:border-green-800">TRN: ${bd.TRAINEE}</div>
-                <div class="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 p-1.5 rounded font-bold border border-orange-200 dark:border-orange-800">VOL: ${bd.VOLUNTEER}</div>
-                <div class="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 p-1.5 rounded font-bold border border-purple-200 dark:border-purple-800">CGV: ${bd.CAREGIVER}</div>
+                <div class="bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400 p-2 rounded font-bold text-sm md:text-base border-2 border-green-200 dark:border-green-800">TRN: ${bd.TRAINEE}</div>
+                <div class="bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 p-2 rounded font-bold text-sm md:text-base border-2 border-orange-200 dark:border-orange-800">VOL: ${bd.VOLUNTEER}</div>
+                <div class="bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 p-2 rounded font-bold text-sm md:text-base border-2 border-purple-200 dark:border-purple-800">CGV: ${bd.CAREGIVER}</div>
             </div>
         </div>`;
     });
@@ -241,8 +241,8 @@ window.showRosterBreakdownModal = function() {
     
     const modalHtml = `
     <div id="rosterBreakdownModal" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
-        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-gray-200 dark:border-gray-800 animate-slide-up">
-            <div class="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border-2 border-gray-200 dark:border-gray-800 animate-slide-up">
+            <div class="flex justify-between items-center p-4 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
                 <h3 class="font-black text-lg text-gray-900 dark:text-white tracking-tight">Participant Breakdown</h3>
                 <button type="button" onclick="document.getElementById('rosterBreakdownModal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none">&times;</button>
             </div>
@@ -357,10 +357,10 @@ rosterSortRules.forEach((rule, idx) => {
    let opts = sortableFields.map(f => `<option value="${f.id}" ${rule.col === f.id ? 'selected' : ''}>${f.label}</option>`).join('');
    html += `
    <div class="flex items-center gap-1">
-       <select onchange="updateSortRule(${idx}, 'col', this.value)" class="flex-1 text-xs font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
+       <select onchange="updateSortRule(${idx}, 'col', this.value)" class="flex-1 text-xs font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
            ${opts}
        </select>
-       <select onchange="updateSortRule(${idx}, 'asc', this.value === 'true')" class="w-16 text-xs font-bold p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
+       <select onchange="updateSortRule(${idx}, 'asc', this.value === 'true')" class="w-16 text-xs font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none">
            <option value="true" ${rule.asc ? 'selected' : ''}>ASC</option>
            <option value="false" ${!rule.asc ? 'selected' : ''}>DESC</option>
        </select>
@@ -537,7 +537,7 @@ data.sort((a, b) => {
 
 const thead = document.getElementById('rosterTableHead');
 let headHtml = `<tr>
-   <th class="py-1.5 px-2 relative bg-gray-100 dark:bg-gray-800 roster-col-fullName align-top sticky left-0 z-20 border-r border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style="min-width: 150px; max-width: 300px;" data-col-id="fullName">
+   <th class="py-1.5 px-2 relative bg-gray-100 dark:bg-gray-800 roster-col-fullName align-top sticky left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" style="min-width: 150px; max-width: 300px;" data-col-id="fullName">
        <div class="flex items-center gap-1 cursor-pointer hover:text-primary transition" onclick="quickSort('fullName')">Full Name <span class="text-[10px]">↕</span></div>
        
    </th>`;
@@ -595,19 +595,19 @@ data.forEach(p => {
 
    const nameClass = expiryHighlight ? 'text-red-600 dark:text-red-400 font-extrabold' : 'font-bold text-gray-900 dark:text-gray-100';
    const expClass = expiryHighlight 
-       ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1 py-0.5 rounded font-bold border border-red-200 dark:border-red-800 shadow-sm text-[11px] md:text-xs inline-block whitespace-nowrap' 
-       : 'text-gray-800 dark:text-gray-200 whitespace-nowrap text-xs font-medium';
+       ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1 py-0.5 rounded font-bold border-2 border-red-200 dark:border-red-800 shadow-md text-xs md:text-sm inline-block whitespace-nowrap' 
+       : 'text-gray-800 dark:text-gray-200 whitespace-nowrap text-sm font-medium';
    
    const roleStr = p.role.substring(0, 3).toUpperCase();
    const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     
     html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
-       <td class="py-1.5 px-2 align-top roster-col-fullName sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50" style="min-width: 150px; max-width: 300px;">
+       <td class="py-1.5 px-2 align-top roster-col-fullName sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50" style="min-width: 150px; max-width: 300px;">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
-               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-sm text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
            </div>
            ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
        </td>`;
@@ -615,12 +615,12 @@ data.forEach(p => {
    rosterCols.forEach(c => {
        if (c.visible) {
            const styleStr = ``;
-           const baseClass = `px-3 py-2 align-top roster-col-${c.id} text-xs font-medium text-gray-800 dark:text-gray-200 ${['address', 'medical', 'diet', 'otherPoints', 'pairings', 'sleeping'].includes(c.id) ? 'whitespace-normal break-words min-w-[150px] max-w-[300px]' : 'whitespace-nowrap'}`;
+           const baseClass = `px-3 py-2 align-top roster-col-${c.id} text-sm font-medium text-gray-800 dark:text-gray-200 ${['address', 'medical', 'diet', 'otherPoints', 'pairings', 'sleeping'].includes(c.id) ? 'whitespace-normal break-words min-w-[150px] max-w-[300px]' : 'whitespace-nowrap'}`;
            
            if (c.id === 'role') {
-               html += `<td class="${baseClass}" ${styleStr}><span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span></td>`;
+               html += `<td class="${baseClass}" ${styleStr}><span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span></td>`;
            } else if (c.id === 'group') {
-               html += `<td class="${baseClass}" ${styleStr}><span class="px-2 py-0.5 rounded border shadow-sm text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block">${(p.group || 'None').toUpperCase()}</span></td>`;
+               html += `<td class="${baseClass}" ${styleStr}><span class="px-2 py-0.5 rounded border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block">${(p.group || 'None').toUpperCase()}</span></td>`;
            } else if (c.id === 'nric') {
                html += `<td class="${baseClass} font-mono font-bold text-gray-700 dark:text-gray-300" ${styleStr}>${(p.nric||'').toUpperCase()}</td>`;
            } else if (c.id === 'passportNo') {

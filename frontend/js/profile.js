@@ -96,7 +96,7 @@ if (minExpiry) {
 
 if (expiringNames.length > 0 && tripEnd) {
    topBannersHtml += `
-   <div class="bg-red-50/50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 text-red-800 dark:text-red-400 p-3 rounded-lg shadow-sm">
+   <div class="bg-red-50/50 dark:bg-red-900/10 border-2 border-red-200 dark:border-red-800/50 text-red-800 dark:text-red-400 p-3 rounded-lg shadow-md">
        <p class="font-bold mb-0.5 text-xs flex items-center gap-1.5"><svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg> Passport Validity Warning</p>
        <p class="text-xs leading-tight mt-1">The following members have passports expiring within 6 months of the trip end date (<span class="font-bold">${typeof formatDDMmmYYYY === 'function' ? formatDDMmmYYYY(tripEnd) : tripEnd.toLocaleDateString('en-GB', {day: '2-digit', month: 'short', year: 'numeric'})}</span>): <span class="font-bold">${expiringNames.join(', ')}</span>. Please renew them immediately.</p>
    </div>`;
@@ -107,11 +107,11 @@ if(!appSettings.allowEdits) {
  let cListHtml = '';
  if(appSettings.committee) {
    appSettings.committee.forEach(c => { 
-     if(c.phone) cListHtml += `<a href="https://wa.me/65${c.phone}" target="_blank" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold px-2 py-1 rounded shadow-sm text-xs border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Chat with ${c.name}</a>`; 
+     if(c.phone) cListHtml += `<a href="https://wa.me/65${c.phone}" target="_blank" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold px-2 py-1 rounded shadow-md text-xs border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Chat with ${c.name}</a>`; 
    });
  }
  topBannersHtml += `
- <div class="bg-yellow-50/50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/50 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg shadow-sm">
+ <div class="bg-yellow-50/50 dark:bg-yellow-900/10 border-2 border-yellow-200 dark:border-yellow-800/50 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg shadow-md">
      <p class="font-bold mb-0.5 text-xs">🔒 Editing is currently Locked.</p>
      <p class="text-xs mb-2">To request changes to your details, please contact a Committee Member:</p>
      <div class="flex flex-wrap gap-1.5">${cListHtml}</div>
@@ -142,65 +142,65 @@ loadedFamily.forEach((m, i) => {
  }
 
  const mRoleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
- let headerLabel = i === 0 ? '<span class="text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-sm">My Profile</span>' : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-sm">Family Member</span>';
+ let headerLabel = i === 0 ? '<span class="text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">My Profile</span>' : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">Family Member</span>';
 
  profilesHtml += `
-   <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm relative mb-4" id="profCard_${i}">
+   <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md relative mb-4" id="profCard_${i}">
      ${headerLabel}
-     <div class="flex justify-between items-start border-b border-gray-100 dark:border-gray-800 pb-2 mb-3">
+     <div class="flex justify-between items-start border-b-2 border-gray-100 dark:border-gray-800 pb-2 mb-3">
        <div class="flex items-center flex-wrap gap-1.5">
-         <span class="font-extrabold text-[13px] md:text-sm px-2 py-0.5 rounded shadow-sm border ${dynColor} leading-tight">${m.fullName}</span> 
-         <span class="text-[11px] font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
+         <span class="font-extrabold text-base md:text-lg px-2 py-0.5 rounded shadow-md border ${dynColor} leading-tight">${m.fullName}</span> 
+         <span class="text-xs md:text-sm font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
        </div>
-       ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-sm">Edit</button>` : ''}
+       ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>` : ''}
      </div>
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2.5 text-xs text-gray-800 dark:text-gray-200">
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || '-'}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${m.dob}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex items-center gap-1">${renderPhoneLink(m.contact)} | ${m.email || 'N/A'}</div></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-sm ${dynColor}">${m.group || 'None'}</span></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? 'font-bold text-red-600 dark:text-red-400' : 'font-semibold'}">${m.passportExpiry || '-'}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ''}</p></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
-       <div class="border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-semibold text-red-600 dark:text-red-400">${m.diet || 'None'}</p></div>
-       <div class="md:col-span-2 border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Sleeping Arrangement</p><p class="font-semibold text-green-600 dark:text-green-400">${m.sleeping || 'No special request'}</p></div>
-       <div class="md:col-span-2 border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${m.otherPoints || 'None'}</p></div>
-       ${m.role === 'TRAINEE' ? `<div class="md:col-span-2 border-t border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-semibold">${m.medical || 'None'}</p></div>` : ''}
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 text-sm text-gray-800 dark:text-gray-200">
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Short Name</p><p class="font-bold text-sm md:text-base">${m.shortName || '-'}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-bold text-sm md:text-base uppercase">${m.nric}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-bold text-sm md:text-base">${m.dob}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-bold text-sm md:text-base">${m.gender} | ${m.nationality}</p></div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${renderPhoneLink(m.contact)} | ${m.email || 'N/A'}</div></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || 'None'}</span></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Home Address</p><p class="font-bold text-sm md:text-base">${m.address}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-bold text-sm md:text-base uppercase">${m.passportNo}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? 'font-bold text-red-600 dark:text-red-400' : 'font-semibold'}">${m.passportExpiry || '-'}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ''}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-sm md:text-base text-red-600 dark:text-red-400">${m.diet || 'None'}</p></div>
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Sleeping Arrangement</p><p class="font-bold text-sm md:text-base text-green-600 dark:text-green-400">${m.sleeping || 'No special request'}</p></div>
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-bold text-sm md:text-base">${m.otherPoints || 'None'}</p></div>
+       ${m.role === 'TRAINEE' ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-sm md:text-base">${m.medical || 'None'}</p></div>` : ''}
 
      </div>
    </div>
    
    <form id="profEdit_${i}" onsubmit="event.preventDefault(); saveProfileEdit(${i}, this.querySelector('button[type=submit]'));" class="hidden-force bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border border-primary dark:border-green-500 space-y-3 shadow-[0_4px_15px_-5px_rgba(22,163,74,0.2)]">
-     <h4 class="font-black text-sm mb-1 border-b border-gray-100 dark:border-gray-800 pb-1.5 text-gray-900 dark:text-white tracking-tight">Edit Details</h4>
+     <h4 class="font-black text-sm mb-1 border-b-2 border-gray-100 dark:border-gray-800 pb-1.5 text-gray-900 dark:text-white tracking-tight">Edit Details</h4>
      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Full Name</label><input type="text" id="edName_${i}" value="${m.fullName}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Short Name</label><input type="text" id="edShortName_${i}" value="${m.shortName || ''}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Email</label><input type="text" id="edEmail_${i}" value="${m.email}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Contact</label><input type="tel" pattern="[0-9]{8}" id="edContact_${i}" value="${m.contact}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Gender</label><select id="edGender_${i}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"><option ${m.gender==='Male'?'selected':''}>Male</option><option ${m.gender==='Female'?'selected':''}>Female</option></select></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Role</label><select id="edRole_${i}" onchange="document.getElementById('edRelated_${i}').closest('.relative').className = this.value === 'CAREGIVER' ? 'block relative' : 'hidden-force relative'; document.getElementById('edRelation_${i}').parentElement.className = this.value === 'CAREGIVER' ? 'block' : 'hidden-force'; document.getElementById('edMedical_${i}').parentElement.className = this.value === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force';" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"><option ${m.role==='TRAINEE'?'selected':''}>TRAINEE</option><option ${m.role==='CAREGIVER'?'selected':''}>CAREGIVER</option><option ${m.role==='VOLUNTEER'?'selected':''}>VOLUNTEER</option></select></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Project</label><select id="edGroup_${i}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">${groupOpts}</select></div>
-        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Address</label><textarea id="edAddress_${i}" rows="2" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">${m.address}</textarea></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Nationality</label><input type="text" id="edNat_${i}" value="${m.nationality}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">DOB</label><input type="text" id="edDob_${i}" value="${formatDDMmmYYYY(m.dob)}" readonly onclick="openDatePicker('edDob_${i}', 'dob')" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Passport No.</label><input type="text" id="edPass_${i}" value="${m.passportNo}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs uppercase font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Passport Expiry</label><input type="text" id="edExp_${i}" value="${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : ''}" readonly onclick="openDatePicker('edExp_${i}', 'exp')" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Contact Name</label><input type="text" id="edEmName_${i}" value="${m.emergencyName}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Contact No.</label><input type="tel" pattern="[0-9]{8}" id="edEmCont_${i}" value="${m.emergencyContact}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Relation</label><input type="text" id="edEmRel_${i}" value="${m.emergencyRelation}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Dietary Needs</label><input type="text" id="edDiet_${i}" value="${m.diet}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Sleeping Arrangement Request</label><textarea id="edSleep_${i}" rows="2" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">${m.sleeping}</textarea></div>
-        <div class="${m.role === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force'}"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Medical Conditions and Medications to take note of</label><textarea id="edMedical_${i}" rows="2" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">${m.medical}</textarea></div>
-        <div class="${m.role==='CAREGIVER'?'block':'hidden-force'} relative"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Related Trainees' Name(s)</label><input type="text" id="edRelated_${i}" placeholder="Search trainee..." value="${m.relatedTrainee || ''}" autocomplete="off" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div class="${m.role==='CAREGIVER'?'block':'hidden-force'}"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Relationship to Trainee(s)</label><input type="text" id="edRelation_${i}" value="${m.relationship || ''}" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"></div>
-        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Other Points to Note</label><textarea id="edOther_${i}" rows="2" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm">${m.otherPoints}</textarea></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Full Name</label><input type="text" id="edName_${i}" value="${m.fullName}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Short Name</label><input type="text" id="edShortName_${i}" value="${m.shortName || ''}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Email</label><input type="text" id="edEmail_${i}" value="${m.email}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Contact</label><input type="tel" pattern="[0-9]{8}" id="edContact_${i}" value="${m.contact}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Gender</label><select id="edGender_${i}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"><option ${m.gender==='Male'?'selected':''}>Male</option><option ${m.gender==='Female'?'selected':''}>Female</option></select></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Role</label><select id="edRole_${i}" onchange="document.getElementById('edRelated_${i}').closest('.relative').className = this.value === 'CAREGIVER' ? 'block relative' : 'hidden-force relative'; document.getElementById('edRelation_${i}').parentElement.className = this.value === 'CAREGIVER' ? 'block' : 'hidden-force'; document.getElementById('edMedical_${i}').parentElement.className = this.value === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force';" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"><option ${m.role==='TRAINEE'?'selected':''}>TRAINEE</option><option ${m.role==='CAREGIVER'?'selected':''}>CAREGIVER</option><option ${m.role==='VOLUNTEER'?'selected':''}>VOLUNTEER</option></select></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Project</label><select id="edGroup_${i}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md">${groupOpts}</select></div>
+        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Address</label><textarea id="edAddress_${i}" rows="2" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md">${m.address}</textarea></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Nationality</label><input type="text" id="edNat_${i}" value="${m.nationality}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">DOB</label><input type="text" id="edDob_${i}" value="${formatDDMmmYYYY(m.dob)}" readonly onclick="openDatePicker('edDob_${i}', 'dob')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Passport No.</label><input type="text" id="edPass_${i}" value="${m.passportNo}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs uppercase font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Passport Expiry</label><input type="text" id="edExp_${i}" value="${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : ''}" readonly onclick="openDatePicker('edExp_${i}', 'exp')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Contact Name</label><input type="text" id="edEmName_${i}" value="${m.emergencyName}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Contact No.</label><input type="tel" pattern="[0-9]{8}" id="edEmCont_${i}" value="${m.emergencyContact}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Emergency Relation</label><input type="text" id="edEmRel_${i}" value="${m.emergencyRelation}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Dietary Needs</label><input type="text" id="edDiet_${i}" value="${m.diet}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Sleeping Arrangement Request</label><textarea id="edSleep_${i}" rows="2" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md">${m.sleeping}</textarea></div>
+        <div class="${m.role === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force'}"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Medical Conditions and Medications to take note of</label><textarea id="edMedical_${i}" rows="2" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md">${m.medical}</textarea></div>
+        <div class="${m.role==='CAREGIVER'?'block':'hidden-force'} relative"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Related Trainees' Name(s)</label><input type="text" id="edRelated_${i}" placeholder="Search trainee..." value="${m.relatedTrainee || ''}" autocomplete="off" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div class="${m.role==='CAREGIVER'?'block':'hidden-force'}"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Relationship to Trainee(s)</label><input type="text" id="edRelation_${i}" value="${m.relationship || ''}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+        <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 dark:text-gray-400 block uppercase tracking-wider">Other Points to Note</label><textarea id="edOther_${i}" rows="2" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md">${m.otherPoints}</textarea></div>
      </div>
-     <div class="flex space-x-2 pt-1 mt-2 border-t border-gray-100 dark:border-gray-800">
-       <button type="button" onclick="cancelEditMode(${i})" class="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-sm mt-2">Cancel</button>
-       <button type="submit" class="flex-1 bg-primary text-white text-xs font-bold py-2 rounded-lg shadow-sm hover:bg-green-600 transition flex justify-center items-center focus:outline-none mt-2">
+     <div class="flex space-x-2 pt-1 mt-2 border-t-2 border-gray-100 dark:border-gray-800">
+       <button type="button" onclick="cancelEditMode(${i})" class="flex-1 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-bold py-2 rounded-lg border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-md mt-2">Cancel</button>
+       <button type="submit" class="flex-1 bg-primary text-white text-xs font-bold py-2 rounded-lg shadow-md hover:bg-green-600 transition flex justify-center items-center focus:outline-none mt-2">
           <span class="btn-text">Save Changes</span><div class="btn-spinner spinner-white hidden-force ml-1.5 !w-3 !h-3 border-2"></div>
        </button>
      </div>
@@ -209,8 +209,8 @@ loadedFamily.forEach((m, i) => {
 });
 
 let receiptsHtml = `
-<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-   <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">Trip Fees Payment Confirmation</h3>
+<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md">
+   <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3">Trip Fees Payment Confirmation</h3>
    <div id="myReceiptsContainer" class="overflow-x-auto">
        ${generateMyReceiptsHtml()}
    </div>
@@ -220,8 +220,8 @@ let receiptsHtml = `
 let paymentHtml = `
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
  ${finConfig.showPaymentSection ? `
- <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col h-full">
-   <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">
+ <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md flex flex-col h-full">
+   <div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3">
        <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
            <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
            Trip Fees & Payment
@@ -229,8 +229,8 @@ let paymentHtml = `
    </div>
    ${generatePaymentPortalHtml()}
  </div>
- <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm flex flex-col h-full">
-   <div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 mb-3">
+ <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md flex flex-col h-full">
+   <div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3">
        <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
            <svg class="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
            Upload Fees Paid Confirmation Screenshot
@@ -242,7 +242,7 @@ let paymentHtml = `
 </div>
 `;
 
-let personalDetailsHeader = `<div class="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-2 mb-3 mt-4"><h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Personal Details</h3></div>`;
+let personalDetailsHeader = `<div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3 mt-4"><h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Personal Details</h3></div>`;
 
 tabProfile.innerHTML = topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
 }
@@ -265,7 +265,7 @@ window._currentOrderRef = orderNo; // Update global state just in case it's used
 
 let membersListHtml = targetMembers.map(m => {
    const roleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-   return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-[11px] mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0,3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.fullName}</span></span>`;
+   return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-xs md:text-sm mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0,3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.fullName}</span></span>`;
 }).join('');
 
 if (finalExpected <= 0) {
@@ -274,7 +274,7 @@ if (finalExpected <= 0) {
 
 if (isPaid) {
    return `
-   <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-4 rounded-xl flex flex-col items-center justify-center flex-1">
+   <div class="bg-green-50 dark:bg-green-900/20 border-2 border-green-200 dark:border-green-800 p-4 rounded-xl flex flex-col items-center justify-center flex-1">
        <div class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center mb-3 shadow-md">
            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
        </div>
@@ -289,16 +289,16 @@ const qrStr = payNowNum ? generatePayNowStr('0', payNowNum, finalExpected, order
 const qrUrl = qrStr ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}` : "";
 
 return `<div class="flex flex-col gap-3">
-   <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
+   <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 text-center">
        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Fee</p>
        <p class="text-2xl font-black text-green-700 dark:text-green-400 leading-none">SGD ${finalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</p>
        <div class="mt-2 text-left">${membersListHtml}</div>
    </div>
    
    <div class="flex flex-col items-center justify-center p-2 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
-       ${qrUrl ? `<img src="${qrUrl}" alt="PayNow QR Code" class="w-48 h-48 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-2">
+       ${qrUrl ? `<img src="${qrUrl}" alt="PayNow QR Code" class="w-48 h-48 rounded-lg shadow-md border-2 border-gray-200 dark:border-gray-700 mb-2">
        <p class="text-xs font-bold text-gray-800 dark:text-gray-200 text-center">Scan with your banking app to PayNow</p>
-       <p class="text-[11px] font-medium text-gray-500 mt-1">Order Ref: <span class="font-mono font-bold">${orderNo}</span></p>` : `<p class="text-xs font-bold text-red-500 p-4 text-center">Admin has not set up PayNow details.</p>`}
+       <p class="text-xs md:text-sm font-medium text-gray-500 mt-1">Order Ref: <span class="font-mono font-bold">${orderNo}</span></p>` : `<p class="text-xs font-bold text-red-500 p-4 text-center">Admin has not set up PayNow details.</p>`}
    </div>
 </div>
 `;
@@ -316,10 +316,10 @@ return `<form id="uploadReceiptForm" onsubmit="submitReceipt(event)" class="flex
    </div>
    <div>
        <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Remarks (Optional)</label>
-       <input type="text" id="recRemarks" class="w-full p-2 border border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary shadow-sm" placeholder="Any details...">
+       <input type="text" id="recRemarks" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary shadow-md" placeholder="Any details...">
    </div>
-   <div class="mt-auto pt-2">
-       <button type="submit" class="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-lg shadow-sm hover:bg-purple-700 transition flex justify-center items-center focus:outline-none">
+   <div class="mt-auto pt-3">
+       <button type="submit" class="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-lg shadow-md hover:bg-purple-700 transition flex justify-center items-center focus:outline-none">
           <span class="btn-text">Upload Confirmation</span><div class="btn-spinner spinner-white hidden-force ml-2 !w-3 !h-3 border-2"></div>
        </button>
    </div>
@@ -419,14 +419,14 @@ const feeReceipt = feeReceipts[0];
 const timeStr = new Date(feeReceipt.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const dateStr = (typeof formatDDMmmYYYY === 'function' ? formatDDMmmYYYY(feeReceipt.ts) : '') + ' ' + timeStr;
 
 return `
-   <div class="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-center">
+   <div class="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-gray-100 dark:border-gray-800 text-center">
        <svg class="w-12 h-12 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
        </svg>
        <h4 class="text-lg font-black text-gray-900 dark:text-white mb-1">Screenshot Uploaded</h4>
        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Uploaded on ${dateStr}</p>
        ${feeReceipt.fileUrl ? 
-           `<div class="mt-4 w-full max-w-lg mx-auto aspect-[3/4] relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm bg-gray-100 dark:bg-gray-900">
+           `<div class="mt-4 w-full max-w-lg mx-auto aspect-[3/4] relative overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md bg-gray-100 dark:bg-gray-900">
                <iframe src="${feeReceipt.fileUrl.replace(/\/view.*/, '/preview')}" class="absolute top-0 left-0 w-full h-full border-0"></iframe>
            </div>`
            : `<span class="text-xs font-bold text-red-500">Link unavailable</span>`
@@ -435,7 +435,7 @@ return `
            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
            Incorrect file? Re-upload screenshot
        </button>
-       <div id="reuploadFormContainer" class="hidden-force mt-4 w-full max-w-lg mx-auto bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 text-left">
+       <div id="reuploadFormContainer" class="hidden-force mt-4 w-full max-w-lg mx-auto bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-left">
            ${generateReceiptFormHtml('_re')}
        </div>
    </div>
@@ -514,7 +514,7 @@ window.handleProfileRelatedSearch = function(idx, fullQuery) {
     } else {
         dd.innerHTML = results.map(t => {
             const escName = (t.fullName || '').replace(/'/g, "\\'");
-            return '<div class="p-2 border-b border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" onclick="selectProfileRelatedTrainee(' + idx + ', \'' + escName + '\')"><div class="font-bold text-xs text-gray-800 dark:text-gray-200">' + t.fullName + '</div><div class="text-xs text-gray-500">' + (t.shortName || '-') + '</div></div>';
+            return '<div class="p-2 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700" onclick="selectProfileRelatedTrainee(' + idx + ', \'' + escName + '\')"><div class="font-bold text-xs text-gray-800 dark:text-gray-200">' + t.fullName + '</div><div class="text-xs text-gray-500">' + (t.shortName || '-') + '</div></div>';
         }).join('');
     }
     dd.classList.remove('hidden-force');

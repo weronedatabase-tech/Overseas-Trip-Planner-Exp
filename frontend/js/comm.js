@@ -165,7 +165,7 @@ assignBtn.classList.add('opacity-50', 'cursor-not-allowed');
 let skeletonHtml = '';
 for(let i=0; i<3; i++) {
 skeletonHtml += `
-<div class="animate-pulse flex flex-col gap-3 p-4 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+<div class="animate-pulse flex flex-col gap-3 p-4 bg-white dark:bg-zinc-900 rounded-xl border-2 border-gray-200 dark:border-zinc-800 shadow-md">
 <div class="flex justify-between items-start">
 <div class="space-y-2 w-1/2">
    <div class="h-4 bg-gray-200 dark:bg-zinc-800 rounded w-3/4"></div>
@@ -235,7 +235,7 @@ assignBtn.classList.remove('opacity-50', 'cursor-not-allowed');
 let allCards = '';
 data.forEach((item, index) => {
 allCards += `
-<div class="flex flex-col gap-2 p-4 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm relative transition-colors">
+<div class="flex flex-col gap-2 p-4 bg-white dark:bg-zinc-900 rounded-xl border-2 border-gray-200 dark:border-zinc-800 shadow-md relative transition-colors">
 <div class="flex justify-between items-start">
 <div>
 <div class="font-bold text-gray-900 dark:text-white text-sm">${item.displayName}</div>
@@ -249,16 +249,16 @@ allCards += `
 </div>
 </div>
 <div id="stats-${index}" class="animate-pulse mt-2"><div class="h-12 bg-gray-100 dark:bg-zinc-800 rounded w-full"></div></div>
-<div id="btn-group-${index}" class="hidden grid grid-cols-3 gap-1.5 md:gap-2 mt-2 pt-3 border-t border-gray-100 dark:border-zinc-800">
-<button onclick="openReminderModal('${index}')" class="bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 py-1.5 px-1 rounded border border-gray-200 dark:border-zinc-700 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Remind">
+<div id="btn-group-${index}" class="hidden grid grid-cols-3 gap-1.5 md:gap-2 mt-2 pt-3 border-t-2 border-gray-100 dark:border-zinc-800">
+<button onclick="openReminderModal('${index}')" class="bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 py-1.5 px-1 rounded border-2 border-gray-200 dark:border-zinc-700 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Remind">
 <i class="fa-solid fa-bell text-sm md:text-base shrink-0"></i>
 <span class="text-[10px] md:text-[11px] font-semibold truncate">Remind</span>
 </button>
-<button onclick="copyOutingMessage('${index}', this)" class="bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 py-1.5 px-1 rounded border border-gray-200 dark:border-zinc-700 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Copy Info">
+<button onclick="copyOutingMessage('${index}', this)" class="bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 py-1.5 px-1 rounded border-2 border-gray-200 dark:border-zinc-700 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Copy Info">
 <i class="fa-regular fa-copy text-sm md:text-base shrink-0"></i>
 <span class="text-[10px] md:text-[11px] font-semibold truncate">Copy Info</span>
 </button>
-<button onclick="openShareTableFromComm('${item.sheetUrl}')" class="bg-gray-50 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 py-1.5 px-1 rounded border border-gray-200 dark:border-zinc-700 hover:border-blue-200 dark:hover:border-blue-800 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Take Screenshot for Volunteers">
+<button onclick="openShareTableFromComm('${item.sheetUrl}')" class="bg-gray-50 dark:bg-zinc-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 py-1.5 px-1 rounded border-2 border-gray-200 dark:border-zinc-700 hover:border-blue-200 dark:hover:border-blue-800 transition-colors flex items-center justify-center gap-1 overflow-hidden" title="Take Screenshot for Volunteers">
 <i class="fa-solid fa-camera text-sm md:text-base shrink-0"></i>
 <span class="text-[9px] md:text-[11px] font-semibold leading-tight text-center whitespace-normal">Screenshot for Vol</span>
 </button>
@@ -310,7 +310,7 @@ const btnGroup = document.getElementById(`btn-group-${index}`);
 if(res.success) {
 outingDetailsCache[index] = { config: res.outingConfig, message: res.outingMessage };
 
-let html = '<table class="w-full text-[10px] md:text-xs text-left border-collapse"><tr class="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-zinc-700"><th class="pb-1">Proj</th><th class="text-center pb-1">Trainees</th><th class="text-center pb-1">CG</th><th class="text-center pb-1">Vols</th></tr>';
+let html = '<table class="w-full text-[10px] md:text-xs text-left border-collapse"><tr class="text-gray-500 dark:text-gray-400 border-b-2 border-gray-200 dark:border-zinc-700"><th class="pb-1">Proj</th><th class="text-center pb-1">Trainees</th><th class="text-center pb-1">CG</th><th class="text-center pb-1">Vols</th></tr>';
 
 let total_tY = 0, total_tTot = 0, total_cY = 0, total_vY = 0, total_vTot = 0;
 const sortedKeys = Object.keys(res.stats).sort();
@@ -330,7 +330,7 @@ html += '<tr><td colspan="4" class="text-center py-3 text-gray-400 dark:text-gra
 } else {
 for(const proj of standardProjects) {
 const d = res.stats[proj];
-html += `<tr class="border-b border-gray-100 dark:border-zinc-800/50 last:border-0"><td class="py-1.5 font-bold text-gray-700 dark:text-gray-300">${proj}</td><td class="text-center text-gray-500 dark:text-gray-400"><span class="text-gray-900 dark:text-white">${d.tY}</span>/${d.tTot}</td><td class="text-center text-gray-900 dark:text-white">${d.cY}</td><td class="text-center text-gray-500 dark:text-gray-400"><span class="text-gray-900 dark:text-white">${d.vY}</span>/${d.vTot}</td></tr>`;
+html += `<tr class="border-b-2 border-gray-100 dark:border-zinc-800/50 last:border-0"><td class="py-1.5 font-bold text-gray-700 dark:text-gray-300">${proj}</td><td class="text-center text-gray-500 dark:text-gray-400"><span class="text-gray-900 dark:text-white">${d.tY}</span>/${d.tTot}</td><td class="text-center text-gray-900 dark:text-white">${d.cY}</td><td class="text-center text-gray-500 dark:text-gray-400"><span class="text-gray-900 dark:text-white">${d.vY}</span>/${d.vTot}</td></tr>`;
 }
 
 // Total Row
@@ -639,7 +639,7 @@ btn.classList.add('ring-1', 'ring-gray-900', 'dark:ring-gray-100');
 
 btn.innerText = btnText;
 
-let html = `<div class="p-1.5 flex justify-between border-b border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-black sticky top-0 z-10">
+let html = `<div class="p-1.5 flex justify-between border-b-2 border-gray-200 dark:border-zinc-700 bg-gray-50 dark:bg-black sticky top-0 z-10">
 <button onclick="clearCommAttFilter('${type}', event)" class="text-[10px] bg-gray-200 dark:bg-zinc-800 hover:bg-gray-300 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded transition">Clear</button>
 <button onclick="closeAllCommAttFilters(event)" class="text-[10px] bg-primary hover:bg-blue-600 text-white px-3 py-1 rounded transition">Done</button>
 </div>`;
@@ -651,7 +651,7 @@ availableItems.forEach(item => {
 const isChecked = selectedArray.includes(item);
 const jsSafeItem = item.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
 html += `
-<div class="px-3 py-2 border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-between transition-colors" onclick="toggleCommAttFilterItem('${type}', '${jsSafeItem}', event)">
+<div class="px-3 py-2 border-b-2 border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer flex items-center justify-between transition-colors" onclick="toggleCommAttFilterItem('${type}', '${jsSafeItem}', event)">
 <span class="text-xs text-gray-700 dark:text-gray-300 font-bold break-words pr-2">${type === 'group' ? 'Grp ' + item : item}</span>
 <div class="w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked ? 'bg-blue-500 border-blue-600 text-white' : 'bg-gray-100 border-gray-300 dark:bg-black dark:border-zinc-600 text-transparent'}">
 <i class="fa-solid fa-check text-[10px]"></i>
@@ -874,16 +874,16 @@ function generateCommAttCard(p, isChecked, isGoneHome) {
 const jsSafeName = p.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
 const htmlSafeName = p.name.replace(/"/g, '&quot;');
 
-const caregiverBadge = p.caregivers > 0 ? `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 bg-red-500 rounded-full text-[9px] md:text-[11px] font-black text-white shadow-sm mt-px" title="${p.caregivers} Caregiver(s)">${p.caregivers > 1 ? p.caregivers + 'C' : 'C'}</span>` : '';
+const caregiverBadge = p.caregivers > 0 ? `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] md:min-w-[20px] h-4 md:h-5 px-1 bg-red-500 rounded-full text-[9px] md:text-[11px] font-black text-white shadow-md mt-px" title="${p.caregivers} Caregiver(s)">${p.caregivers > 1 ? p.caregivers + 'C' : 'C'}</span>` : '';
 
 let volHtml = '';
 if (p.volPaired) {
 const vols = p.volPaired.split(/[,|\n]+/).map(v => v.trim()).filter(v => v);
 if (vols.length > 0) {
-volHtml = vols.map(v => `<span class="text-[9px] md:text-[11px] text-teal-700 dark:text-teal-400 leading-tight font-bold bg-teal-50 dark:bg-teal-900/30 px-1.5 md:px-2 py-0.5 md:py-1 rounded border border-teal-200 dark:border-teal-800/50 whitespace-normal break-words w-fit max-w-full text-left"><i class="fa-solid fa-handshake-angle mr-1"></i>${v}</span>`).join('');
+volHtml = vols.map(v => `<span class="text-[9px] md:text-[11px] text-teal-700 dark:text-teal-400 leading-tight font-bold bg-teal-50 dark:bg-teal-900/30 px-1.5 md:px-2 py-0.5 md:py-1 rounded border-2 border-teal-200 dark:border-teal-800/50 whitespace-normal break-words w-fit max-w-full text-left"><i class="fa-solid fa-handshake-angle mr-1"></i>${v}</span>`).join('');
 }
 } else if (!isGoneHome) {
-volHtml = `<span class="text-[9px] md:text-[11px] text-red-700 dark:text-red-400 leading-tight font-black bg-red-50 dark:bg-red-900/30 px-1.5 md:px-2 py-0.5 md:py-1 rounded border border-red-200 dark:border-red-800/50 whitespace-normal break-words w-fit max-w-full text-left uppercase"><i class="fa-solid fa-circle-exclamation mr-1"></i>Unpaired</span>`;
+volHtml = `<span class="text-[9px] md:text-[11px] text-red-700 dark:text-red-400 leading-tight font-black bg-red-50 dark:bg-red-900/30 px-1.5 md:px-2 py-0.5 md:py-1 rounded border-2 border-red-200 dark:border-red-800/50 whitespace-normal break-words w-fit max-w-full text-left uppercase"><i class="fa-solid fa-circle-exclamation mr-1"></i>Unpaired</span>`;
 }
 
 let starBadge = '';
@@ -905,7 +905,7 @@ remarksBadge = `<i class="fa-solid fa-note-sticky text-yellow-500 dark:text-yell
 
 let locHtml = '';
 if (p.meetingLoc || p.dismissalLoc) {
-locHtml = '<div class="flex flex-col gap-1 w-full mt-1 border-t border-gray-100 dark:border-zinc-700/60 pt-1.5">';
+locHtml = '<div class="flex flex-col gap-1 w-full mt-1 border-t-2 border-gray-100 dark:border-zinc-700/60 pt-1.5">';
 if (p.meetingLoc) {
 locHtml += `<span class="text-[9px] md:text-[11px] text-blue-700 dark:text-blue-300 leading-tight bg-blue-50 dark:bg-blue-900/20 px-1.5 md:px-2 py-1 md:py-1.5 rounded whitespace-normal break-words w-full text-left"><i class="fa-solid fa-location-dot mr-1 text-blue-500 dark:text-blue-400"></i>Meeting: ${p.meetingLoc}</span>`;
 }
@@ -915,7 +915,7 @@ locHtml += `<span class="text-[9px] md:text-[11px] text-purple-700 dark:text-pur
 locHtml += '</div>';
 }
 
-const groupBadge = p.group ? `<span class="bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 md:px-2 py-0.5 md:py-1 rounded font-black text-[9px] md:text-[11px] uppercase shadow-sm whitespace-nowrap">Grp ${p.group}</span>` : '';
+const groupBadge = p.group ? `<span class="bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 md:px-2 py-0.5 md:py-1 rounded font-black text-[9px] md:text-[11px] uppercase shadow-md whitespace-nowrap">Grp ${p.group}</span>` : '';
 
 const homeBtnClass = isGoneHome ? 'bg-blue-500 text-white border-blue-600 shadow-inner' : 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-zinc-700 hover:text-blue-500 dark:hover:text-blue-400 hover:border-blue-500';
 const checkBtnClass = isChecked ? 'bg-green-500 border-green-600 text-white shadow-inner' : 'bg-gray-50 dark:bg-black border-gray-300 dark:border-zinc-600 text-transparent';
@@ -923,7 +923,7 @@ const checkBtnClass = isChecked ? 'bg-green-500 border-green-600 text-white shad
 return `
 <div id="comm-att-card-${p.name.replace(/[^a-zA-Z0-9]/g, '')}" 
 data-name="${htmlSafeName}"
-class="comm-att-card relative bg-white dark:bg-zinc-900 p-2 md:p-3 rounded border border-gray-200 dark:border-zinc-700 shadow-sm transition-all duration-300 flex flex-col gap-1.5 md:gap-2 select-none active:scale-95 cursor-pointer hover:border-teal-500" 
+class="comm-att-card relative bg-white dark:bg-zinc-900 p-2 md:p-3 rounded border-2 border-gray-200 dark:border-zinc-700 shadow-md transition-all duration-300 flex flex-col gap-1.5 md:gap-2 select-none active:scale-95 cursor-pointer hover:border-teal-500" 
 onclick="toggleCommAttStatus('${jsSafeName}', ${!isChecked}, event)">
 <div class="flex items-start gap-1.5 md:gap-2 w-full">
 <span class="font-extrabold text-xs md:text-sm text-gray-900 dark:text-white leading-tight break-words">${p.name}</span>
@@ -1304,7 +1304,7 @@ if (!btn) return;
 const textSpan = btn.querySelector('.btn-text');
 const spinner = btn.querySelector('.btn-spinner');
 
-btn.className = "text-[10px] md:text-xs px-1.5 py-1 flex items-center justify-center rounded font-bold transition border border-gray-300 dark:border-zinc-700 focus:outline-none shadow-sm shrink-0";
+btn.className = "text-[10px] md:text-xs px-1.5 py-1 flex items-center justify-center rounded font-bold transition border-2 border-gray-300 dark:border-zinc-700 focus:outline-none shadow-md shrink-0";
 spinner.classList.add('hidden');
 
 if (state === 'saving') {
@@ -1737,20 +1737,20 @@ let volHtml = '';
 if (p.volPaired) {
 const vols = p.volPaired.split(/[,|\n]+/).map(v => v.trim()).filter(v => v);
 if (vols.length > 0) {
-volHtml = vols.map(v => `<span class="text-[9px] text-teal-700 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-900/30 px-1 py-0.5 rounded border border-teal-200 dark:border-teal-800/50 break-words w-fit"><i class="fa-solid fa-handshake-angle mr-1"></i>${v}</span>`).join('');
+volHtml = vols.map(v => `<span class="text-[9px] text-teal-700 dark:text-teal-400 font-bold bg-teal-50 dark:bg-teal-900/30 px-1 py-0.5 rounded border-2 border-teal-200 dark:border-teal-800/50 break-words w-fit"><i class="fa-solid fa-handshake-angle mr-1"></i>${v}</span>`).join('');
 }
 } else {
-volHtml = `<span class="text-[9px] text-red-700 dark:text-red-400 font-black bg-red-50 dark:bg-red-900/30 px-1 py-0.5 rounded border border-red-200 dark:border-red-800/50 break-words w-fit uppercase">Unpaired</span>`;
+volHtml = `<span class="text-[9px] text-red-700 dark:text-red-400 font-black bg-red-50 dark:bg-red-900/30 px-1 py-0.5 rounded border-2 border-red-200 dark:border-red-800/50 break-words w-fit uppercase">Unpaired</span>`;
 }
 
 const checkBtnClass = isBoarded ? 'bg-green-500 border-green-600 text-white shadow-inner' : 'bg-gray-50 dark:bg-black border-gray-300 dark:border-zinc-600 text-transparent';
 
-let busBadge = isBoarded ? `<span class="text-[10px] font-black uppercase text-yellow-800 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded border border-yellow-300 dark:border-yellow-700">${assignedBus}</span>` : '';
+let busBadge = isBoarded ? `<span class="text-[10px] font-black uppercase text-yellow-800 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/50 px-1.5 py-0.5 rounded border-2 border-yellow-300 dark:border-yellow-700">${assignedBus}</span>` : '';
 
 return `
 <div id="bus-att-card-${p.name.replace(/[^a-zA-Z0-9]/g, '')}" 
 data-name="${htmlSafeName}"
-class="bus-att-card relative bg-white dark:bg-zinc-900 p-2 rounded border border-gray-200 dark:border-zinc-700 shadow-sm transition-all duration-300 flex flex-col gap-1.5 select-none active:scale-95 cursor-pointer hover:border-yellow-500" 
+class="bus-att-card relative bg-white dark:bg-zinc-900 p-2 rounded border-2 border-gray-200 dark:border-zinc-700 shadow-md transition-all duration-300 flex flex-col gap-1.5 select-none active:scale-95 cursor-pointer hover:border-yellow-500" 
 onclick="toggleBusStatus('${jsSafeName}', ${!isBoarded}, event)">
 <div class="flex items-start justify-between gap-1 w-full">
 <span class="font-extrabold text-xs text-gray-900 dark:text-white leading-tight break-words">${p.name}</span>

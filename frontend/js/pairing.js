@@ -130,7 +130,7 @@ const jsSafeVol = volName.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"
 const removeBtn = isTraineeGoneHome ? '' : `<div class="remove-x flex items-center justify-center font-bold text-[10px] bg-transparent text-red-500 shadow-none border-none hover:bg-transparent hover:text-red-700 hover:scale-125 top-0 right-1" onclick="unpairTrainee('${jsSafeTrainee}', '${jsSafeVol}')">✕</div>`;
 
 return `<div class="relative flex w-full align-top pointer-events-auto">
-<div class="bg-gray-100 dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 text-gray-900 dark:text-gray-100 text-[10px] md:text-[11px] pl-2 ${isTraineeGoneHome ? 'pr-2' : 'pr-6'} py-1 rounded shadow-sm border font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full flex items-center">
+<div class="bg-gray-100 dark:bg-zinc-800 border-gray-300 dark:border-zinc-600 text-gray-900 dark:text-gray-100 text-[10px] md:text-[11px] pl-2 ${isTraineeGoneHome ? 'pr-2' : 'pr-6'} py-1 rounded shadow-md border font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full flex items-center">
 <span>${pillName}</span>${goneHomeBadge}
 </div>
 ${removeBtn}
@@ -169,12 +169,12 @@ if (isGoneHome) {
 sysBadge = `<i class="fa-solid fa-house-user text-blue-500 dark:text-blue-400 shrink-0 text-[10px] md:text-xs ml-0.5" title="Gone Home"></i>`;
 opacityClass = 'opacity-50 grayscale pointer-events-none';
 } else if (item.isAttendingUnknown) {
-sysBadge = `<span class="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-800 text-[8px] uppercase font-black tracking-wider px-1 py-0.5 rounded shrink-0 shadow-sm pointer-events-none whitespace-nowrap">? ATTENDING</span>`;
+sysBadge = `<span class="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-2 border-yellow-200 dark:border-yellow-800 text-[8px] uppercase font-black tracking-wider px-1 py-0.5 rounded shrink-0 shadow-md pointer-events-none whitespace-nowrap">? ATTENDING</span>`;
 }
 
 let cgBadge = '';
 if (!isVol && item.caregivers > 0) {
-cgBadge = `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-black text-white shadow-sm">${item.caregivers > 1 ? item.caregivers + 'C' : 'C'}</span>`;
+cgBadge = `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-black text-white shadow-md">${item.caregivers > 1 ? item.caregivers + 'C' : 'C'}</span>`;
 }
 
 let starBadge = '';
@@ -199,16 +199,16 @@ let projectInfo = '';
 if (item.project) {
 projectInfo = `<span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium">${item.project}</span>`;
 if (!isVol && item.group) {
-projectInfo += `<span class="ml-1.5 bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 py-0.5 rounded font-black text-[8px] uppercase shadow-sm whitespace-nowrap">Grp ${item.group}</span>`;
+projectInfo += `<span class="ml-1.5 bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 py-0.5 rounded font-black text-[8px] uppercase shadow-md whitespace-nowrap">Grp ${item.group}</span>`;
 }
 } else if (!isVol && item.group) {
-projectInfo = `<span class="bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 py-0.5 rounded font-black text-[8px] uppercase shadow-sm whitespace-nowrap">Grp ${item.group}</span>`;
+projectInfo = `<span class="bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/40 dark:text-orange-300 dark:border-orange-800 border px-1.5 py-0.5 rounded font-black text-[8px] uppercase shadow-md whitespace-nowrap">Grp ${item.group}</span>`;
 }
 
-const addBtnHtml = isGoneHome ? '' : `<button class="shrink-0 text-xs text-gray-500 dark:text-gray-400 hover:text-primary transition-colors bg-gray-50 dark:bg-black hover:bg-gray-100 dark:hover:bg-zinc-800 px-1.5 py-0.5 rounded border border-gray-200 dark:border-zinc-700 shadow-sm pointer-events-auto flex items-center justify-center font-bold" onclick="event.stopPropagation(); openQuickPairModal('${jsSafeName}', '${item.role}')">+${isVol ? 'Trn' : 'Vol'}</button>`;
+const addBtnHtml = isGoneHome ? '' : `<button class="shrink-0 text-xs text-gray-500 dark:text-gray-400 hover:text-primary transition-colors bg-gray-50 dark:bg-black hover:bg-gray-100 dark:hover:bg-zinc-800 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-zinc-700 shadow-md pointer-events-auto flex items-center justify-center font-bold" onclick="event.stopPropagation(); openQuickPairModal('${jsSafeName}', '${item.role}')">+${isVol ? 'Trn' : 'Vol'}</button>`;
 
 return `
-<div class="dnd-draggable dnd-dropzone bg-white dark:bg-zinc-900 p-2 rounded-md border border-gray-200 dark:border-zinc-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col min-h-[70px] gap-1.5 ${opacityClass}" data-name="${htmlSafeName}" data-role="${item.role}" data-source-array="${isVol ? 'volunteers' : 'trainees'}">
+<div class="dnd-draggable dnd-dropzone bg-white dark:bg-zinc-900 p-2 rounded-md border-2 border-gray-200 dark:border-zinc-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col min-h-[70px] gap-1.5 ${opacityClass}" data-name="${htmlSafeName}" data-role="${item.role}" data-source-array="${isVol ? 'volunteers' : 'trainees'}">
 <div class="flex justify-between items-center w-full gap-2">
 <div class="main-name-pill font-extrabold text-[11px] md:text-[12px] text-gray-900 dark:text-white leading-tight break-words whitespace-normal flex items-center gap-1 min-w-0 flex-1">
 <span class="break-words">${displayName}</span>
@@ -572,7 +572,7 @@ const btn = document.getElementById('btn-sync-manual-pairing');
 if(!btn) return;
 const textSpan = btn.querySelector('.btn-text'); const spinner = btn.querySelector('.btn-spinner');
 
-btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
 spinner.className = "fa-solid fa-circle-notch fa-spin btn-spinner ml-1 hidden"; 
 
 if (state === 'loading' || state === 'saving') { 
@@ -584,7 +584,7 @@ btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200', 'dark:bg-
 textSpan.textContent = "Saved"; 
 setTimeout(() => {
 if (pendingPairingUpdates.length === 0) {
-btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 shadow-sm focus:outline-none shrink-0";
+btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 shadow-md focus:outline-none shrink-0";
 textSpan.textContent = "Saved";
 }
 }, 2000);

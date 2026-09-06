@@ -68,86 +68,86 @@ const headerBtn = `<button type="button" onclick="this.closest('.member-block').
 
 const headerHtml = `
  ${headerBtn}
- <h4 class="font-bold text-lg mb-4 border-b border-gray-200 dark:border-gray-700 pb-2 text-primary dark:text-green-400">Person ${idx + 1}</h4>
+ <h4 class="font-bold text-lg mb-4 border-b-2 border-gray-200 dark:border-gray-700 pb-2 text-primary dark:text-green-400">Person ${idx + 1}</h4>
 `;
 
 const personalInfoHtml = `
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
    <div class="md:col-span-2">
        <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Role <span class="text-red-500">*</span></label>
-       <select required class="reg-f-role w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" onchange="syncTraineeName(); toggleTraineeFields(this, ${idx});">
+       <select required class="reg-f-role w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" onchange="syncTraineeName(); toggleTraineeFields(this, ${idx});">
            <option value="" disabled selected>Select Role...</option>
            <option value="TRAINEE">Trainee</option>
            <option value="CAREGIVER">Caregiver</option>
            <option value="VOLUNTEER">Volunteer</option>
        </select>
    </div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Full Name (As in Passport) <span class="text-red-500">*</span></label><input required type="text" class="reg-f-name w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" oninput="syncTraineeName()"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Short Name / Nickname <span class="text-red-500">*</span></label><input required type="text" class="reg-f-shortname w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Preferred name"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Email <span class="text-red-500">*</span></label><input required type="email" class="reg-f-email w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Gender <span class="text-red-500">*</span></label><select required class="reg-f-gender w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"><option>Male</option><option>Female</option></select></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Contact Number (8-digit) <span class="text-red-500">*</span></label><input required type="tel" pattern="[0-9]{8}" class="reg-f-contact w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Date of Birth <span class="text-red-500">*</span></label><input required type="text" id="dob_${idx}" readonly placeholder="DD Mmm YYYY" onclick="openDatePicker('dob_${idx}', 'dob')" class="reg-f-dob w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium text-center cursor-pointer bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Project <span class="text-red-500">*</span></label><select required class="reg-f-group w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">${groupOpts}</select></div>
-   <div class="md:col-span-2"><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Home Address <span class="text-red-500">*</span></label><textarea required class="reg-f-address w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Full Name (As in Passport) <span class="text-red-500">*</span></label><input required type="text" class="reg-f-name w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" oninput="syncTraineeName()"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Short Name / Nickname <span class="text-red-500">*</span></label><input required type="text" class="reg-f-shortname w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Preferred name"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Email <span class="text-red-500">*</span></label><input required type="email" class="reg-f-email w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Gender <span class="text-red-500">*</span></label><select required class="reg-f-gender w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"><option>Male</option><option>Female</option></select></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Contact Number (8-digit) <span class="text-red-500">*</span></label><input required type="tel" pattern="[0-9]{8}" class="reg-f-contact w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Date of Birth <span class="text-red-500">*</span></label><input required type="text" id="dob_${idx}" readonly placeholder="DD Mmm YYYY" onclick="openDatePicker('dob_${idx}', 'dob')" class="reg-f-dob w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium text-center cursor-pointer bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Project <span class="text-red-500">*</span></label><select required class="reg-f-group w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">${groupOpts}</select></div>
+   <div class="md:col-span-2"><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Home Address <span class="text-red-500">*</span></label><textarea required class="reg-f-address w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
  </div>
 `;
 
 const caregiverHtml = `
- <div class="trainee-div hidden-force bg-green-50/50 dark:bg-gray-800 p-4 rounded-xl mb-4 border border-green-100 dark:border-gray-700">
+ <div class="trainee-div hidden-force bg-green-50/50 dark:bg-gray-800 p-4 rounded-xl mb-4 border-2 border-green-100 dark:border-gray-700">
    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
      <div class="relative">
          <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Related Trainees' Name(s) <span class="text-red-500">*</span></label>
-         <input required disabled type="text" id="reg-f-related-${idx}" class="reg-f-related w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" autocomplete="off" placeholder="Comma-separated for multiple">
+         <input required disabled type="text" id="reg-f-related-${idx}" class="reg-f-related w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" autocomplete="off" placeholder="Comma-separated for multiple">
      </div>
-     <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Relationship to Trainee(s) <span class="text-red-500">*</span></label><input required disabled type="text" class="reg-f-relation w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Father, Sibling"></div>
+     <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Relationship to Trainee(s) <span class="text-red-500">*</span></label><input required disabled type="text" class="reg-f-relation w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="e.g. Father, Sibling"></div>
    </div>
  </div>
 `;
 
 const identityHtml = `
- <h4 class="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Identification</h4>
+ <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Identification</h4>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Full NRIC / FIN <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'nric')" oninput="handleFieldInput(this, 'nric')" class="reg-f-nric w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Nationality <span class="text-red-500">*</span></label><input required type="text" id="reg-f-nat_${idx}" class="reg-f-nat w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport No. <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'passport')" oninput="handleFieldInput(this, 'passport')" class="reg-f-pass w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport Expiry <span class="text-red-500">*</span></label><input required type="text" id="exp_${idx}" readonly placeholder="DD Mmm YYYY" onclick="openDatePicker('exp_${idx}', 'exp')" class="reg-f-exp w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium text-center cursor-pointer bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Full NRIC / FIN <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'nric')" oninput="handleFieldInput(this, 'nric')" class="reg-f-nric w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Nationality <span class="text-red-500">*</span></label><input required type="text" id="reg-f-nat_${idx}" class="reg-f-nat w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport No. <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'passport')" oninput="handleFieldInput(this, 'passport')" class="reg-f-pass w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport Expiry <span class="text-red-500">*</span></label><input required type="text" id="exp_${idx}" readonly placeholder="DD Mmm YYYY" onclick="openDatePicker('exp_${idx}', 'exp')" class="reg-f-exp w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium text-center cursor-pointer bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
  </div>
 `;
 
 const medicalHtml = `
- <h4 class="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Dietary</h4>
+ <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Dietary</h4>
  <div class="mb-4">
    <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Dietary Restrictions <span class="text-red-500">*</span></label>
-   <input required type="text" class="reg-f-diet w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nil if none">
+   <input required type="text" class="reg-f-diet w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Nil if none">
  </div>
  
  <div class="medical-div hidden-force">
-   <h4 class="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Medical</h4>
+   <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Medical</h4>
    <div class="mb-4">
      <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Medical Conditions and Medications to take note of <span class="text-red-500">*</span></label>
-     <textarea required class="reg-f-medical w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" rows="2" placeholder="Nil if none"></textarea>
+     <textarea required class="reg-f-medical w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-primary" rows="2" placeholder="Nil if none"></textarea>
    </div>
  </div>
 
- <h4 class="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Emergency Contact</h4>
+ <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Emergency Contact</h4>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Emergency Contact Name <span class="text-red-500">*</span></label><input required type="text" class="reg-f-emname w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Emergency Contact Number (8-digit) <span class="text-red-500">*</span></label><input required type="tel" pattern="[0-9]{8}" class="reg-f-emcontact w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Relationship to Emerg. Contact <span class="text-red-500">*</span></label><input required type="text" class="reg-f-emrelation w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Emergency Contact Name <span class="text-red-500">*</span></label><input required type="text" class="reg-f-emname w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Emergency Contact Number (8-digit) <span class="text-red-500">*</span></label><input required type="tel" pattern="[0-9]{8}" class="reg-f-emcontact w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Relationship to Emerg. Contact <span class="text-red-500">*</span></label><input required type="text" class="reg-f-emrelation w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
  </div>
 `;
 
 const remarksHtml = `
- <h4 class="font-bold text-lg mb-3 border-b border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Remarks</h4>
+ <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Remarks</h4>
  <div class="space-y-4">
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Sleeping Arrangement Request</label><textarea class="reg-f-sleep w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Other Points to Note</label><textarea class="reg-f-other w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Sleeping Arrangement Request</label><textarea class="reg-f-sleep w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
+   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Other Points to Note</label><textarea class="reg-f-other w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary" rows="2"></textarea></div>
  </div>
 `;
 
 const finalHtml = `
- <div class="member-block bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm relative" data-idx="${idx}">
+ <div class="member-block bg-white dark:bg-gray-800 p-5 rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-md relative" data-idx="${idx}">
    ${headerHtml}
    ${personalInfoHtml}
    ${caregiverHtml}
@@ -244,18 +244,18 @@ function ensureCaregiverPopupModal() {
     const div = document.createElement('div');
     div.id = 'caregiverPopupModal';
     div.className = 'fixed inset-0 bg-black/60 z-[120] hidden-force flex justify-center items-center backdrop-blur-sm p-4';
-    div.innerHTML = `<div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800 animate-scale-up">
-            <div class="p-5 border-b border-gray-200 dark:border-gray-800">
+    div.innerHTML = `<div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden border-2 border-gray-200 dark:border-gray-800 animate-scale-up">
+            <div class="p-5 border-b-2 border-gray-200 dark:border-gray-800">
                 <h3 class="text-lg font-black text-gray-900 dark:text-white">Caregiver Details</h3>
             </div>
             <div class="p-5 space-y-4">
                 <div>
                     <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Related Trainee Name <span class="text-red-500">*</span></label>
-                    <input type="text" id="cgPopupTraineeName" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">
+                    <input type="text" id="cgPopupTraineeName" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Relationship to Trainee <span class="text-red-500">*</span></label>
-                    <select id="cgPopupRelation" class="w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">
+                    <select id="cgPopupRelation" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary">
                         <option value="">Select Relationship</option>
                         <option value="Mother">Mother</option>
                         <option value="Father">Father</option>
@@ -266,8 +266,8 @@ function ensureCaregiverPopupModal() {
                     </select>
                 </div>
             </div>
-            <div class="p-4 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3 border-t border-gray-200 dark:border-gray-700">
-                <button type="button" onclick="cancelCaregiverPopup()" class="px-4 py-2 rounded-lg font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition">Cancel</button>
+            <div class="p-4 bg-gray-50 dark:bg-gray-800 flex justify-end gap-3 border-t-2 border-gray-200 dark:border-gray-700">
+                <button type="button" onclick="cancelCaregiverPopup()" class="px-4 py-2 rounded-lg font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900 border-2 border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-md transition">Cancel</button>
                 <button type="button" onclick="confirmCaregiverPopup()" class="px-6 py-2 rounded-lg font-bold text-white bg-primary hover:bg-green-600 shadow-md transition">Confirm</button>
             </div>
         </div>`;
@@ -459,7 +459,7 @@ if (query) {
 
 let html = '';
 matches.forEach(t => {
-  html += `<li class="px-3 py-2 text-sm font-bold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition border-b border-gray-100 dark:border-gray-700 last:border-0" onmousedown="selectTraineeDropdown(${idx}, '${t.name.replace(/'/g, "\\'")}')">${t.name} ${t.shortName ? `(${t.shortName})` : ''}</li>`;
+  html += `<li class="px-3 py-2 text-sm font-bold text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition border-b-2 border-gray-100 dark:border-gray-700 last:border-0" onmousedown="selectTraineeDropdown(${idx}, '${t.name.replace(/'/g, "\\'")}')">${t.name} ${t.shortName ? `(${t.shortName})` : ''}</li>`;
 });
 
 if(html === '') {

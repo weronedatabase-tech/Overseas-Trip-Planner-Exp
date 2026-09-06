@@ -165,7 +165,7 @@ const cardId = `grouping-card-${t.name.replace(/[^a-zA-Z0-9]/g, '')}`;
 
 let volBadge = '';
 if (t.volPaired) {
-volBadge = `<div class="mt-2 text-[10px] text-teal-600 dark:text-teal-400 font-bold leading-tight bg-teal-50 dark:bg-teal-900/30 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800/50 inline-block"><i class="fa-solid fa-handshake-angle mr-1"></i>${t.volPaired}</div>`;
+volBadge = `<div class="mt-2 text-[10px] text-teal-600 dark:text-teal-400 font-bold leading-tight bg-teal-50 dark:bg-teal-900/30 px-1.5 py-0.5 rounded border-2 border-teal-200 dark:border-teal-800/50 inline-block"><i class="fa-solid fa-handshake-angle mr-1"></i>${t.volPaired}</div>`;
 } else {
 volBadge = `<div class="mt-2 text-[9px] uppercase tracking-wider text-red-500 font-black bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded inline-block"><i class="fa-solid fa-circle-exclamation mr-1"></i>Unpaired</div>`;
 }
@@ -183,11 +183,11 @@ extras += `<i class="fa-solid fa-note-sticky text-yellow-500 text-[10px] ml-1 cu
 
 let cgBadge = '';
 if (t.caregivers > 0) {
-cgBadge = `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-black text-white shadow-sm ml-1">${t.caregivers > 1 ? t.caregivers + 'C' : 'C'}</span>`;
+cgBadge = `<span class="inline-flex shrink-0 items-center justify-center min-w-[16px] h-4 px-1 bg-red-500 rounded-full text-[9px] font-black text-white shadow-md ml-1">${t.caregivers > 1 ? t.caregivers + 'C' : 'C'}</span>`;
 }
 
 cardsHtml += `
-<div id="${cardId}" class="bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm cursor-pointer hover:border-orange-500 transition relative grouping-card group select-none active:scale-95" data-name="${htmlSafeName}" onclick="openQuickGroupModal('${jsSafeName}')">
+<div id="${cardId}" class="bg-white dark:bg-zinc-800 p-3 rounded-lg border-2 border-gray-200 dark:border-zinc-700 shadow-md cursor-pointer hover:border-orange-500 transition relative grouping-card group select-none active:scale-95" data-name="${htmlSafeName}" onclick="openQuickGroupModal('${jsSafeName}')">
 <div class="flex justify-between items-start gap-1 w-full">
    <div class="text-sm font-black text-gray-900 dark:text-white leading-tight break-words flex-1 flex items-center flex-wrap gap-1">
        <span>${t.name}</span>
@@ -211,11 +211,11 @@ html += `
 <div class="${headerBg} px-3 py-2 rounded-t-lg font-black flex justify-between items-center text-xs md:text-sm uppercase tracking-wide border-b-2 ${borderCol} relative">
 <div class="flex items-center gap-2">
    <span>${title}</span>
-   ${!isUnassigned ? `<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-red-500 text-red-500 hover:text-white dark:hover:bg-red-600 rounded shadow-none hover:shadow-sm transition-colors opacity-70 hover:opacity-100" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+   ${!isUnassigned ? `<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-red-500 text-red-500 hover:text-white dark:hover:bg-red-600 rounded shadow-none hover:shadow-md transition-colors opacity-70 hover:opacity-100" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
 </div>
 <span class="bg-white/60 dark:bg-black/50 px-2.5 py-0.5 rounded-full text-[10px] shadow-inner">${colTrainees.length}</span>
 </div>
-<div class="bg-white/50 dark:bg-zinc-900/50 p-2 md:p-3 rounded-b-lg border border-t-0 ${innerBorderCol} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
+<div class="bg-white/50 dark:bg-zinc-900/50 p-2 md:p-3 rounded-b-lg border-2 border-t-0 ${innerBorderCol} grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 md:gap-3">
 ${cardsHtml || `<div class="col-span-full text-center p-3 text-xs font-bold text-gray-400 italic bg-gray-50 dark:bg-zinc-800/50 rounded-lg border border-dashed border-gray-200 dark:border-zinc-700">No trainees</div>`}
 </div>
 </div>
@@ -252,8 +252,8 @@ let allG = new Set([...activeGroups]);
 Array.from(allG).sort((a,b) => a.localeCompare(b, undefined, {numeric: true})).forEach(g => {
 grid.innerHTML += `
 <div class="relative group/btn">
-  <button onclick="handleGroupSelection('${g}')" class="w-full bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-zinc-700 py-2 md:py-3 rounded-lg text-sm font-bold hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors shadow-sm focus:outline-none">Grp ${g}</button>
-  <button onclick="if(window.deleteGroup('${g}', event)) closeQuickGroupModal()" class="absolute -top-1.5 -right-1.5 bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm border border-gray-300 dark:border-zinc-600 transition-colors z-10"><i class="fa-solid fa-xmark"></i></button>
+  <button onclick="handleGroupSelection('${g}')" class="w-full bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border-2 border-gray-300 dark:border-zinc-700 py-2 md:py-3 rounded-lg text-sm font-bold hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors shadow-md focus:outline-none">Grp ${g}</button>
+  <button onclick="if(window.deleteGroup('${g}', event)) closeQuickGroupModal()" class="absolute -top-1.5 -right-1.5 bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md border-2 border-gray-300 dark:border-zinc-600 transition-colors z-10"><i class="fa-solid fa-xmark"></i></button>
 </div>`;
 });
 }
@@ -385,7 +385,7 @@ const btn = document.getElementById('btn-sync-manual-grouping');
 if(!btn) return;
 const textSpan = btn.querySelector('.btn-text'); const spinner = btn.querySelector('.btn-spinner');
 
-btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
 spinner.className = "fa-solid fa-circle-notch fa-spin btn-spinner ml-1 hidden"; 
 
 if (state === 'loading' || state === 'saving') { 
@@ -397,7 +397,7 @@ btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200', 'dark:bg-
 textSpan.textContent = "Saved"; 
 setTimeout(() => {
 if (pendingGroupingUpdates.length === 0) {
-btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center border border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 shadow-sm focus:outline-none shrink-0";
+btn.className = "text-[10px] md:text-xs px-1.5 py-1 rounded font-bold transition flex items-center border-2 border-gray-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 shadow-md focus:outline-none shrink-0";
 textSpan.textContent = "Saved";
 }
 }, 2000);
@@ -555,7 +555,7 @@ function generateCustomDropdownHtml(type, targetId, label, options, currentICNam
 const jsSafeTarget = targetId.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
 const dropdownId = `dropdown-${type}-${targetId.replace(/[^a-zA-Z0-9]/g, '')}`;
 
-let listHtml = `<div class="p-2 border-b border-gray-100 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer transition-colors" onclick="handleAssignICChange('${type}', '${jsSafeTarget}', '')">
+let listHtml = `<div class="p-2 border-b-2 border-gray-100 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer transition-colors" onclick="handleAssignICChange('${type}', '${jsSafeTarget}', '')">
 <div class="font-bold text-sm text-gray-500">-- No IC Assigned --</div>
 </div>`;
 
@@ -569,7 +569,7 @@ const bgClass = isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-b
 
 const jsSafeVolName = v.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
-listHtml += `<div class="p-2 border-b border-gray-100 dark:border-zinc-800 ${bgClass} cursor-pointer transition-colors" onclick="handleAssignICChange('${type}', '${jsSafeTarget}', '${jsSafeVolName}')">
+listHtml += `<div class="p-2 border-b-2 border-gray-100 dark:border-zinc-800 ${bgClass} cursor-pointer transition-colors" onclick="handleAssignICChange('${type}', '${jsSafeTarget}', '${jsSafeVolName}')">
  <div class="font-bold text-sm text-gray-900 dark:text-white flex justify-between items-center">
      <span>${v.name}</span>
      ${isSelected ? '<i class="fa-solid fa-check text-blue-500 text-xs"></i>' : ''}
@@ -582,14 +582,14 @@ listHtml += `<div class="p-2 border-b border-gray-100 dark:border-zinc-800 ${bgC
 const displayLabel = currentICName || "-- No IC Assigned --";
 
 return `
-<div class="bg-gray-50 dark:bg-zinc-800/50 p-3 md:p-4 rounded-xl border border-gray-200 dark:border-zinc-700 relative">
+<div class="bg-gray-50 dark:bg-zinc-800/50 p-3 md:p-4 rounded-xl border-2 border-gray-200 dark:border-zinc-700 relative">
 <label class="block text-xs font-black text-gray-900 dark:text-white mb-2 uppercase tracking-wide">${label}</label>
 <div class="relative">
-<button type="button" onclick="toggleAssignICDropdown('${dropdownId}', event)" class="w-full bg-white dark:bg-black border border-gray-300 dark:border-zinc-600 rounded-lg p-2.5 text-sm text-gray-900 dark:text-white shadow-sm focus:outline-none focus:border-blue-500 flex justify-between items-center">
+<button type="button" onclick="toggleAssignICDropdown('${dropdownId}', event)" class="w-full bg-white dark:bg-black border-2 border-gray-300 dark:border-zinc-600 rounded-lg p-2.5 text-sm text-gray-900 dark:text-white shadow-md focus:outline-none focus:border-blue-500 flex justify-between items-center">
  <span class="truncate">${displayLabel}</span>
  <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
 </button>
-<div id="${dropdownId}" class="assign-ic-dropdown-list hidden absolute z-50 w-full mt-1 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar text-left">
+<div id="${dropdownId}" class="assign-ic-dropdown-list hidden absolute z-50 w-full mt-1 bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl max-h-60 overflow-y-auto custom-scrollbar text-left">
  ${listHtml}
 </div>
 </div>
@@ -611,7 +611,7 @@ activeTrainees.forEach(t => allGroups.add(String(t.group).trim()));
 let sortedGroups = Array.from(allGroups).sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
 
 if (sortedGroups.length > 0) {
-html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-users text-orange-500 mr-2"></i>Group ICs</h4><div class="space-y-3">`;
+html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-users text-orange-500 mr-2"></i>Group ICs</h4><div class="space-y-3">`;
 sortedGroups.forEach(g => {
 let tList = activeTrainees.filter(t => String(t.group).trim() === g);
 let groupVolKeys = new Set();
@@ -635,14 +635,14 @@ html += generateCustomDropdownHtml('group', g, `Group ${g} IC`, options, current
 });
 html += `</div></div>`;
 } else {
-html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-users text-orange-500 mr-2"></i>Group ICs</h4>
+html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-users text-orange-500 mr-2"></i>Group ICs</h4>
 <p class="text-xs text-gray-500 italic text-center py-2">No groups assigned yet.</p></div>`;
 }
 
 // --- 2. MEETING ICs ---
 let meetingLocs = groupingData.meetingLocs || [];
 if (meetingLocs.length > 0) {
-html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-location-dot text-blue-500 mr-2"></i>Meeting ICs</h4><div class="space-y-3">`;
+html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-location-dot text-blue-500 mr-2"></i>Meeting ICs</h4><div class="space-y-3">`;
 meetingLocs.forEach(loc => {
 let options = [];
 let currentICName = "";
@@ -661,7 +661,7 @@ html += `</div></div>`;
 // --- 3. DISMISSAL ICs ---
 let dismissalLocs = groupingData.dismissalLocs || [];
 if (dismissalLocs.length > 0) {
-html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-flag-checkered text-purple-500 mr-2"></i>Dismissal ICs</h4><div class="space-y-3">`;
+html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-flag-checkered text-purple-500 mr-2"></i>Dismissal ICs</h4><div class="space-y-3">`;
 dismissalLocs.forEach(loc => {
 let options = [];
 let currentICName = "";
@@ -750,7 +750,7 @@ const container = document.getElementById('exportTableContainer');
 if (btn) {
 btn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Share';
 btn.onclick = shareExportTable; 
-btn.className = 'px-4 md:px-5 py-2 md:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors';
+btn.className = 'px-4 md:px-5 py-2 md:py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-colors';
 btn.disabled = false;
 }
 
@@ -1085,7 +1085,7 @@ for (let i = 0; i < pages.length; i++) {
 
   const dataUrl = canvas.toDataURL('image/png', 1.0);
   dataUrls.push(dataUrl);
-  previewHtml += `<img src="${dataUrl}" class="w-full h-auto shadow-md rounded border border-gray-200 dark:border-zinc-700 mx-auto mb-4" style="display:block; max-width: 100%;" />`;
+  previewHtml += `<img src="${dataUrl}" class="w-full h-auto shadow-md rounded border-2 border-gray-200 dark:border-zinc-700 mx-auto mb-4" style="display:block; max-width: 100%;" />`;
 
   const blob = await (await fetch(dataUrl)).blob();
   generatedImageBlobs.push(blob);
@@ -1097,7 +1097,7 @@ preview.innerHTML = previewHtml;
 
 btn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Share via Apps';
 btn.onclick = executeNativeShare;
-btn.className = 'px-4 md:px-5 py-2 md:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors';
+btn.className = 'px-4 md:px-5 py-2 md:py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-bold flex items-center gap-2 shadow-md transition-colors';
 
 if (currentGroupingSheetUrl && dataUrls.length > 0) {
   apiCall('uploadExportTable', {

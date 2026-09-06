@@ -325,7 +325,7 @@ if(btns.length === 0) return;
 btns.forEach(btn => {
     const textSpan = btn.querySelector('.btn-text'); 
     const spinner = btn.querySelector('.btn-spinner');
-    btn.className = "btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+    btn.className = "btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
     spinner.className = "btn-spinner ml-1 !w-3 !h-3 hidden-force"; 
     if (state === 'loading') { 
         btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 
@@ -449,7 +449,7 @@ const btn = document.getElementById('btn-sync-rooms');
 if(!btn) return;
 const textSpan = btn.querySelector('.btn-text'); 
 const spinner = btn.querySelector('.btn-spinner');
-btn.className = "text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+btn.className = "text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
 spinner.className = "btn-spinner ml-1 !w-3 !h-3 hidden-force"; 
 if (state === 'loading') { 
     btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 
@@ -885,7 +885,7 @@ try {
 // ==========================================
 function buildLogisticsUI() {
 const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_logistics) el_tab_logistics.innerHTML = `
-<div class="sticky top-0 z-40 flex overflow-x-auto bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 scrollbar-hide shrink-0 rounded-t-xl md:rounded-none px-2 pt-1">
+<div class="sticky top-0 z-40 flex overflow-x-auto bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 scrollbar-hide shrink-0 rounded-t-xl md:rounded-none px-2 pt-1">
     <button onclick="switchLogisticsSubTab('pairings')" id="subTab-pairings" class="px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none">1. Pairings</button>
     <button onclick="switchLogisticsSubTab('rooms')" id="subTab-rooms" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">2. Rooms</button>
     <button onclick="switchLogisticsSubTab('groups')" id="subTab-groups" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">3. Groups</button>
@@ -895,30 +895,30 @@ const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_log
 <div id="log-pairings" class="flex-1 flex flex-col min-h-0 w-full relative">
     <div id="logLoadingOverlay" class="absolute inset-0 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-20 hidden-force flex flex-col justify-center items-center">
         <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-        <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading...</span>
+        <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading...</span>
     </div>
-    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-1 shadow-sm sticky top-0 z-30">
+    <div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-1 shadow-md sticky top-0 z-30">
         <div class="flex justify-between items-center px-1">
             <div class="flex items-center gap-2">
                 <h3 class="text-sm md:text-base font-black text-gray-900 dark:text-white tracking-tight">Pairings</h3>
-                <button onclick="toggleAltSwap()" class="bg-gray-100 dark:bg-gray-800 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none border border-gray-200 dark:border-gray-700 shadow-sm" title="Swap Columns">
+                <button onclick="toggleAltSwap()" class="bg-gray-100 dark:bg-gray-800 p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none border-2 border-gray-200 dark:border-gray-700 shadow-md" title="Swap Columns">
                     <svg class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 </button>
             </div>
-            <button onclick="manualSyncPairings(this)" class="btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncPairings(this)" class="btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
         <div class="flex justify-between items-center px-1 gap-2 mt-1 mb-1">
             <div class="relative w-full">
-                <input type="text" id="pairingSearchInput" oninput="renderPairings()" placeholder="Search pairings..." class="w-full p-1.5 pl-7 pr-8 border border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+                <input type="text" id="pairingSearchInput" oninput="renderPairings()" placeholder="Search pairings..." class="w-full p-1.5 pl-7 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
                 <svg class="w-3.5 h-3.5 absolute left-2 top-2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 <button onclick="clearSearch('pairingSearchInput', 'renderPairings')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
         </div>
     </div>
-    <div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950 border-x border-b border-gray-200 dark:border-gray-700 rounded-b-xl md:rounded-none">
-        <div id="dnd-source-col" class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r border-gray-200 dark:border-gray-700">
+    <div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950 border-x border-b-2 border-gray-200 dark:border-gray-700 rounded-b-xl md:rounded-none">
+        <div id="dnd-source-col" class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r-2 border-gray-200 dark:border-gray-700">
             <h4 id="dnd-source-title" class="font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b"></h4>
             <div id="dnd-source-pool" class="space-y-1.5 flex-grow overflow-y-auto p-1.5 custom-scrollbar bg-opacity-50 pb-6"></div>
         </div>
@@ -930,32 +930,32 @@ const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_log
 </div>
 
 <div id="log-rooms" class="hidden-force flex-1 flex flex-col min-h-0 w-full relative">
-    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-sm sticky top-0 z-30">
+    <div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-md sticky top-0 z-30">
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Room Assignments</h3>
-                <button onclick="resetRoomAssignments()" class="bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetRoomAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Assignment</span>
                 </button>
-                <button onclick="deleteAllRooms()" class="bg-red-50 text-red-600 border border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-red-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Delete All Rooms">
+                <button onclick="deleteAllRooms()" class="bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-red-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Delete All Rooms">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Rooms</span>
                 </button>
-                <button onclick="autoAssignRooms()" class="bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-green-100 transition focus:outline-none whitespace-nowrap">Auto-Room</button>
+                <button onclick="autoAssignRooms()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none whitespace-nowrap">Auto-Room</button>
                 
             </div>
-            <button id="btn-sync-rooms" onclick="manualSyncRooms(this)" class="text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button id="btn-sync-rooms" onclick="manualSyncRooms(this)" class="text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
         <div class="flex justify-between items-center px-1 gap-2 mt-1">
             <div class="relative w-full max-w-sm">
-                <input type="text" id="roomSearchInput" oninput="renderRooms()" placeholder="Search participants/rooms..." class="w-full p-1.5 pl-7 pr-8 border border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+                <input type="text" id="roomSearchInput" oninput="renderRooms()" placeholder="Search participants/rooms..." class="w-full p-1.5 pl-7 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
                 <svg class="w-3.5 h-3.5 absolute left-2 top-2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 <button onclick="clearSearch('roomSearchInput', 'renderRooms')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
-            <select id="roomFilterSelect" onchange="renderRooms()" class="text-xs font-bold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1.5 py-1.5 outline-none shrink-0">
+            <select id="roomFilterSelect" onchange="renderRooms()" class="text-xs font-bold bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1.5 outline-none shrink-0">
                 <option value="ALL">All Roles</option>
                 <option value="TRAINEE">Trainees</option>
                 <option value="CAREGIVER">Caregivers</option>
@@ -964,14 +964,14 @@ const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_log
         </div>
     </div>
     <div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative bg-gray-50 dark:bg-gray-950 rounded-b-xl md:rounded-none">
-        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden border-r border-gray-200 dark:border-gray-700 bg-gray-100/50 dark:bg-gray-900/50">
-            <h4 class="font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest bg-gray-200/50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">Unassigned (<span id="unassignedCount">0</span>)</h4>
+        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden border-r-2 border-gray-200 dark:border-gray-700 bg-gray-100/50 dark:bg-gray-900/50">
+            <h4 class="font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest bg-gray-200/50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-400 border-b-2 border-gray-200 dark:border-gray-700">Unassigned (<span id="unassignedCount">0</span>)</h4>
             <div id="roomUnassignedPool" class="space-y-1.5 flex-grow overflow-y-auto p-1.5 custom-scrollbar pb-6"></div>
         </div>
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
-            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Rooms</span>
-                <button onclick="openManageRoomsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
+                <button onclick="openManageRoomsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
             </div>
             <div id="roomListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
@@ -979,80 +979,80 @@ const el_tab_logistics = document.getElementById('tab-logistics'); if(el_tab_log
 </div>
 
 <div id="log-groups" class="hidden-force flex-1 flex flex-col min-h-0 w-full relative">
-    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-sm sticky top-0 z-30">
+    <div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-md sticky top-0 z-30">
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Groups</h3>
-                <button onclick="autoGroup()" class="bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Group">
+                <button onclick="autoGroup()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Group">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span class="whitespace-nowrap">Auto Group</span>
                 </button>
-                <button onclick="resetGroupAssignments()" class="bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetGroupAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
             </div>
-            <button onclick="manualSyncGroups()" class="btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncGroups()" class="btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
         <div class="relative w-full flex items-center gap-2">
             <div class="relative flex-1">
-                <input type="text" id="groupSearchInput" oninput="renderGroups()" placeholder="Search..." class="w-full p-1.5 pl-7 pr-8 border border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+                <input type="text" id="groupSearchInput" oninput="renderGroups()" placeholder="Search..." class="w-full p-1.5 pl-7 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
                 <i class="fa-solid fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
                 <button onclick="clearSearch('groupSearchInput', 'renderGroups')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
         </div>
     </div>
     <div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative">
-        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             <h4 class="font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50">Unassigned (<span id="groupUnassignedCount">0</span>)</h4>
             <div id="groupUnassignedPool" class="dnd-group-dropzone space-y-1.5 flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar pb-6"></div>
         </div>
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
-            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Groups</span>
-                <button onclick="openManageGroupsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
+                <button onclick="openManageGroupsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
             </div>
             <div id="groupListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
     </div>
 </div>
 <div id="log-buses" class="hidden-force flex-1 flex flex-col min-h-0 w-full relative">
-    <div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-sm sticky top-0 z-30">
+    <div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-md sticky top-0 z-30">
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Buses</h3>
-                <button onclick="autoBus()" class="bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Bus">
+                <button onclick="autoBus()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Bus">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span class="whitespace-nowrap">Auto Bus</span>
                 </button>
-                <button onclick="resetBusAssignments()" class="bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-sm hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetBusAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
             </div>
-            <button onclick="manualSyncBuses()" class="btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncBuses()" class="btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
         <div class="relative w-full flex items-center gap-2">
             <div class="relative flex-1">
-                <input type="text" id="busSearchInput" oninput="renderBuses()" placeholder="Search..." class="w-full p-1.5 pl-7 pr-8 border border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+                <input type="text" id="busSearchInput" oninput="renderBuses()" placeholder="Search..." class="w-full p-1.5 pl-7 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
                 <i class="fa-solid fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
                 <button onclick="clearSearch('busSearchInput', 'renderBuses')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
             </div>
         </div>
     </div>
     <div class="flex flex-row flex-1 min-h-0 w-full overflow-hidden relative">
-        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r-2 border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             <h4 class="font-black text-xs py-1.5 shrink-0 text-center uppercase tracking-widest shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50">Unassigned (<span id="busUnassignedCount">0</span>)</h4>
             <div id="busUnassignedPool" class="dnd-bus-dropzone space-y-1.5 flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar pb-6"></div>
         </div>
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
-            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
+            <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Buses</span>
-                <button onclick="openManageBusesSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
+                <button onclick="openManageBusesSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog mr-1"></i>Manage</button>
             </div>
             <div id="busListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
@@ -1118,8 +1118,8 @@ let unHtml = '';
         });
 
         grpHtml += `
-        <div class="dnd-group-dropzone bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm transition-colors" data-group="${gName}">
-            <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-1.5 mb-1.5">
+        <div class="dnd-group-dropzone bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-md transition-colors" data-group="${gName}">
+            <div class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-1.5 mb-1.5">
                 <div class="flex items-center gap-2">
                     <span class="font-black text-sm md:text-sm text-gray-900 dark:text-white leading-tight">Group ${gName}</span>
                     <button onclick="removeGroupList('${gName}')" class="text-red-500 hover:text-red-600 focus:outline-none"><i class="fa-solid fa-trash text-sm"></i></button>
@@ -1141,11 +1141,11 @@ function generateGroupCardHtml(item) {
     const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     const roleShort = item.role.substring(0,3).toUpperCase();
     return `
-    <div class="dnd-group-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
-        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-sm border ${dynColor} w-full flex items-start justify-between gap-1">
+    <div class="dnd-group-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
+        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
             <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
         </div>
-        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
+        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
     </div>
     `;
 }
@@ -1199,8 +1199,8 @@ let unHtml = '';
         });
 
         busHtml += `
-        <div class="dnd-bus-dropzone bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-sm transition-colors" data-bus="${bName}">
-            <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-1.5 mb-1.5">
+        <div class="dnd-bus-dropzone bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-md transition-colors" data-bus="${bName}">
+            <div class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-1.5 mb-1.5">
                 <div class="flex items-center gap-2">
                     <span class="font-black text-sm md:text-sm text-gray-900 dark:text-white leading-tight">Bus ${bName}</span>
                     <button onclick="removeBusList('${bName}')" class="text-red-500 hover:text-red-600 focus:outline-none"><i class="fa-solid fa-trash text-sm"></i></button>
@@ -1222,11 +1222,11 @@ function generateBusCardHtml(item) {
     const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     const roleShort = item.role.substring(0,3).toUpperCase();
     return `
-    <div class="dnd-bus-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
-        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-sm border ${dynColor} w-full flex items-start justify-between gap-1">
+    <div class="dnd-bus-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
+        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
             <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
         </div>
-        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
+        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
     </div>
     `;
 }
@@ -1550,7 +1550,7 @@ function toggleAltSwap() { altSwapMode = !altSwapMode; renderPairings(); }
 
 function generatePillHtml(targetName, targetColorClass, traineeNric, volNric) {
 return `<div class="relative flex w-full align-top pointer-events-auto">
-<div class="${targetColorClass} text-xs md:text-sm pl-2 pr-6 py-1 rounded shadow-sm border border-gray-300 dark:border-gray-600 font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full">
+<div class="${targetColorClass} text-xs md:text-sm pl-2 pr-6 py-1 rounded shadow-md border-2 border-gray-300 dark:border-gray-600 font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full">
 ${targetName}
 </div>
 <div class="remove-x" onclick="unpairTrainee('${traineeNric}', '${volNric}')">×</div>
@@ -1561,7 +1561,7 @@ function generateCardHtml(item, traineesWithCaregivers, activePairings, vols, tr
 const dynColor = getProjectColor(item.group);
 
 const isFam = item.role === 'TRAINEE' && traineesWithCaregivers.has(String(item.name).trim().toLowerCase());
-const famBadge = isFam ? `<span class="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-[10px] uppercase font-black tracking-wider px-1 py-0.5 rounded shrink-0 shadow-sm border border-purple-200 dark:border-purple-700 pointer-events-none whitespace-nowrap">FAM</span>` : '';
+const famBadge = isFam ? `<span class="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-[10px] uppercase font-black tracking-wider px-1 py-0.5 rounded shrink-0 shadow-md border-2 border-purple-200 dark:border-purple-700 pointer-events-none whitespace-nowrap">FAM</span>` : '';
 
 const myPairings = item.role === 'TRAINEE' ? activePairings.filter(p => p.traineeNric === item.nric) : activePairings.filter(p => p.volNric === item.nric);
 
@@ -1578,13 +1578,13 @@ const btnLabel = item.role === 'TRAINEE' ? '+ Vol' : '+ Trn';
 const displayName = item.displayName || item.name;
 
 return `
-<div class="dnd-draggable dnd-dropzone bg-white dark:bg-gray-800 p-1.5 md:p-2 rounded-md border border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col min-h-[60px] gap-1" data-nric="${item.nric}" data-role="${item.role}">
+<div class="dnd-draggable dnd-dropzone bg-white dark:bg-gray-800 p-1.5 md:p-2 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col min-h-[60px] gap-1" data-nric="${item.nric}" data-role="${item.role}">
     <div class="flex justify-between items-start w-full gap-1">
-        <div class="main-name-pill font-extrabold text-sm md:text-[12px] px-1.5 py-0.5 rounded shadow-sm border ${dynColor} max-w-full inline-flex flex-wrap items-center gap-1 self-start min-w-0 leading-[1.1]">
+        <div class="main-name-pill font-extrabold text-sm md:text-[12px] px-1.5 py-0.5 rounded shadow-md border ${dynColor} max-w-full inline-flex flex-wrap items-center gap-1 self-start min-w-0 leading-[1.1]">
             <span class="break-words whitespace-normal min-w-0 text-left">${displayName}</span>
             ${famBadge}
         </div>
-        <button onclick="openPairingSheet('${item.nric}', '${item.role}')" class="text-[11px] md:text-xs bg-green-50 dark:bg-gray-700 text-green-600 dark:text-green-400 font-bold px-1.5 py-1 rounded border border-green-200 dark:border-gray-600 hover:bg-green-100 transition whitespace-nowrap focus:outline-none shrink-0 pointer-events-auto shadow-sm">${btnLabel}</button>
+        <button onclick="openPairingSheet('${item.nric}', '${item.role}')" class="text-[11px] md:text-xs bg-green-50 dark:bg-gray-700 text-green-600 dark:text-green-400 font-bold px-1.5 py-1 rounded border-2 border-green-200 dark:border-gray-600 hover:bg-green-100 transition whitespace-nowrap focus:outline-none shrink-0 pointer-events-auto shadow-md">${btnLabel}</button>
     </div>
     <div class="flex flex-col pointer-events-auto bg-gray-50/50 dark:bg-gray-900/50 p-1.5 rounded min-h-[36px] border border-dashed border-gray-200 dark:border-gray-700 mt-1 w-full gap-1.5">
         ${pairedPills || '<span class="text-[11px] md:text-xs font-medium text-gray-400 dark:text-gray-500 mt-0.5 pointer-events-none text-center w-full py-1">Drop pair here</span>'}
@@ -1638,12 +1638,12 @@ const traineeColClass = "bg-green-50/30 dark:bg-green-900/10";
 const sourceColClass = isSourceVol ? volColClass : traineeColClass;
 const targetColClass = isSourceVol ? traineeColClass : volColClass;
 
-const volTitleClass = "bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-b border-orange-200 dark:border-orange-800";
-const traineeTitleClass = "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-b border-green-200 dark:border-green-800";
+const volTitleClass = "bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-b-2 border-orange-200 dark:border-orange-800";
+const traineeTitleClass = "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-b-2 border-green-200 dark:border-green-800";
 
 const sourceCol = document.getElementById('dnd-source-col');
 const targetCol = document.getElementById('dnd-target-col');
-sourceCol.className = `flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r border-gray-200 dark:border-gray-700 ${sourceColClass}`;
+sourceCol.className = `flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors border-r-2 border-gray-200 dark:border-gray-700 ${sourceColClass}`;
 targetCol.className = `flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors ${targetColClass}`;
 
 const sourceTitle = document.getElementById('dnd-source-title');
@@ -1699,12 +1699,12 @@ filteredUnassigned.forEach(item => {
     const sleepingIndicator = item.sleeping ? `<button onclick="openSleepingModal('${item.nric}')" class="ml-1 text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 pointer-events-auto transition-transform hover:scale-110 focus:outline-none shrink-0" title="${sleepingTooltip}"><svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg></button>` : '';
 
     unHtml += `
-    <div class="dnd-room-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" data-role="${item.role}">
-        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-sm border ${dynColor} w-full flex items-start justify-between gap-1">
+    <div class="dnd-room-draggable bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" data-role="${item.role}">
+        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
             <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
             ${sleepingIndicator}
         </div>
-        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
+        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
     </div>
     `;
 });
@@ -1747,7 +1747,7 @@ roomsToRender.forEach(room => {
             
             occHtml += `
             <div class="dnd-room-draggable relative flex w-full cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-transform pointer-events-auto" data-nric="${p.nric}">
-                <div class="main-name-pill ${dynColor} ${matchClass} text-xs md:text-sm px-2 py-1.5 rounded shadow-sm border font-bold opacity-90 leading-tight flex items-start justify-between w-full pr-5 gap-1">
+                <div class="main-name-pill ${dynColor} ${matchClass} text-xs md:text-sm px-2 py-1.5 rounded shadow-md border font-bold opacity-90 leading-tight flex items-start justify-between w-full pr-5 gap-1">
                     <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
                     ${sleepingIndicator}
                 </div>
@@ -1759,16 +1759,16 @@ roomsToRender.forEach(room => {
     const occDisplay = isFull ? `<span class="text-green-600 dark:text-green-400 font-black tracking-widest">${occCount}/${room.capacity} (FULL)</span>` : `<span class="text-gray-500 dark:text-gray-400 font-bold tracking-widest">${occCount}/${room.capacity}</span>`;
 
     roomHtml += `
-    <div class="dnd-room-dropzone flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm transition-colors" data-room-id="${room.id}">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 border-b border-gray-100 dark:border-gray-700 rounded-t-xl shrink-0 gap-2 w-full">
+    <div class="dnd-room-dropzone flex flex-col bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md transition-colors" data-room-id="${room.id}">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 border-b-2 border-gray-100 dark:border-gray-700 rounded-t-xl shrink-0 gap-2 w-full">
             <div class="flex items-start justify-between w-full lg:w-auto gap-2 flex-1">
                 <span class="font-black text-[12px] md:text-sm text-gray-900 dark:text-white break-words whitespace-normal leading-tight">${room.name}</span>
-                <span class="text-[11px] bg-gray-200/50 dark:bg-gray-700/50 px-1.5 py-0.5 rounded border border-gray-300 dark:border-gray-600 shrink-0 mt-0.5">${occDisplay}</span>
+                <span class="text-[11px] bg-gray-200/50 dark:bg-gray-700/50 px-1.5 py-0.5 rounded border-2 border-gray-300 dark:border-gray-600 shrink-0 mt-0.5">${occDisplay}</span>
             </div>
             <div class="flex items-center gap-1 shrink-0 w-full lg:w-auto justify-end">
-                <button onclick="openRoomAddSheet('${room.id}')" class="text-[11px] bg-green-50 text-green-600 border border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 font-bold px-1.5 py-0.5 rounded hover:bg-green-100 transition focus:outline-none" ${isFull ? 'disabled style="opacity:0.5;"' : ''}>+ Add</button>
-                <button onclick="promptEditRoom('${room.id}')" class="text-gray-400 hover:text-primary transition p-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                <button onclick="deleteRoom('${room.id}')" class="text-red-500 hover:text-red-600 transition p-0.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-sm"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                <button onclick="openRoomAddSheet('${room.id}')" class="text-[11px] bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 font-bold px-1.5 py-0.5 rounded hover:bg-green-100 transition focus:outline-none" ${isFull ? 'disabled style="opacity:0.5;"' : ''}>+ Add</button>
+                <button onclick="promptEditRoom('${room.id}')" class="text-gray-400 hover:text-primary transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
+                <button onclick="deleteRoom('${room.id}')" class="text-red-500 hover:text-red-600 transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
             </div>
         </div>
         <div class="p-1.5 min-h-[40px] flex flex-col pointer-events-auto bg-transparent gap-1.5 w-full">
@@ -1815,7 +1815,7 @@ let titleHtml = sourceRole === 'TRAINEE' ? "Select Volunteer" : "Select Trainee"
 if (sourcePerson) {
     const dynColor = getProjectColor(sourcePerson.group);
     const dName = sourcePerson.displayName || sourcePerson.name;
-    titleHtml = `Pair with <span class="ml-1 font-bold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-sm border ${dynColor}">${dName}</span>`;
+    titleHtml = `Pair with <span class="ml-1 font-bold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-md border ${dynColor}">${dName}</span>`;
 }
 
 const el_sheetTitle = document.getElementById('sheetTitle'); if(el_sheetTitle) el_sheetTitle.innerHTML = titleHtml;
@@ -1841,9 +1841,9 @@ targets.forEach(t => {
     const dName = t.displayName || t.name;
     const fullName = (t.name || '').toLowerCase();
 
-    html += `<div onclick="confirmPairing('${t.nric}')" class="sheet-list-item flex flex-col bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-pointer hover:border-primary transition mb-1.5" data-name="${dName.toLowerCase()}" data-fullname="${fullName}">
+    html += `<div onclick="confirmPairing('${t.nric}')" class="sheet-list-item flex flex-col bg-white dark:bg-gray-800 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-pointer hover:border-primary transition mb-1.5" data-name="${dName.toLowerCase()}" data-fullname="${fullName}">
     <div class="flex justify-between items-start w-full gap-2">
-        <span class="font-extrabold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-sm border ${tDynColor} break-words whitespace-normal min-w-0 flex-1 text-left leading-[1.1]">${dName}</span>
+        <span class="font-extrabold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-md border ${tDynColor} break-words whitespace-normal min-w-0 flex-1 text-left leading-[1.1]">${dName}</span>
         <span class="text-[11px] font-black ${roleColor} border px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap uppercase tracking-wider">${roleLabel}</span>
     </div>
     </div>`;
@@ -1874,9 +1874,9 @@ unassignedArr.forEach(t => {
     const dName = t.displayName || t.name;
     const fullName = (t.name || '').toLowerCase();
 
-    html += `<div onclick="confirmRoomAdd('${t.nric}')" class="sheet-list-item flex flex-col bg-white dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-pointer hover:border-primary transition mb-1.5" data-name="${dName.toLowerCase()}" data-fullname="${fullName}">
+    html += `<div onclick="confirmRoomAdd('${t.nric}')" class="sheet-list-item flex flex-col bg-white dark:bg-gray-800 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-pointer hover:border-primary transition mb-1.5" data-name="${dName.toLowerCase()}" data-fullname="${fullName}">
     <div class="flex justify-between items-start w-full gap-2">
-        <span class="font-extrabold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-sm border ${tDynColor} break-words whitespace-normal min-w-0 flex-1 text-left leading-[1.1]">${dName}</span>
+        <span class="font-extrabold text-sm md:text-xs px-1.5 py-0.5 rounded shadow-md border ${tDynColor} break-words whitespace-normal min-w-0 flex-1 text-left leading-[1.1]">${dName}</span>
         <span class="text-[11px] font-black ${roleColor} border px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap uppercase tracking-wider">${t.role.substring(0,3)}</span>
     </div>
     </div>`;
@@ -2022,7 +2022,7 @@ function renderGroupBusOptions() {
     // Unassign option
     if (activeAssignNric && (!query || "unassign".includes(query))) {
         html += `
-        <div onclick="selectGroupBusOption('')" class="sheet-list-item cursor-pointer p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition" data-name="unassign">
+        <div onclick="selectGroupBusOption('')" class="sheet-list-item cursor-pointer p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-750 transition" data-name="unassign">
             <span class="font-bold text-gray-700 dark:text-gray-200 text-sm">Unassigned</span>
         </div>`;
     }
@@ -2034,7 +2034,7 @@ function renderGroupBusOptions() {
         if (query && !nameStr.toLowerCase().includes(query)) return;
         
         html += `
-        <div class="sheet-list-item p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm flex items-center justify-between transition hover:bg-gray-50 dark:hover:bg-gray-750" data-name="${nameStr.toLowerCase()}">
+        <div class="sheet-list-item p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between transition hover:bg-gray-50 dark:hover:bg-gray-750" data-name="${nameStr.toLowerCase()}">
             <div class="cursor-pointer flex-1 font-bold text-gray-900 dark:text-white text-sm" onclick="selectGroupBusOption('${idVal}')">${activeAssignType === 'group' ? 'Group ' : (activeAssignType === 'bus' ? 'Bus ' : 'Room ')}${nameStr}</div>
             <button onclick="${activeAssignType === 'room' ? `deleteRoom('${idVal}')` : `removeGroupBusFromPopup('${idVal}')`}" class="text-red-500 hover:text-red-600 p-2 -mr-2"><i class="fa-solid fa-trash text-sm"></i></button>
         </div>`;
@@ -2180,7 +2180,7 @@ function setGroupSyncButtonState(state) {
     if(!btn) return;
     const textSpan = btn.querySelector('.btn-text'); 
     const spinner = btn.querySelector('.btn-spinner');
-    btn.className = "btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+    btn.className = "btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
     spinner.className = "btn-spinner ml-1 !w-3 !h-3 hidden-force"; 
     if (state === 'loading') { 
         btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 
@@ -2206,7 +2206,7 @@ function setBusSyncButtonState(state) {
     if(!btn) return;
     const textSpan = btn.querySelector('.btn-text'); 
     const spinner = btn.querySelector('.btn-spinner');
-    btn.className = "btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm focus:outline-none shrink-0"; 
+    btn.className = "btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
     spinner.className = "btn-spinner ml-1 !w-3 !h-3 hidden-force"; 
     if (state === 'loading') { 
         btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 

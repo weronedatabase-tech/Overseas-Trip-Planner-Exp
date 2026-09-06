@@ -13,8 +13,8 @@ let traineeShortNames = {};
 function buildDietUI() {
 const el_tab_diet = document.getElementById('tab-diet');
 if(el_tab_diet) el_tab_diet.innerHTML = `
-<div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+<div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
                <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
@@ -22,30 +22,30 @@ if(el_tab_diet) el_tab_diet.innerHTML = `
            </h3>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-sm cursor-pointer shrink-0">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0">
                <option value="" disabled>Custom Views</option>
                <option value="medical.html">Medical</option>
                <option value="diet.html" selected>Dietary</option>
                <option value="expired.html">Expired Passports</option>
                <option value="other.html">Other Notes</option>
            </select>
-           <button onclick="loadDietData()" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-sm" title="Refresh">
+           <button onclick="loadDietData()" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
            </button>
        </div>
    </div>
    
-   <div class="py-1 px-2 md:px-3 bg-gray-50 dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 shrink-0 flex items-center gap-2">
+   <div class="py-1 px-2 md:px-3 bg-gray-50 dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 flex items-center gap-2">
        <div class="relative w-full flex-1">
-           <input type="text" id="dietSearch" oninput="handleDietSearch()" placeholder="Search by name, diet, or medical notes..." class="w-full p-2 pl-9 pr-8 border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+           <input type="text" id="dietSearch" oninput="handleDietSearch()" placeholder="Search by name, diet, or medical notes..." class="w-full p-2 pl-9 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-md transition">
            <svg class="w-4 h-4 absolute left-3 top-3 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
            <button onclick="clearSearch(\'dietSearch\', 'handleDietSearch')" class="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
        </div>
    </div>
    
    <div class="flex-1 min-h-0 overflow-auto custom-scrollbar relative" id="dietTableContainer">
-       <table class="w-full table-fixed text-left border-collapse border-b border-gray-200 dark:border-gray-700">
-           <thead id="dietTableHead" class="sticky top-0 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase font-black tracking-wider z-10 shadow-sm border-b border-gray-200 dark:border-gray-700">
+       <table class="w-full table-fixed text-left border-collapse border-b-2 border-gray-200 dark:border-gray-700">
+           <thead id="dietTableHead" class="sticky top-0 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-xs uppercase font-black tracking-wider z-10 shadow-md border-b-2 border-gray-200 dark:border-gray-700">
            </thead>
            <tbody id="dietTableBody" class="text-sm divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
            </tbody>
@@ -53,7 +53,7 @@ if(el_tab_diet) el_tab_diet.innerHTML = `
        
        <div id="dietLoading" class="absolute inset-0 bg-white/80 dark:bg-gray-900/80 flex flex-col justify-center items-center z-20">
            <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-           <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading Data...</span>
+           <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading Data...</span>
        </div>
    </div>
 </div>
@@ -211,7 +211,7 @@ data.sort((a, b) => {
 
 const thead = document.getElementById('dietTableHead');
 let headHtml = `<tr>
-   <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r border-gray-200 dark:border-gray-700 shadow-sm w-[35%] text-left">
+   <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%] text-left">
        <div class="font-bold text-gray-700 dark:text-gray-300">Participant</div>
    </th>
    <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 z-10 w-[65%] text-left">
@@ -230,16 +230,16 @@ data.forEach(p => {
    const nameClass = 'font-bold text-gray-900 dark:text-gray-100';
    
    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
-       <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 shadow-sm w-[35%]">
+       <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
            ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
-               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-sm text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
            </div>
            ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
        </td>
-       <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l border-gray-100 dark:border-gray-700/50">
+       <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
 
    const hasDiet = p.diet && p.diet.trim() && p.diet.trim().toLowerCase() !== 'nil' && p.diet.trim().toLowerCase() !== 'none';

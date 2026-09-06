@@ -27,7 +27,7 @@ return String(dateVal);
 function buildMinutesUI() {
 document.getElementById('tab-minutes').innerHTML = `
 <div class="flex flex-col h-full w-full relative">
-   <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-3 shrink-0 flex flex-col md:flex-row justify-between items-center shadow-sm rounded-t-xl md:rounded-none gap-3">
+   <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 p-3 shrink-0 flex flex-col md:flex-row justify-between items-center shadow-md rounded-t-xl md:rounded-none gap-3">
        <div class="flex items-center gap-2 w-full md:w-auto">
            <h3 class="text-sm md:text-base font-black text-gray-900 dark:text-white tracking-tight">Meeting Notes</h3>
            <span id="minutesSyncStatus" class="ml-2 text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider">Synced</span>
@@ -35,11 +35,11 @@ document.getElementById('tab-minutes').innerHTML = `
        
        <div class="flex w-full md:w-auto items-center gap-2 justify-end">
            <div class="relative w-full md:w-48 shrink-0">
-               <input type="text" id="minutesSearchInput" oninput="handleMinutesSearch()" placeholder="Fuzzy search notes..." class="w-full p-2 pl-8 pr-8 border border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm transition">
+               <input type="text" id="minutesSearchInput" oninput="handleMinutesSearch()" placeholder="Fuzzy search notes..." class="w-full p-2 pl-8 pr-8 border-2 border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md transition">
                <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                <button onclick="clearSearch('minutesSearchInput', 'handleMinutesSearch')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
            </div>
-           <button onclick="addMinuteNote()" class="w-auto bg-primary text-white text-xs md:text-xs font-bold px-3 py-2 rounded-md hover:bg-green-600 transition flex items-center justify-center shadow-sm focus:outline-none shrink-0">
+           <button onclick="addMinuteNote()" class="w-auto bg-primary text-white text-xs md:text-xs font-bold px-3 py-2 rounded-md hover:bg-green-600 transition flex items-center justify-center shadow-md focus:outline-none shrink-0">
                <svg class="w-3.5 h-3.5 md:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
                <span class="hidden md:inline">New Note</span>
            </button>
@@ -48,7 +48,7 @@ document.getElementById('tab-minutes').innerHTML = `
 
    <div id="minutesLoadingOverlay" class="absolute inset-0 top-[60px] bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-20 flex flex-col justify-center items-center hidden-force">
        <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-       <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading Notes...</span>
+       <span class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full">Loading Notes...</span>
    </div>
 
    <div class="flex-grow overflow-y-auto p-2 md:p-4 bg-gray-50 dark:bg-gray-950 custom-scrollbar pb-10">
@@ -311,32 +311,32 @@ if (metaEl) {
 function createNoteDOM(note) {
 const div = document.createElement('div');
 div.id = `min-card-${note.id}`;
-div.className = "bg-white dark:bg-gray-800 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 transform";
+div.className = "bg-white dark:bg-gray-800 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 transform";
 
 const timeStr = note.ts ? new Date(note.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New';
 
 div.innerHTML = `
-   <div class="flex justify-between items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 md:p-3 border-b border-gray-100 dark:border-gray-700 shrink-0">
+   <div class="flex justify-between items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 md:p-3 border-b-2 border-gray-100 dark:border-gray-700 shrink-0">
        <div class="flex items-center gap-2">
            <input type="date" value="${formatYMD(note.date)}" 
-               class="note-date min-w-[120px] [color-scheme:light] dark:[color-scheme:dark] text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 shadow-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+               class="note-date min-w-[120px] [color-scheme:light] dark:[color-scheme:dark] text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 shadow-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
                onchange="handleMinuteInput('${note.id}', 'date', this.value)">
            <span id="min-by-${note.id}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${timeStr} by ${(note.updatedBy||'').toUpperCase()}</span>
        </div>
-       <button onclick="deleteMinuteNote('${note.id}')" class="text-red-500 hover:text-red-600 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-1.5 rounded shadow-sm hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none">
+       <button onclick="deleteMinuteNote('${note.id}')" class="text-red-500 hover:text-red-600 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 p-1.5 rounded shadow-md hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none">
            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
        </button>
    </div>
    <div class="p-3">
        <textarea 
-           class="note-content w-full bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs md:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y shadow-inner min-h-[100px]"
+           class="note-content w-full bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs md:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y shadow-inner min-h-[100px]"
            placeholder="Salient points, decisions made, or important notes..."
            oninput="handleMinuteInput('${note.id}', 'content', this.value)">${note.content}</textarea>
    </div>
-   <div class="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-3 border-t border-green-100 dark:border-green-900/30 flex items-center gap-2">
+   <div class="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-3 border-t-2 border-green-100 dark:border-green-900/30 flex items-center gap-2">
        <svg class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
        <input type="text" value="${note.assignedTo}" 
-           class="note-assigned w-full bg-white dark:bg-gray-800 border border-green-200 dark:border-green-800/50 rounded-md px-2 py-1.5 text-xs font-bold text-green-800 dark:text-green-300 placeholder-green-300 dark:placeholder-green-700 focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+           class="note-assigned w-full bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800/50 rounded-md px-2 py-1.5 text-xs font-bold text-green-800 dark:text-green-300 placeholder-green-300 dark:placeholder-green-700 focus:outline-none focus:ring-1 focus:ring-primary shadow-md"
            placeholder="Tag follow-ups (e.g. John, Alice)..."
            oninput="handleMinuteInput('${note.id}', 'assignedTo', this.value)">
    </div>

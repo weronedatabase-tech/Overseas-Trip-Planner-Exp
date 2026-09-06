@@ -12,11 +12,11 @@
 <body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
 
 <div id="devModeBar" class="hidden-force"></div>
-<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border border-gray-700 dark:border-gray-200"></div>
+<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border-2 border-gray-700 dark:border-gray-200"></div>
 <div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
 
 <div id="unauthLayout" class="flex-1 flex flex-col w-full relative overflow-y-auto">
-<header class="flex items-center justify-between px-5 py-1 border-b border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-sm">
+<header class="flex items-center justify-between px-5 py-1 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 bg-white dark:bg-gray-900 shadow-md">
 <div class="flex flex-col">
 <h1 class="font-black text-xl text-primary tracking-tight leading-tight">Overseas Trip</h1>
 <span id="unauthTripName" class="text-xs font-bold text-gray-500 uppercase tracking-wider hidden-force"></span>
@@ -32,12 +32,12 @@
 
 <main class="flex-1 flex flex-col p-4 w-full max-w-2xl mx-auto pb-20 relative">
 <div id="viewRegister" class="mt-2 space-y-4 w-full animate-slide-up">
-<div class="flex justify-between items-center pb-2 border-b border-gray-200 dark:border-gray-800 mb-4">
+<div class="flex justify-between items-center pb-2 border-b-2 border-gray-200 dark:border-gray-800 mb-4">
  <div>
    <h3 class="text-xl font-bold text-gray-900 dark:text-white">New Registration</h3>
    <p class="text-xs font-bold text-red-500 dark:text-red-400 mt-1">If you are registering/adding a caregiver, pls ensure the related trainee(s) has been added/registered first</p>
  </div>
- <button onclick="navigateTo('index.html')" class="text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-sm">Cancel</button>
+ <button onclick="navigateTo('index.html')" class="text-sm font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition shadow-md">Cancel</button>
 </div>
 <form id="regForm" onsubmit="event.preventDefault(); submitRegistration(this.querySelector('button[type=submit]'));" class="space-y-6">
  <div id="membersContainer" class="space-y-6"></div>

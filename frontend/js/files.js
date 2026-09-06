@@ -15,7 +15,7 @@ if (menu && !menu.classList.contains('hidden-force')) {
 function buildFilesUI() {
 const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_tab_files.innerHTML = `
 <div class="flex flex-col h-full w-full relative">
-<div class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-2 md:p-3 shrink-0 flex items-center gap-2 shadow-sm rounded-t-xl md:rounded-none relative z-20">
+<div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 p-2 md:p-3 shrink-0 flex items-center gap-2 shadow-md rounded-t-xl md:rounded-none relative z-20">
  <button type="button" id="btnDriveBack" onclick="navigateDriveBack()" class="hidden-force p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 active:scale-95">
     <svg class="w-5 h-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
  </button>
@@ -35,7 +35,7 @@ const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_t
           <svg class="w-5 h-5 md:w-6 md:h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           <span class="hidden md:inline pointer-events-none">Extract</span>
        </button>
-       <div id="driveExtractMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
+       <div id="driveExtractMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
          <div class="py-1.5">
            <a href="javascript:void(0)" onclick="document.getElementById('driveExtractMenu').classList.add('hidden-force'); showExtractionPopup('insurance')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-blue-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg> Insurance Extraction
@@ -52,7 +52,7 @@ const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_t
           <svg class="w-5 h-5 md:w-6 md:h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
           <span class="hidden md:inline pointer-events-none">Add</span>
        </button>
-       <div id="driveAddMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
+       <div id="driveAddMenu" class="hidden-force origin-top-right absolute right-0 mt-2 w-56 rounded-xl shadow-2xl bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 dark:divide-gray-700 z-[100]">
          <div class="py-1.5">
            <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateFolder()" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-yellow-500 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg> New Folder
@@ -82,19 +82,19 @@ const el_tab_files = document.getElementById('tab-files'); if(el_tab_files) el_t
  </div>
 </div>
 
-<div id="driveBulkActions" class="hidden-force bg-green-50 dark:bg-green-900/30 p-2 md:p-3 shrink-0 flex justify-between items-center border-b border-green-200 dark:border-green-800 z-10 transition-all">
+<div id="driveBulkActions" class="hidden-force bg-green-50 dark:bg-green-900/30 p-2 md:p-3 shrink-0 flex justify-between items-center border-b-2 border-green-200 dark:border-green-800 z-10 transition-all">
  <span id="driveBulkCount" class="text-xs md:text-sm font-black text-green-800 dark:text-green-300">0 selected</span>
  <div class="flex items-center gap-1.5 md:gap-2">
-     <button onclick="bulkCopySelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-700 rounded shadow-sm hover:bg-green-100 transition focus:outline-none">Copy</button>
-     <button onclick="bulkMoveSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800 rounded shadow-sm hover:bg-orange-50 transition focus:outline-none">Move</button>
-     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded shadow-sm hover:bg-red-50 transition focus:outline-none">Delete</button>
-     <button onclick="clearDriveSelection()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded shadow-sm hover:bg-gray-100 transition focus:outline-none ml-2">Cancel</button>
+     <button onclick="bulkCopySelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border-2 border-green-200 dark:border-green-700 rounded shadow-md hover:bg-green-100 transition focus:outline-none">Copy</button>
+     <button onclick="bulkMoveSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 border-2 border-orange-200 dark:border-orange-800 rounded shadow-md hover:bg-orange-50 transition focus:outline-none">Move</button>
+     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border-2 border-red-200 dark:border-red-800 rounded shadow-md hover:bg-red-50 transition focus:outline-none">Delete</button>
+     <button onclick="clearDriveSelection()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded shadow-md hover:bg-gray-100 transition focus:outline-none ml-2">Cancel</button>
  </div>
 </div>
 
 <div id="driveLoadingOverlay" class="absolute inset-0 top-[50px] bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm z-20 hidden-force flex flex-col justify-center items-center">
   <div class="loader !w-8 !h-8 border-primary mb-2"></div>
-  <span id="driveLoadingText" class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
+  <span id="driveLoadingText" class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
 </div>
 
 <div id="driveContentsList" class="flex-grow overflow-y-auto p-2 md:p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 custom-scrollbar pb-10">
@@ -457,7 +457,7 @@ folders.forEach(f => {
 const safeName = f.name.replace(/'/g, "\\'");
 const isChecked = selectedDriveItems.has(f.id) ? 'checked' : '';
 html += `
- <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:border-primary transition group">
+ <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-primary transition group">
     <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', true, '${safeName}')">
     </div>
@@ -510,13 +510,13 @@ if (f.mimeType.includes('folder')) {
    iconHtml = `<svg class="w-5 h-5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm6 1.5L18.5 9H12V3.5z"/></svg>`;
 }
 
-const shortcutBadge = f.isShortcut ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-sm p-0.5"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>` : '';
+const shortcutBadge = f.isShortcut ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-md p-0.5"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>` : '';
 const nameHtml = f.isShortcut 
   ? `<div class="flex flex-col min-w-0"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
   : `<span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>`;
 
 html += `
- <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:border-gray-300 dark:hover:border-gray-500 transition group">
+ <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
     <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', false, '${safeName}')">
     </div>
