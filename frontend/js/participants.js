@@ -668,18 +668,20 @@ const colCount = rosterCols.filter(c => c.visible).length + 1;
 tbody.innerHTML = html || `<tr><td colspan="${colCount}" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No participants found matching the criteria.</td></tr>`;
 }
 window.openChatGroupsModal = function() {
-    const groups = new Set();
+    const projects = new Set();
+    const logisticsGroups = new Set();
     const buses = new Set();
     
     if (typeof adminRosterData !== 'undefined') {
         adminRosterData.forEach(p => {
-            if(p.group && p.group.trim() !== '') groups.add(p.group);
-            if(p.logisticsGroup && p.logisticsGroup.trim() !== '') groups.add(p.logisticsGroup);
+            if(p.group && p.group.trim() !== '') projects.add(p.group);
+            if(p.logisticsGroup && p.logisticsGroup.trim() !== '') logisticsGroups.add(p.logisticsGroup);
             if(p.bus && p.bus.trim() !== '') buses.add(p.bus);
         });
     }
     
-    const groupsArr = Array.from(groups).sort();
+    const projectsArr = Array.from(projects).sort();
+    const logisticsGroupsArr = Array.from(logisticsGroups).sort();
     const busesArr = Array.from(buses).sort();
 
     let modalHtml = `
@@ -697,15 +699,23 @@ window.openChatGroupsModal = function() {
                         <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="cgRoleCgv" value="CAREGIVER" class="w-4 h-4 accent-primary"> Caregivers</label>
                     </div>
                 </div>
+                
+                <div class="space-y-2">
+                    <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Projects</label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgProjAll" onchange="toggleAllCheckboxes('cgProj', this.checked)" checked class="w-4 h-4 accent-primary"> ALL</label>
+                        ${projectsArr.map(g => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgProj" value="${g}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgProjAll')"> ${g}</label>`).join('')}
+                    </div>
+                </div>
 
                 <div class="space-y-2">
                     <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Groups</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
                         <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgGrpAll" onchange="toggleAllCheckboxes('cgGrp', this.checked)" checked class="w-4 h-4 accent-primary"> ALL</label>
-                        ${groupsArr.map(g => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgGrp" value="${g}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgGrpAll')"> ${g}</label>`).join('')}
+                        ${logisticsGroupsArr.map(g => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgGrp" value="${g}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgGrpAll')"> ${g}</label>`).join('')}
                     </div>
                 </div>
-
+                
                 <div class="space-y-2">
                     <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Buses</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -718,13 +728,13 @@ window.openChatGroupsModal = function() {
             </div>
         </div>
     </div>`;
-
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
 window.toggleAllCheckboxes = function(name, checked) {
     document.querySelectorAll(`input[name="${name}"]`).forEach(cb => cb.checked = checked);
 };
+
 window.uncheckAll = function(id) {
     document.getElementById(id).checked = false;
 };
@@ -733,13 +743,16 @@ window.generateChatGroupsList = function() {
     const includeVol = document.getElementById('cgRoleVol').checked;
     const includeCgv = document.getElementById('cgRoleCgv').checked;
     
+    const projAll = document.getElementById('cgProjAll').checked;
+    const selectedProjs = Array.from(document.querySelectorAll('input[name="cgProj"]:checked')).map(cb => cb.value);
+
     const grpAll = document.getElementById('cgGrpAll').checked;
     const selectedGrps = Array.from(document.querySelectorAll('input[name="cgGrp"]:checked')).map(cb => cb.value);
 
     const busAll = document.getElementById('cgBusAll').checked;
     const selectedBuses = Array.from(document.querySelectorAll('input[name="cgBus"]:checked')).map(cb => cb.value);
 
-    let rows = [["First Name", "Phone 1 - Value"]];
+    let rows = [["Given Name", "Phone 1 - Value"]];
 
     if (typeof adminRosterData !== 'undefined') {
         adminRosterData.forEach(p => {
@@ -747,7 +760,8 @@ window.generateChatGroupsList = function() {
             const isCgv = p.role === 'CAREGIVER';
             
             if (!((isVol && includeVol) || (isCgv && includeCgv))) return;
-            if (!grpAll && !selectedGrps.includes(p.group) && !selectedGrps.includes(p.logisticsGroup)) return;
+            if (!projAll && !selectedProjs.includes(p.group)) return;
+            if (!grpAll && !selectedGrps.includes(p.logisticsGroup)) return;
             if (!busAll && !selectedBuses.includes(p.bus)) return;
 
             if (p.contact && p.contact.trim() !== '') {
@@ -775,7 +789,7 @@ window.generateChatGroupsList = function() {
         return;
     }
 
-    const csvContent = rows.map(r => r.join(",")).join("\\n");
+    const csvContent = rows.map(r => r.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
