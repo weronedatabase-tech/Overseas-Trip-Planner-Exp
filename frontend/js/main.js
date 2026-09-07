@@ -815,7 +815,7 @@ async function loadPage(url) {
 
 document.addEventListener('click', e => {
     const link = e.target.closest('a');
-    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('#') && !link.getAttribute('href').startsWith('javascript:') && !link.getAttribute('target')) {
+    if (link && link.getAttribute('href') && !link.getAttribute('href').startsWith('http') && !link.getAttribute('href').startsWith('blob:') && !link.getAttribute('href').startsWith('mailto:') && !link.getAttribute('href').startsWith('tel:') && !link.getAttribute('href').startsWith('#') && !link.getAttribute('href').startsWith('javascript:') && !link.getAttribute('target') && !link.hasAttribute('download')) {
         e.preventDefault();
         navigateTo(link.getAttribute('href'));
     }
