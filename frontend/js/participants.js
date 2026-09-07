@@ -73,6 +73,10 @@ document.getElementById('tab-participants').innerHTML = `
                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                <span class="text-sm md:text-sm font-black ml-1.5 uppercase tracking-wider hidden md:inline">Breakdown</span>
            </button>
+           <button onclick="openChatGroupsModal()" class="flex items-center justify-center bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 focus:outline-none transition rounded-lg px-2 py-1 md:px-2.5 md:py-1.5 shadow-md border-2 border-blue-200 dark:border-blue-800 shrink-0 ml-1" title="Generate Chat Groups">
+               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+               <span class="text-sm md:text-sm font-black ml-1.5 uppercase tracking-wider hidden md:inline">Comms</span>
+           </button>
        </div>
        <div class="flex items-center gap-2">
            <select onchange="if(this.value) navigateTo(this.value)" class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
@@ -663,3 +667,122 @@ data.forEach(p => {
 const colCount = rosterCols.filter(c => c.visible).length + 1;
 tbody.innerHTML = html || `<tr><td colspan="${colCount}" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No participants found matching the criteria.</td></tr>`;
 }
+window.openChatGroupsModal = function() {
+    const groups = new Set();
+    const buses = new Set();
+    
+    if (typeof adminRosterData !== 'undefined') {
+        adminRosterData.forEach(p => {
+            if(p.group && p.group.trim() !== '') groups.add(p.group);
+            if(p.logisticsGroup && p.logisticsGroup.trim() !== '') groups.add(p.logisticsGroup);
+            if(p.bus && p.bus.trim() !== '') buses.add(p.bus);
+        });
+    }
+    
+    const groupsArr = Array.from(groups).sort();
+    const busesArr = Array.from(buses).sort();
+
+    let modalHtml = `
+    <div id="chatGroupsModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col border-2 border-gray-200 dark:border-gray-700 max-h-[90vh]">
+            <div class="flex items-center justify-between p-4 border-b-2 border-gray-200 dark:border-gray-800 shrink-0">
+                <h3 class="font-black text-gray-900 dark:text-white text-lg"><i class="fa-solid fa-address-book text-green-500 mr-2"></i>Export Contacts (CSV)</h3>
+                <button onclick="document.getElementById('chatGroupsModal').remove()" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto space-y-4 custom-scrollbar">
+                <div class="space-y-2">
+                    <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Roles</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="cgRoleVol" value="VOLUNTEER" checked class="w-4 h-4 accent-primary"> Volunteers</label>
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="cgRoleCgv" value="CAREGIVER" class="w-4 h-4 accent-primary"> Caregivers</label>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Groups</label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgGrpAll" onchange="toggleAllCheckboxes('cgGrp', this.checked)" checked class="w-4 h-4 accent-primary"> ALL</label>
+                        ${groupsArr.map(g => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgGrp" value="${g}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgGrpAll')"> ${g}</label>`).join('')}
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Buses</label>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgBusAll" onchange="toggleAllCheckboxes('cgBus', this.checked)" checked class="w-4 h-4 accent-primary"> ALL</label>
+                        ${busesArr.map(b => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgBus" value="${b}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgBusAll')"> Bus ${b}</label>`).join('')}
+                    </div>
+                </div>
+                
+                <button onclick="generateChatGroupsList()" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl shadow-md transition text-sm flex justify-center items-center gap-2"><i class="fa-solid fa-download"></i> Download Contacts CSV</button>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.toggleAllCheckboxes = function(name, checked) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach(cb => cb.checked = checked);
+};
+window.uncheckAll = function(id) {
+    document.getElementById(id).checked = false;
+};
+
+window.generateChatGroupsList = function() {
+    const includeVol = document.getElementById('cgRoleVol').checked;
+    const includeCgv = document.getElementById('cgRoleCgv').checked;
+    
+    const grpAll = document.getElementById('cgGrpAll').checked;
+    const selectedGrps = Array.from(document.querySelectorAll('input[name="cgGrp"]:checked')).map(cb => cb.value);
+
+    const busAll = document.getElementById('cgBusAll').checked;
+    const selectedBuses = Array.from(document.querySelectorAll('input[name="cgBus"]:checked')).map(cb => cb.value);
+
+    let rows = [["First Name", "Phone 1 - Value"]];
+
+    if (typeof adminRosterData !== 'undefined') {
+        adminRosterData.forEach(p => {
+            const isVol = p.role === 'VOLUNTEER';
+            const isCgv = p.role === 'CAREGIVER';
+            
+            if (!((isVol && includeVol) || (isCgv && includeCgv))) return;
+            if (!grpAll && !selectedGrps.includes(p.group) && !selectedGrps.includes(p.logisticsGroup)) return;
+            if (!busAll && !selectedBuses.includes(p.bus)) return;
+
+            if (p.contact && p.contact.trim() !== '') {
+                let cleaned = p.contact.replace(/[^\d+]/g, '');
+                if(cleaned.length > 0) {
+                    const shortName = (p.shortName || p.fullName || '').trim();
+                    const groupName = (p.logisticsGroup || p.group || 'NOGROUP').trim();
+                    
+                    let firstName = '';
+                    if (isVol) firstName = `TOT2026_VOL_${groupName}_${shortName}`;
+                    else if (isCgv) firstName = `TOT2026_CAR_${groupName}_${shortName}`;
+                    
+                    const safeName = `"${firstName.replace(/"/g, '""')}"`;
+                    const safePhone = `"${cleaned}"`;
+                    
+                    rows.push([safeName, safePhone]);
+                }
+            }
+        });
+    }
+
+    if(rows.length === 1) {
+        if (typeof showToast === 'function') showToast("No matching contacts found.", true);
+        else alert("No matching contacts found.");
+        return;
+    }
+
+    const csvContent = rows.map(r => r.join(",")).join("\\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Trip_Contacts.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
