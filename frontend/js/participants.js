@@ -693,6 +693,10 @@ window.openChatGroupsModal = function() {
     const logisticsGroupsArr = Array.from(logisticsGroups).sort();
     const busesArr = Array.from(buses).sort();
 
+    // Automation logic for active logistics group filter
+    const activeGroupFilter = (typeof rosterLogisticsGroupFilter !== 'undefined' && rosterLogisticsGroupFilter) ? rosterLogisticsGroupFilter : null;
+    const isGrpAllChecked = !activeGroupFilter;
+
     let modalHtml = `
     <div id="chatGroupsModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
         <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col border-2 border-gray-200 dark:border-gray-700 max-h-[90vh]">
@@ -708,7 +712,7 @@ window.openChatGroupsModal = function() {
                         <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="cgRoleCgv" value="CAREGIVER" class="w-4 h-4 accent-primary"> Caregivers</label>
                     </div>
                 </div>
-                
+
                 <div class="space-y-2">
                     <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Projects</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -720,11 +724,14 @@ window.openChatGroupsModal = function() {
                 <div class="space-y-2">
                     <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Groups</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgGrpAll" onchange="toggleAllCheckboxes('cgGrp', this.checked)" checked class="w-4 h-4 accent-primary"> ALL</label>
-                        ${logisticsGroupsArr.map(g => `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgGrp" value="${g}" checked class="w-4 h-4 accent-primary" onchange="uncheckAll('cgGrpAll')"> ${g}</label>`).join('')}
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" id="cgGrpAll" onchange="toggleAllCheckboxes('cgGrp', this.checked)" ${isGrpAllChecked ? 'checked' : ''} class="w-4 h-4 accent-primary"> ALL</label>
+                        ${logisticsGroupsArr.map(g => {
+                            const isChecked = isGrpAllChecked || g === activeGroupFilter;
+                            return `<label class="flex items-center gap-2 font-bold text-sm cursor-pointer bg-gray-50 dark:bg-gray-800 p-2 rounded border border-gray-200 dark:border-gray-700"><input type="checkbox" name="cgGrp" value="${g}" ${isChecked ? 'checked' : ''} class="w-4 h-4 accent-primary" onchange="uncheckAll('cgGrpAll')"> ${g}</label>`;
+                        }).join('')}
                     </div>
                 </div>
-                
+
                 <div class="space-y-2">
                     <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Buses</label>
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -737,6 +744,7 @@ window.openChatGroupsModal = function() {
             </div>
         </div>
     </div>`;
+
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 };
 
