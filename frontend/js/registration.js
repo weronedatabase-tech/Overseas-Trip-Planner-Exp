@@ -108,7 +108,7 @@ const caregiverHtml = `
 const identityHtml = `
  <h4 class="font-bold text-lg mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-1 text-primary dark:text-green-400">Identification</h4>
  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-   <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Full NRIC / FIN <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'nric')" oninput="handleFieldInput(this, 'nric')" class="reg-f-nric w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
+   <div><div class="flex justify-between items-center mb-1"><label class="block text-xs font-semibold text-gray-500 dark:text-gray-400">Full NRIC / FIN <span class="text-red-500">*</span></label><label class="flex items-center gap-1 text-[10px] text-gray-500 cursor-pointer font-semibold"><input type="checkbox" onchange="toggleNoNric(this)" class="reg-f-nonric accent-primary"> No NRIC/FIN</label></div><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'nric')" oninput="handleFieldInput(this, 'nric')" class="reg-f-nric w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
    <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Nationality <span class="text-red-500">*</span></label><input required type="text" id="reg-f-nat_${idx}" class="reg-f-nat w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
    <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport No. <span class="text-red-500">*</span></label><div class="dup-warn hidden-force text-xs text-red-500 font-bold mb-1"></div><input required type="text" onblur="checkDuplicateField(this, 'passport')" oninput="handleFieldInput(this, 'passport')" class="reg-f-pass w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg uppercase bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
    <div><label class="block text-xs font-semibold mb-1 text-gray-500 dark:text-gray-400">Passport Expiry <span class="text-red-500">*</span></label><input required type="text" id="exp_${idx}" readonly placeholder="DD Mmm YYYY" onclick="openDatePicker('exp_${idx}', 'exp')" class="reg-f-exp w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg font-medium text-center cursor-pointer bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"></div>
@@ -549,7 +549,8 @@ async function checkDuplicateField(inputEl, fieldType) {
         return;
     }
     
-    if (fieldType === 'nric' && typeof isValidNRIC === 'function' && !isValidNRIC(val)) {
+    const isNoNric = inputEl.closest('.grid').querySelector('.reg-f-nonric').checked;
+    if (fieldType === 'nric' && typeof isValidNRIC === 'function' && !isValidNRIC(val) && !isNoNric) {
         const warnEl = inputEl.previousElementSibling;
         if (warnEl) {
             warnEl.innerHTML = "Invalid NRIC/FIN.";
@@ -607,7 +608,8 @@ window.handleFieldInput = function(inputEl, fieldType) {
     const warnEl = inputEl.previousElementSibling;
     
     // Auto-clear invalid format errors if it becomes valid
-    if (fieldType === 'nric' && typeof isValidNRIC === 'function') {
+    const isNoNric = inputEl.closest('.grid').querySelector('.reg-f-nonric').checked;
+    if (fieldType === 'nric' && typeof isValidNRIC === 'function' && !isNoNric) {
         if (isValidNRIC(val)) {
             if (warnEl && warnEl.innerHTML === "Invalid NRIC/FIN.") {
                 warnEl.classList.add('hidden-force');
@@ -624,5 +626,41 @@ window.handleFieldInput = function(inputEl, fieldType) {
         warnEl.classList.add('hidden-force');
         inputEl.classList.remove('border-red-500', 'ring-red-500');
         inputEl.removeAttribute('data-invalid');
+    }
+};
+window.toggleNoNric = function(cb) {
+    const block = cb.closest('.grid');
+    const nricInput = block.querySelector('.reg-f-nric');
+    const passInput = block.querySelector('.reg-f-pass');
+    
+    if (cb.checked) {
+        nricInput.readOnly = true;
+        nricInput.value = passInput.value;
+        nricInput.classList.add('bg-gray-200', 'dark:bg-gray-700', 'cursor-not-allowed');
+        // Clear errors
+        nricInput.classList.remove('border-red-500', 'ring-red-500');
+        nricInput.removeAttribute('data-invalid');
+        const warnEl = nricInput.previousElementSibling;
+        if (warnEl) warnEl.classList.add('hidden-force');
+        if (nricInput.value) checkDuplicateField(nricInput, 'nric');
+    } else {
+        nricInput.readOnly = false;
+        nricInput.value = '';
+        nricInput.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'cursor-not-allowed');
+    }
+};
+
+const originalHandleFieldInput = window.handleFieldInput;
+window.handleFieldInput = function(inputEl, fieldType) {
+    originalHandleFieldInput(inputEl, fieldType);
+    
+    if (fieldType === 'passport') {
+        const block = inputEl.closest('.grid');
+        const noNricCb = block.querySelector('.reg-f-nonric');
+        if (noNricCb && noNricCb.checked) {
+            const nricInput = block.querySelector('.reg-f-nric');
+            nricInput.value = inputEl.value;
+            checkDuplicateField(nricInput, 'nric');
+        }
     }
 };

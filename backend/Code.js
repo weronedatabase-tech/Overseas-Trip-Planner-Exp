@@ -1693,27 +1693,42 @@ function extractData(extractType, excludedNrics) {
       let isFirst = true;
       for (const b in buses) {
         let sheet;
+        let tabName = b.toLowerCase() === 'unassigned' ? 'Unassigned' : (b.toLowerCase().startsWith('bus') ? b : 'Bus ' + b);
         if (isFirst) {
           sheet = ss.getSheets()[0];
-          sheet.setName(b);
+          sheet.setName(tabName);
           isFirst = false;
         } else {
-          sheet = ss.insertSheet(b);
+          sheet = ss.insertSheet(tabName);
         }
         
         // Rows 1-7 bus info
-        sheet.getRange("A1").setValue("Departure from Singapore Date");
-        sheet.getRange("A2").setValue("Estimated time to reach checkpoint");
-        sheet.getRange("A3").setValue("Arrival to Singapore Date");
-        sheet.getRange("A4").setValue("Estimated time to reach checkpoint");
-        sheet.getRange("A5").setValue("Checkpoint (Tuas / Woodlands)");
-        sheet.getRange("A6").setValue("Point of Contact");
-        sheet.getRange("A7").setValue("Bus Plate #, Assigned Bus Driver name & Passport Detail:");
-        sheet.getRange("B7").setValue("1. Bus plate No: \n2. Driver Full Name: \n3. Driver Gender: \n4. Driver Date of Birth: \n5. Driver Passport Number: \n6. Driver Passport Expiry: \n7. Driver Nationality: \n8. H/P: ");
+        sheet.getRange("B1").setValue("Departure from Singapore Date");
+        sheet.getRange("B2").setValue("Estimated time to reach checkpoint");
+        sheet.getRange("B3").setValue("Arrival to Singapore Date");
+        sheet.getRange("B4").setValue("Estimated time to reach checkpoint");
+        sheet.getRange("B5").setValue("Checkpoint (Tuas / Woodlands)");
+        sheet.getRange("B6").setValue("Point of Contact");
+        sheet.getRange("B7").setValue("Bus Plate #, Assigned Bus Driver name & Passport Detail:");
+        sheet.getRange("C7").setValue("1. Bus plate No: \n2. Driver Full Name: \n3. Driver Gender: \n4. Driver Date of Birth: \n5. Driver Passport Number: \n6. Driver Passport Expiry: \n7. Driver Nationality: \n8. H/P: ");
+        sheet.getRange("C7").setVerticalAlignment("top").setWrap(true);
+        sheet.setRowHeight(7, 130);
         
-        // Row 8 Header
+        // Row 9 Header (Note: Row 8 is blank)
         const header = ["S/N", "Full Name as per Passport", "Gender", "Date of Birth", "Passport No.", "Passport Expiry Date", "Nationality", "Medical Conditions", "Remarks", "Clients / Volunteers / Caregivers"];
-        sheet.getRange("A8:J8").setValues([header]);
+        sheet.getRange("A9:J9").setValues([header]).setFontWeight("bold");
+        
+        // Formatting column widths
+        sheet.setColumnWidth(1, 40); // S/N
+        sheet.setColumnWidth(2, 280); // Full Name
+        sheet.setColumnWidth(3, 80); // Gender
+        sheet.setColumnWidth(4, 120); // DOB
+        sheet.setColumnWidth(5, 120); // Passport No
+        sheet.setColumnWidth(6, 120); // Passport Expiry
+        sheet.setColumnWidth(7, 120); // Nationality
+        sheet.setColumnWidth(8, 200); // Medical Conditions
+        sheet.setColumnWidth(9, 150); // Remarks
+        sheet.setColumnWidth(10, 200); // Role
         
         const rows = [];
         const busParticipants = buses[b];
@@ -1746,14 +1761,14 @@ function extractData(extractType, excludedNrics) {
             p.passportNo || p.nric || '',
             formattedExp,
             p.nationality || '',
-            '', // Medical Conditions blank
-            '', // Remarks blank
+            p.medical || '',
+            p.otherPoints || '',
             roleMapped
           ]);
         });
         
         if (rows.length > 0) {
-          sheet.getRange(9, 1, rows.length, rows[0].length).setValues(rows);
+          sheet.getRange(10, 1, rows.length, rows[0].length).setValues(rows);
         }
       }
       DriveApp.getFileById(fileId).moveTo(folder);

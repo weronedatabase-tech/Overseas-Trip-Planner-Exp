@@ -106,7 +106,7 @@ async function submitLandingReceipt(e) {
     const fileInput = document.getElementById('landingRecFile');
     
     if(!nric) { err.textContent = "Uploader NRIC is required."; return err.classList.remove('hidden-force'); }
-    if(typeof isValidNRIC === 'function' && !isValidNRIC(nric)) { err.textContent = "Invalid NRIC/FIN."; return err.classList.remove('hidden-force'); }
+    if(typeof isValidNRIC === 'function' && !isValidNRIC(nric) && nric.length < 5) { err.textContent = "Invalid NRIC/FIN or Passport format."; return err.classList.remove('hidden-force'); }
     if(amount <= 0) { err.textContent = "Amount must be greater than 0."; return err.classList.remove('hidden-force'); }
     if(!category) { err.textContent = "Category is required."; return err.classList.remove('hidden-force'); }
     if(!fileInput.files.length) { err.textContent = "Please select a file."; return err.classList.remove('hidden-force'); }

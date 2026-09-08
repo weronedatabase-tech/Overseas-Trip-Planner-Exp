@@ -487,7 +487,7 @@ async function addCommittee(btn) {
   const nric = document.getElementById('newCommNric').value.trim(); 
   const phone = document.getElementById('newCommPhone').value.trim(); 
   if(!nric || !name || !phone) return showToast("Name, NRIC, Phone required", true); 
-  if (typeof isValidNRIC === 'function' && !isValidNRIC(nric)) return showToast("Invalid NRIC/FIN.", true); 
+  if (typeof isValidNRIC === 'function' && !isValidNRIC(nric) && nric.length < 5) return showToast("Invalid NRIC/FIN or Passport format.", true); 
   setBtnLoading(btn, true); 
   try { 
     const res = await apiCall('addCommittee', { nric, name, phone }); 

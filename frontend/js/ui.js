@@ -585,10 +585,11 @@ window.isValidNRIC = function(str) {
 
     const st = ['J', 'Z', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
     const fgm = ['X', 'W', 'U', 'T', 'R', 'Q', 'P', 'N', 'M', 'L', 'K'];
-
+    const mMap = ['X', 'W', 'U', 'T', 'R', 'Q', 'P', 'N', 'J', 'L', 'K'];
     let expectedSuffix = '';
     if (prefix === 'S' || prefix === 'T') expectedSuffix = st[remainder];
-    else if (prefix === 'F' || prefix === 'G' || prefix === 'M') expectedSuffix = fgm[remainder];
+    else if (prefix === 'F' || prefix === 'G') expectedSuffix = fgm[remainder];
+    else if (prefix === 'M') expectedSuffix = mMap[remainder];
 
     return suffix === expectedSuffix;
 };
