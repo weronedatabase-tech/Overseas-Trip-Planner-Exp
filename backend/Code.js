@@ -1693,7 +1693,12 @@ function extractData(extractType, excludedNrics) {
       let isFirst = true;
       for (const b in buses) {
         let sheet;
-        let tabName = b.toLowerCase() === 'unassigned' ? 'Unassigned' : (b.toLowerCase().startsWith('bus') ? b : 'Bus ' + b);
+        let tabName = 'Unassigned';
+        if (b.toLowerCase() !== 'unassigned') {
+          let clean = b.replace(/bus/i, '').trim();
+          tabName = 'Bus ' + clean;
+        }
+        
         if (isFirst) {
           sheet = ss.getSheets()[0];
           sheet.setName(tabName);
@@ -1710,13 +1715,15 @@ function extractData(extractType, excludedNrics) {
         sheet.getRange("B5").setValue("Checkpoint (Tuas / Woodlands)");
         sheet.getRange("B6").setValue("Point of Contact");
         sheet.getRange("B7").setValue("Bus Plate #, Assigned Bus Driver name & Passport Detail:");
+        sheet.getRange("B1:B7").setFontWeight("bold").setWrap(true);
+        
         sheet.getRange("C7").setValue("1. Bus plate No: \n2. Driver Full Name: \n3. Driver Gender: \n4. Driver Date of Birth: \n5. Driver Passport Number: \n6. Driver Passport Expiry: \n7. Driver Nationality: \n8. H/P: ");
-        sheet.getRange("C7").setVerticalAlignment("top").setWrap(true);
+        sheet.getRange("C7").setVerticalAlignment("top").setWrap(false);
         sheet.setRowHeight(7, 130);
         
         // Row 9 Header (Note: Row 8 is blank)
         const header = ["S/N", "Full Name as per Passport", "Gender", "Date of Birth", "Passport No.", "Passport Expiry Date", "Nationality", "Medical Conditions", "Remarks", "Clients / Volunteers / Caregivers"];
-        sheet.getRange("A9:J9").setValues([header]).setFontWeight("bold");
+        sheet.getRange("A9:J9").setValues([header]).setFontWeight("bold").setWrap(true).setVerticalAlignment("top").setHorizontalAlignment("left");
         
         // Formatting column widths
         sheet.setColumnWidth(1, 40); // S/N
@@ -1761,14 +1768,16 @@ function extractData(extractType, excludedNrics) {
             p.passportNo || p.nric || '',
             formattedExp,
             p.nationality || '',
-            p.medical || '',
-            p.otherPoints || '',
+            '',
+            '',
             roleMapped
           ]);
         });
         
         if (rows.length > 0) {
-          sheet.getRange(10, 1, rows.length, rows[0].length).setValues(rows);
+          const dataRange = sheet.getRange(10, 1, rows.length, rows[0].length);
+          dataRange.setValues(rows);
+          dataRange.setWrap(true).setVerticalAlignment("top").setHorizontalAlignment("left");
         }
       }
       DriveApp.getFileById(fileId).moveTo(folder);
