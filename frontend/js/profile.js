@@ -159,15 +159,7 @@ loadedFamily.forEach((m, i) => {
        <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-bold text-sm md:text-base uppercase">${m.nric}</p></div>
        <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-bold text-sm md:text-base">${m.dob}</p></div>
        <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-bold text-sm md:text-base">${m.gender} | ${m.nationality}</p></div>
-              <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${renderPhoneLink(m.contact)} | ${m.email || 'N/A'}</div></div>
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-wider mb-0.5">Pairing</p><p class="font-black text-sm md:text-base text-indigo-700 dark:text-indigo-400 uppercase">${m.pairings || 'UNASSIGNED'}</p></div>
-                <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-sm md:text-base text-amber-700 dark:text-amber-400 uppercase">${m.logisticsGroup || 'UNASSIGNED'}</p></div>
-                <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-black text-sm md:text-base text-teal-700 dark:text-teal-400 uppercase">${m.room || 'UNASSIGNED'}</p></div>
-                <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[10px] md:text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-sm md:text-base text-rose-700 dark:text-rose-400 uppercase">${m.bus || 'UNASSIGNED'}</p></div>
-            </div>
-       </div>
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${renderPhoneLink(m.contact)} | ${m.email || 'N/A'}</div></div>
        <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || 'None'}</span></div>
        <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Home Address</p><p class="font-bold text-sm md:text-base">${m.address}</p></div>
        <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-bold text-sm md:text-base uppercase">${m.passportNo}</p></div>
@@ -250,52 +242,9 @@ let paymentHtml = `
 </div>
 `;
 
-
-let pairingHtml = '';
-if (currentUser.role === 'VOLUNTEER' && typeof logRes !== 'undefined' && logRes && logRes.pairings) {
-    const myPairings = logRes.pairings.filter(p => p.volNric === currentUser.nric && (!p.status || p.status === 'ACTIVE'));
-    if (myPairings.length > 0) {
-        let pairedPocNrics = new Set();
-        let pairedTrainees = [];
-        
-        myPairings.forEach(pair => {
-            const t = logRes.participants.find(x => x.nric === pair.traineeNric);
-            if (t) {
-                pairedTrainees.push(t);
-                pairedPocNrics.add(t.pocNric || t.nric);
-            }
-        });
-        
-        let familyMembersHtml = '';
-        pairedPocNrics.forEach(pocNric => {
-            const fam = logRes.participants.filter(x => (x.pocNric || x.nric) === pocNric);
-            fam.forEach(m => {
-                const roleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-                const dynColor = getProjectColor(m.group);
-                
-                familyMembersHtml += `<div onclick="showParticipantSummaryModal('${m.nric}')" class="flex flex-col bg-white dark:bg-gray-800 p-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-primary cursor-pointer transition shadow-sm mb-2">
-                    <div class="flex items-center gap-2 mb-1">
-                        <span class="text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase tracking-wider border border-current">${m.role.substring(0,3)}</span>
-                        <span class="font-bold text-sm md:text-base ${dynColor} px-1.5 py-0.5 rounded shadow-sm border bg-white dark:bg-gray-900">${m.shortName || m.fullName}</span>
-                    </div>
-                </div>`;
-            });
-        });
-        
-        pairingHtml = `<div class="mt-4 mb-4">
-            <div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3">
-                <h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Pairing</h3>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                ${familyMembersHtml}
-            </div>
-        </div>`;
-    }
-}
-
 let personalDetailsHeader = `<div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3 mt-4"><h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Personal Details</h3></div>`;
 
-tabProfile.innerHTML = topBannersHtml + pairingHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
+tabProfile.innerHTML = topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
 }
 
 function generatePaymentPortalHtml() {
@@ -336,11 +285,6 @@ if (isPaid) {
 }
 
 const payNowNum = finConfig.payNowNumber ? "+65" + finConfig.payNowNumber : "";
-const adminRemarksHtml = (finConfig.showAdminRemarks && finConfig.feeDeviations?.[targetNric]?.remarks) 
-    ? `<div class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border-2 border-blue-200 dark:border-blue-800 text-left mt-2">
-         <p class="text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest mb-1">Admin Remarks</p>
-         <p class="text-xs font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">${finConfig.feeDeviations[targetNric].remarks}</p>
-       </div>` : '';
 const qrStr = payNowNum ? generatePayNowStr('0', payNowNum, finalExpected, orderNo) : ""; 
 const qrUrl = qrStr ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}` : "";
 
@@ -349,7 +293,6 @@ return `<div class="flex flex-col gap-3">
        <p class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Total Fee</p>
        <p class="text-2xl font-black text-green-700 dark:text-green-400 leading-none">SGD ${finalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</p>
        <div class="mt-2 text-left">${membersListHtml}</div>
-       ${adminRemarksHtml}
    </div>
    
    <div class="flex flex-col items-center justify-center p-2 border border-dashed border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
@@ -488,10 +431,6 @@ return `
            </div>`
            : `<span class="text-xs font-bold text-red-500">Link unavailable</span>`
        }
-       <a href="${feeReceipt.fileUrl}" target="_blank" class="mt-4 text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1">
-           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-           Open Screenshot in New Tab
-       </a>
        <button onclick="document.getElementById('reuploadFormContainer').classList.toggle('hidden-force')" class="mt-6 text-xs text-primary font-bold hover:underline flex items-center gap-1">
            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
            Incorrect file? Re-upload screenshot
