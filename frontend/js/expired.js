@@ -1,15 +1,15 @@
-let medicalRosterData = [];
-let expiredSearchQuery = '';
+var medicalRosterData = [];
+var expiredSearchQuery = '';
 
-let medSortRules = JSON.parse(localStorage.getItem('expiredSortRules')) || [{ col: 'fullName', asc: true }];
-let medCols = JSON.parse(localStorage.getItem('expiredCols')) || [
+var medSortRules = JSON.parse(localStorage.getItem('expiredSortRules')) || [{ col: 'fullName', asc: true }];
+var medCols = JSON.parse(localStorage.getItem('expiredCols')) || [
 { id: 'passportNo', label: 'Passport No.', width: 150, visible: true },
 { id: 'passportExpiry', label: 'Expiry Date', width: 150, visible: true },
 { id: 'nationality', label: 'Nationality', width: 120, visible: true }
 ];
 
 
-let traineeShortNames = {};
+var traineeShortNames = {};
 
 function buildExpiredUI() {
 const el_tab_expired = document.getElementById('tab-expired'); if(el_tab_expired) el_tab_expired.innerHTML = `
@@ -106,9 +106,9 @@ expiredSearchQuery = document.getElementById('expiredSearch').value.toLowerCase(
 renderExpiredTable();
 }
 
-let mResizingCol = null;
-let mStartX = 0;
-let mStartWidth = 0;
+var mResizingCol = null;
+var mStartX = 0;
+var mStartWidth = 0;
 
 function initMedResize(e, colId) {
 e.stopPropagation();
@@ -147,7 +147,7 @@ document.removeEventListener('mousemove', onMedMouseMove);
 document.removeEventListener('mouseup', onMedMouseUp);
 }
 
-let medDraggedColId = null;
+var medDraggedColId = null;
 window.onMedColDragStart = function(e, colId) {
 medDraggedColId = colId;
 e.dataTransfer.effectAllowed = "move";

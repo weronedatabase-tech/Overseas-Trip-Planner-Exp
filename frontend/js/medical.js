@@ -1,8 +1,8 @@
-let medicalRosterData = [];
-let medicalSearchQuery = '';
+var medicalRosterData = [];
+var medicalSearchQuery = '';
 
-let medSortRules = JSON.parse(localStorage.getItem('medicalSortRules_v2')) || [{ col: 'fullName', asc: true }];
-let medCols = JSON.parse(localStorage.getItem('medicalCols_v2')) || [
+var medSortRules = JSON.parse(localStorage.getItem('medicalSortRules_v2')) || [{ col: 'fullName', asc: true }];
+var medCols = JSON.parse(localStorage.getItem('medicalCols_v2')) || [
 { id: 'medical', label: 'Medical & Medications', width: 300, visible: true },
 { id: 'otherPoints', label: 'Other Notes', width: 220, visible: true },
 { id: 'emergencyName', label: 'Emergency Contact Name', width: 180, visible: true },
@@ -10,7 +10,7 @@ let medCols = JSON.parse(localStorage.getItem('medicalCols_v2')) || [
 ];
 
 
-let traineeShortNames = {};
+var traineeShortNames = {};
 
 function buildMedicalUI() {
 document.getElementById('tab-medical').innerHTML = `
@@ -107,9 +107,9 @@ medicalSearchQuery = document.getElementById('medicalSearch').value.toLowerCase(
 renderMedicalTable();
 }
 
-let mResizingCol = null;
-let mStartX = 0;
-let mStartWidth = 0;
+var mResizingCol = null;
+var mStartX = 0;
+var mStartWidth = 0;
 
 function initMedResize(e, colId) {
 e.stopPropagation();
@@ -148,7 +148,7 @@ document.removeEventListener('mousemove', onMedMouseMove);
 document.removeEventListener('mouseup', onMedMouseUp);
 }
 
-let medDraggedColId = null;
+var medDraggedColId = null;
 window.onMedColDragStart = function(e, colId) {
 medDraggedColId = colId;
 e.dataTransfer.effectAllowed = "move";

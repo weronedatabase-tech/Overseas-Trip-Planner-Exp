@@ -136,7 +136,7 @@ async function showParticipantSummaryModal(nric) {
         <div class="flex justify-between items-center p-4 border-b-2 border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-900/50">
           <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
             <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            Participant Summary
+            ${currentUser && (currentUser.role === 'admin' || currentUser.nric === 'ADMIN') ? 'Participant Summary' : 'Participant Details'}
           </h3>
           <button type="button" onclick="closeParticipantSummaryModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none">&times;</button>
         </div>
@@ -270,15 +270,17 @@ async function showParticipantSummaryModal(nric) {
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
           <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || '-'}</p></div>
-          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
-          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${formatDDMmmYYYY(m.dob)}</p></div>
-          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
-          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${m.email || 'N/A'}">${m.email || 'N/A'}</span></div></div>
+          <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p><p class="font-black text-lg text-indigo-600 dark:text-indigo-400 truncate w-full" title="${logPairing}">${logPairing}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-emerald-600 dark:text-emerald-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-sky-600 dark:text-sky-400 truncate w-full" title="${logBus}">${logBus}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${m.email || 'N/A'}">${m.email || 'N/A'}</span></div></div>
+          
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${formatDDMmmYYYY(m.dob)}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || 'None'}</span></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p><p class="font-semibold truncate w-full" title="${logPairing}">${logPairing}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-semibold truncate w-full" title="${logRoom}">${logRoom}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-semibold truncate w-full" title="${logGroup}">${logGroup}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-semibold truncate w-full" title="${logBus}">${logBus}</p></div>
+          
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="font-semibold">${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : '-'}</p></div>
@@ -287,9 +289,8 @@ async function showParticipantSummaryModal(nric) {
           <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Sleeping Arrangement</p><p class="font-semibold text-green-600 dark:text-green-400">${m.sleeping || 'No special request'}</p></div>
           <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${m.otherPoints || 'None'}</p></div>
           ${m.role === 'TRAINEE' ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-semibold">${m.medical || 'None'}</p></div>` : ''}
-
           ${familyHtml}
-        </div>
+</div>
       </div>
       
       <form id="gpm-edit" onsubmit="event.preventDefault(); submitAdminProfileEdit(this.querySelector('button[type=submit]'));" class="hidden-force space-y-3">
@@ -308,7 +309,7 @@ async function showParticipantSummaryModal(nric) {
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Passport Expiry</label><input type="text" id="gpmExp" value="${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : ''}" readonly onclick="openDatePicker('gpmExp', 'exp')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md" placeholder="DD Mmm YYYY"></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Dietary</label><input type="text" id="gpmDiet" value="${m.diet}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
           <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Home Address</label><textarea id="gpmAddress" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.address}</textarea></div>
-          <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Other Points</label><textarea id="gpmOther" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.otherPoints || ''}</textarea></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Treat as Individual</label><div class="flex items-center h-[36px]"><input type="checkbox" id="gpmIsIndividual" ${m.isIndividual ? 'checked' : ''} class="w-5 h-5 text-primary border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 bg-gray-50 dark:bg-gray-800"><span class="ml-2 text-xs font-semibold text-gray-700 dark:text-gray-300">Yes, skip auto-logic</span></div></div><div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Other Points</label><textarea id="gpmOther" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.otherPoints || ''}</textarea></div>
 <div class="${m.role === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force'}"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Medical Conditions</label><textarea id="gpmMedical" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.medical || ''}</textarea></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Name</label><input type="text" id="gpmEmName" value="${m.emergencyName}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Contact</label><input type="text" id="gpmEmContact" value="${m.emergencyContact}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
@@ -400,6 +401,7 @@ async function submitAdminProfileEdit(btn) {
       emergencyRelation: document.getElementById('gpmEmRel').value,
       sleeping: document.getElementById('gpmSleep').value,
       otherPoints: document.getElementById('gpmOther').value,
+      isIndividual: document.getElementById('gpmIsIndividual') ? document.getElementById('gpmIsIndividual').checked : false,
       relatedTrainee: document.getElementById('gpmRelated') ? document.getElementById('gpmRelated').value : '',
       relationship: document.getElementById('gpmRelation') ? document.getElementById('gpmRelation').value : ''
     };
@@ -525,7 +527,7 @@ if (cachedSettings) {
 
 // 2. Background Network Revalidation (With cold-start retries)
 let config = null;
-let attempts = 0;
+var attempts = 0;
 
 while(attempts < 3 && !config) {
    try {

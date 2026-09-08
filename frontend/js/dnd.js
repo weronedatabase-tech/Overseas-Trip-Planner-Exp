@@ -3,7 +3,7 @@
 // Shared across Pairing
 // ==========================================
 
-let dndState = {
+var dndState = {
    isDragging: false,
    el: null,
    clone: null,

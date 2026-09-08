@@ -1,14 +1,14 @@
-let dietRosterData = [];
-let dietSearchQuery = '';
+var dietRosterData = [];
+var dietSearchQuery = '';
 
-let dietSortRules = JSON.parse(localStorage.getItem('dietSortRules_v2')) || [{ col: 'fullName', asc: true }];
-let dietCols = JSON.parse(localStorage.getItem('dietCols_v2')) || [
+var dietSortRules = JSON.parse(localStorage.getItem('dietSortRules_v2')) || [{ col: 'fullName', asc: true }];
+var dietCols = JSON.parse(localStorage.getItem('dietCols_v2')) || [
 { id: 'diet', label: 'Dietary Restrictions', width: 300, visible: true },
 { id: 'otherPoints', label: 'Other Notes', width: 220, visible: true }
 ];
 
 
-let traineeShortNames = {};
+var traineeShortNames = {};
 
 function buildDietUI() {
 const el_tab_diet = document.getElementById('tab-diet');
@@ -106,9 +106,9 @@ dietSearchQuery = document.getElementById('dietSearch').value.toLowerCase().trim
 renderDietTable();
 }
 
-let mResizingCol = null;
-let mStartX = 0;
-let mStartWidth = 0;
+var mResizingCol = null;
+var mStartX = 0;
+var mStartWidth = 0;
 
 function initDietResize(e, colId) {
 e.stopPropagation();
@@ -147,7 +147,7 @@ document.removeEventListener('mousemove', onDietMouseMove);
 document.removeEventListener('mouseup', onDietMouseUp);
 }
 
-let dietDraggedColId = null;
+var dietDraggedColId = null;
 window.onDietColDragStart = function(e, colId) {
 dietDraggedColId = colId;
 e.dataTransfer.effectAllowed = "move";

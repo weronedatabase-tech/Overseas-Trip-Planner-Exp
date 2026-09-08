@@ -154,7 +154,18 @@ if (name === "Raw Data") {
 } else if (name === "Finance Options") {
   sheet.appendRow(["JSON Data - Do Not Edit"]);
   sheet.appendRow([""]);
-  sheet.appendRow(["Currency Setup", "SGD to MYR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDMYR")']);
+  sheet.appendRow(["MYR", "SGD to MYR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDMYR")']);
+  sheet.appendRow(["USD", "SGD to USD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDUSD")']);
+  sheet.appendRow(["EUR", "SGD to EUR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDEUR")']);
+  sheet.appendRow(["GBP", "SGD to GBP Rate:", '=GOOGLEFINANCE("CURRENCY:SGDGBP")']);
+  sheet.appendRow(["AUD", "SGD to AUD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDAUD")']);
+  sheet.appendRow(["IDR", "SGD to IDR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDIDR")']);
+  sheet.appendRow(["THB", "SGD to THB Rate:", '=GOOGLEFINANCE("CURRENCY:SGDTHB")']);
+  sheet.appendRow(["JPY", "SGD to JPY Rate:", '=GOOGLEFINANCE("CURRENCY:SGDJPY")']);
+  sheet.appendRow(["KRW", "SGD to KRW Rate:", '=GOOGLEFINANCE("CURRENCY:SGDKRW")']);
+  sheet.appendRow(["TWD", "SGD to TWD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDTWD")']);
+  sheet.appendRow(["PHP", "SGD to PHP Rate:", '=GOOGLEFINANCE("CURRENCY:SGDPHP")']);
+  sheet.appendRow(["VND", "SGD to VND Rate:", '=GOOGLEFINANCE("CURRENCY:SGDVND")']);
 } else if (name === "Receipts") {
   sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed"]);
   sheet.setFrozenRows(1);
@@ -222,6 +233,8 @@ case 'fetchPairingsOnly': result = fetchPairingsOnly(); break;
 case 'syncRoomUpdates': result = syncRoomUpdates(data.updates, data.takenBy || 'Admin'); break;
 case 'syncAssignments': result = syncAssignments(data.updates, data.column); break;
 case 'fetchRoomsOnly': result = fetchRoomsOnly(); break;
+case 'fetchSyncMetadata': result = fetchSyncMetadata(); break;
+case 'updateSyncMetadata': result = updateSyncMetadata(data.payload); break;
 case 'fetchAttendanceData': result = fetchAttendanceData(data.juncture); break;
 case 'syncAttendanceUpdate': result = syncAttendanceUpdate(data.juncture, data.updates, data.takenBy); break;
 case 'fetchFinance': result = fetchFinance(); break;
@@ -382,8 +395,8 @@ data.forEach(row => {
          group: row.group, gender: row.gender, contact: row.contact, address: row.address, nationality: row.nationality,
          nric: row.nric, passportNo: row.passportNo, passportExpiry: expRaw || row.passportExpiry, dob: dobRaw || row.dob, diet: row.diet,
          emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, sleeping: row.sleeping, otherPoints: row.otherPoints,
-         pocNric: row.pocNric, shortName: row.shortName, medical: row.medical
-     });
+         pocNric: row.pocNric, shortName: row.shortName, medical: row.medical, isIndividual: row.isIndividual, logisticsGroup: row.logisticsGroup, room: row.room, bus: row.bus, pairings: row.pairings
+         });
  }
 });
 
@@ -432,6 +445,7 @@ if (String(data[i][11]).trim().toUpperCase() === String(member.nric || '').trim(
   rData[22] = member.shortName || '';
   
   if (member.medical !== undefined) rData[23] = member.medical || '';
+  if (member.isIndividual !== undefined) rData[26] = member.isIndividual ? 'TRUE' : 'FALSE';
 
   sheet.getRange(i+1, 1, 1, rData.length).setValues([rData]);
   
@@ -593,7 +607,8 @@ results.push({
   shortName: String(data[i][22]||'').trim().toUpperCase(),
   medical: String(data[i][23]||'').trim(),
   bus: String(data[i][24]||'').trim(),
-  logisticsGroup: String(data[i][25]||'').trim()
+  logisticsGroup: String(data[i][25]||'').trim(),
+  isIndividual: String(data[i][26]||'').toUpperCase() === 'TRUE'
 });
 }
 }
@@ -668,7 +683,8 @@ const participants = rosterData.map(p => ({
   pocNric: p.pocNric,
   bus: p.bus,
   logisticsGroup: p.logisticsGroup,
-  sleeping: p.sleeping
+  sleeping: p.sleeping,
+  isIndividual: p.isIndividual
 }));
 
 const pairRes = fetchPairingsOnly(forceRebuild);
@@ -968,13 +984,13 @@ finally { lock.releaseLock(); }
 // ==========================================
 // FINANCE ENGINE & RECEIPTS
 // ==========================================
+
 function fetchFinance(forceRebuild = false) {
 const cacheKey = getCacheKey('FINANCE');
 if(!forceRebuild) {
 const cached = getLargeCache(cacheKey);
 if(cached) return JSON.parse(cached);
 }
-
 const ss = getDatabase();
 let sheet = ss.getSheetByName("Finance Options");
 if (!sheet) {
@@ -982,10 +998,33 @@ sheet = ss.insertSheet("Finance Options");
 sheet.getRange("A1").setValue("JSON Data - Do Not Edit");
 }
 
+  // Repair old structure
+  try {
+      const firstRate = sheet.getRange("A3").getValue();
+      if (firstRate === "Currency Setup" || !firstRate) {
+          const formulas = [
+              ["MYR", "SGD to MYR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDMYR")'],
+              ["USD", "SGD to USD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDUSD")'],
+              ["EUR", "SGD to EUR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDEUR")'],
+              ["GBP", "SGD to GBP Rate:", '=GOOGLEFINANCE("CURRENCY:SGDGBP")'],
+              ["AUD", "SGD to AUD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDAUD")'],
+              ["IDR", "SGD to IDR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDIDR")'],
+              ["THB", "SGD to THB Rate:", '=GOOGLEFINANCE("CURRENCY:SGDTHB")'],
+              ["JPY", "SGD to JPY Rate:", '=GOOGLEFINANCE("CURRENCY:SGDJPY")'],
+              ["KRW", "SGD to KRW Rate:", '=GOOGLEFINANCE("CURRENCY:SGDKRW")'],
+              ["TWD", "SGD to TWD Rate:", '=GOOGLEFINANCE("CURRENCY:SGDTWD")'],
+              ["PHP", "SGD to PHP Rate:", '=GOOGLEFINANCE("CURRENCY:SGDPHP")'],
+              ["VND", "SGD to VND Rate:", '=GOOGLEFINANCE("CURRENCY:SGDVND")']
+          ];
+          sheet.getRange(3, 1, formulas.length, 3).setValues(formulas);
+          SpreadsheetApp.flush();
+      }
+  } catch(e) {}
+
 let ratesObj = { "SGD": 1 };
 try {
 const ratesData = sheet.getRange(3, 1, 13, 3).getValues();
-ratesData.forEach(r => { if(r[0] && r[1] && !isNaN(r[2])) ratesObj[String(r[0])] = parseFloat(r[2]); });
+ratesData.forEach(r => { if(r[0] && typeof r[0] === "string" && r[0].length === 3 && r[1] && !isNaN(r[2])) ratesObj[String(r[0])] = Math.round(parseFloat(r[2]) * 100) / 100; });
 } catch(e){}
 
 const data = sheet.getDataRange().getValues();
@@ -1787,4 +1826,24 @@ function extractData(extractType, excludedNrics) {
   } catch(e) {
     return { status: 'error', message: e.message };
   }
+}
+function fetchSyncMetadata() {
+    const props = PropertiesService.getScriptProperties();
+    return {
+        status: 'success',
+        groups: props.getProperty('LOGISTICS_GROUPS') ? JSON.parse(props.getProperty('LOGISTICS_GROUPS')) : [],
+        buses: props.getProperty('LOGISTICS_BUSES') ? JSON.parse(props.getProperty('LOGISTICS_BUSES')) : [],
+        junctures: props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly']
+    };
+}
+function updateSyncMetadata(payload) {
+    const props = PropertiesService.getScriptProperties();
+    if (payload.groups) props.setProperty('LOGISTICS_GROUPS', JSON.stringify(payload.groups));
+    if (payload.buses) props.setProperty('LOGISTICS_BUSES', JSON.stringify(payload.buses));
+    if (payload.junctures) props.setProperty('ATTENDANCE_JUNCTURES', JSON.stringify(payload.junctures));
+    
+    // Clear config cache so getAppConfig will pick it up (for junctures)
+    clearCacheByPrefix('APP_CONFIG');
+    
+    return { status: 'success' };
 }

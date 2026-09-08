@@ -1,5 +1,6 @@
 let adminRosterData = [];
 let rosterSearchQuery = '';
+let rosterLogisticsGroupFilter = '';
 
 let rosterSortRules = JSON.parse(localStorage.getItem('rosterSortRules')) || [{ col: 'specialSort', asc: true }];
 
@@ -60,9 +61,10 @@ if (savedCols) {
     }
 }
 
-let traineeShortNames = {};
+var traineeShortNames = {};
 
 function buildParticipantsUI() {
+    setTimeout(window.populateLogisticsDropdown, 50);
 document.getElementById('tab-participants').innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
    <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
@@ -79,12 +81,14 @@ document.getElementById('tab-participants').innerHTML = `
            </button>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
+           <select id="customViewSelect" onchange="handleCustomViewChange(this.value)"  class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
                <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
+               <option value="reset_filter" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">All Participants</option>
                <option value="medical.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Medical</option>
                <option value="diet.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Dietary</option>
                <option value="expired.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Expired Passports</option>
                <option value="other.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Other Notes</option>
+               <optgroup id="logisticsGroupOptgroup" label="Logistics Groups" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"></optgroup>
            </select>
        </div>
    </div>
@@ -280,6 +284,7 @@ try {
     ]);
    
    adminRosterData = rostRes.roster || []; applyCaregiverLabels(adminRosterData); window.adminRosterData = adminRosterData;
+   if (window.populateLogisticsDropdown) window.populateLogisticsDropdown();
    const logisticsData = logRes || { rooms: [], pairings: [] };
    
    traineeShortNames = {};
@@ -408,7 +413,7 @@ renderRosterTable();
 
 
 
-let draggedColId = null;
+var draggedColId = null;
 window.onColDragStart = function(e, colId) {
 
 draggedColId = colId;
@@ -456,6 +461,10 @@ if(fromIdx > -1 && toIdx > -1) {
 // ==========================================
 function renderRosterTable() {
 let data = [...adminRosterData];
+if (rosterLogisticsGroupFilter) {
+    data = data.filter(p => p.logisticsGroup && p.logisticsGroup.trim() === rosterLogisticsGroupFilter);
+}
+
 
 
 if (rosterSearchQuery) {
@@ -799,4 +808,35 @@ window.generateChatGroupsList = function() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+};
+
+window.handleCustomViewChange = function(val) {
+    if(!val) return;
+    if(val.startsWith('filter_logistics:')) {
+        rosterLogisticsGroupFilter = val.split(':')[1];
+        renderRosterTable();
+    } else if(val === 'reset_filter') {
+        rosterLogisticsGroupFilter = '';
+        renderRosterTable();
+        // reset selection to placeholder
+        const sel = document.getElementById('customViewSelect');
+        if (sel) sel.value = '';
+    } else {
+        navigateTo(val);
+    }
+};
+
+window.populateLogisticsDropdown = function() {
+    const optgroup = document.getElementById('logisticsGroupOptgroup');
+    if (!optgroup) return;
+    const groups = new Set();
+    if (typeof adminRosterData !== 'undefined' && adminRosterData) {
+        adminRosterData.forEach(p => {
+            if(p.logisticsGroup && p.logisticsGroup.trim() !== '') {
+                groups.add(p.logisticsGroup.trim());
+            }
+        });
+    }
+    const sorted = Array.from(groups).sort();
+    optgroup.innerHTML = sorted.map(g => `<option value="filter_logistics:${g}" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Grp - ${g}</option>`).join('');
 };

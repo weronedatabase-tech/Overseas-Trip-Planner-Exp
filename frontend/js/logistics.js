@@ -19,7 +19,7 @@ let roomSyncTimeout = null;
 let activeRoomTargetId = null;
 
 // Expose DND state globally
-let dndState = {
+var dndState = {
 isDragging: false,
 el: null,
 clone: null,
@@ -1151,102 +1151,21 @@ let unHtml = '';
 
 function generateGroupCardHtml(item, isAssigned = false) {
     const dynColor = getProjectColor(item.group);
-    const dName = item.displayName || item.name;
+    const shortName = item.shortName || item.displayName || item.name;
     const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
     const roleShort = item.role.substring(0,3).toUpperCase();
-    return `
-    <div class="dnd-group-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
-        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
-            <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
-        </div>
-        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
-        ${isAssigned ? `<div class="remove-x" onclick="unassignFromGroup('${item.nric}')">×</div>` : ''}
-    </div>
-    `;
-}
-
-function renderBuses() {
-    if(!globalLogistics || !document.getElementById('busListContainer')) return;
-    const query = document.getElementById('busSearchInput') ? document.getElementById('busSearchInput').value.toLowerCase().trim() : '';
+    const isFam = item.role === 'TRAINEE' && item.caregiverFor; 
+    const cgBadge = item.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-[10px] uppercase">[${item.caregiverFor}]</div>` : '';
     
-    let unassigned = [];
-    let busMap = {};
-    activeBusesList.forEach(b => busMap[b] = []);
-
-    globalLogistics.participants.forEach(p => {
-        let pBus = String(p.bus || "").trim();
-        if (pBus && !activeBusesList.includes(pBus)) {
-            activeBusesList.push(pBus);
-            busMap[pBus] = [];
-        }
-        
-        let match = false;
-        if (query) {
-            const dName = (p.displayName || p.name).toLowerCase();
-            const fullName = (p.name || '').toLowerCase();
-            match = dName.includes(query) || fullName.includes(query) || p.nric.toLowerCase().includes(query) || pBus.toLowerCase().includes(query);
-        } else {
-            match = true;
-        }
-        
-        if (!match) return;
-
-        if (pBus) {
-            busMap[pBus].push(p);
-        } else {
-            unassigned.push(p);
-        }
-    });
-
-    document.getElementById('busUnassignedCount').innerText = unassigned.length;
-if (window.sortParticipantsSpecial) window.sortParticipantsSpecial(unassigned, globalLogistics.participants);
-let unHtml = '';
-    unassigned.forEach(item => {
-        unHtml += generateBusCardHtml(item);
-    });
-    const el_busUnassignedPool = document.getElementById('busUnassignedPool'); if(el_busUnassignedPool) el_busUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
-
-    let busHtml = '';
-    activeBusesList.forEach(bName => {
-        let occHtml = '';
-        busMap[bName].forEach(item => {
-            occHtml += generateBusCardHtml(item, true);
-        });
-
-        busHtml += `
-        <div class="dnd-bus-dropzone bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-2 shadow-md transition-colors" data-bus="${bName}">
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b-2 border-gray-100 dark:border-gray-700 pb-1.5 mb-1.5 gap-2 w-full">
-                <div class="flex items-start justify-between w-full lg:w-auto gap-2 flex-1">
-                    <span class="font-black text-[12px] md:text-sm text-gray-900 dark:text-white break-words whitespace-normal leading-tight uppercase tracking-wider">Bus ${bName}</span>
-                    <span class="text-[11px] bg-gray-200/50 dark:bg-gray-700/50 px-1.5 py-0.5 rounded border-2 border-gray-300 dark:border-gray-600 shrink-0 mt-0.5">${busMap[bName].length} Pax</span>
-                </div>
-                <div class="flex items-center gap-1 shrink-0 w-full lg:w-auto justify-end">
-                    <button onclick="openBusAddSheet('${bName.replace(/'/g, '\\\'')}')" class="text-[11px] bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 font-bold px-1.5 py-0.5 rounded hover:bg-green-100 transition focus:outline-none shadow-md">+ Add</button>
-                    <button onclick="promptEditBus('${bName.replace(/'/g, '\\\'')}')" class="text-gray-400 hover:text-primary transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                    <button onclick="removeBusList('${bName.replace(/'/g, '\\\'')}')" class="text-red-500 hover:text-red-600 transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
-                </div>
-            </div>
-            <div class="flex flex-col gap-1 min-h-[40px] relative pointer-events-auto z-10 w-full rounded border border-transparent transition-all">
-                ${occHtml || '<span class="text-xs font-medium text-gray-400 dark:text-gray-500 m-1 pointer-events-none text-center py-2 w-full">Drop here...</span>'}
-            </div>
-        </div>
-        `;
-    });
-    const el_busListContainer = document.getElementById('busListContainer'); if(el_busListContainer) el_busListContainer.innerHTML = busHtml;
-}
-
-function generateBusCardHtml(item, isAssigned = false) {
-    const dynColor = getProjectColor(item.group);
-    const dName = item.displayName || item.name;
-    const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-    const roleShort = item.role.substring(0,3).toUpperCase();
     return `
-    <div class="dnd-bus-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
-        <div class="main-name-pill font-extrabold text-xs md:text-sm px-1.5 py-1 rounded shadow-md border ${dynColor} w-full flex items-start justify-between gap-1">
-            <span class="break-words whitespace-normal text-left flex-1">${dName}</span>
+    <div class="dnd-group-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1 w-full" data-nric="${item.nric}" onclick="openGroupAssignSheet('${item.nric}')">
+        <div class="font-bold text-gray-900 dark:text-gray-100 text-xs md:text-sm leading-tight whitespace-normal break-words">${shortName.toUpperCase()}</div>
+        <div class="flex items-center gap-1 flex-wrap">
+            <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleShort}</span>
+            <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[10px] md:text-[10px] font-bold ${dynColor} whitespace-normal break-words inline-block" title="${(item.group || 'None').toUpperCase()}">${getProjectAbbreviation(item.group || 'None')}</span>
         </div>
-        <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-700 px-1.5 py-0.5 rounded uppercase border-2 border-gray-100 dark:border-gray-600 shrink-0 self-start w-max">${roleShort}</span>
-        ${isAssigned ? `<div class="remove-x" onclick="unassignFromBus('${item.nric}')">×</div>` : ''}
+        ${cgBadge}
+        ${isAssigned ? `<div class="remove-x" onclick="unassignFromGroup('${item.nric}')">×</div>` : ''}
     </div>
     `;
 }
@@ -1301,6 +1220,8 @@ function getConnectedParticipants(startNric) {
         const p = globalLogistics.participants.find(x => x.nric === current);
         if (!p) continue;
         
+        if (p.isIndividual) continue;
+        
         let pTarget = p.pocNric;
         globalLogistics.participants.forEach(x => {
             if (x.pocNric === pTarget && !connected.has(x.nric)) {
@@ -1311,17 +1232,119 @@ function getConnectedParticipants(startNric) {
 
         // Auto link pairings
         activePairings.forEach(pair => {
-            if (pair.traineeNric === current && !connected.has(pair.volNric)) {
+            const vP = globalLogistics.participants.find(x => x.nric === pair.volNric);
+            if (pair.traineeNric === current && !connected.has(pair.volNric) && !(vP && vP.isIndividual)) {
                 connected.add(pair.volNric);
                 queue.push(pair.volNric);
             }
-            if (pair.volNric === current && !connected.has(pair.traineeNric)) {
+            const tP = globalLogistics.participants.find(x => x.nric === pair.traineeNric);
+            if (pair.volNric === current && !connected.has(pair.traineeNric) && !(tP && tP.isIndividual)) {
                 connected.add(pair.traineeNric);
                 queue.push(pair.traineeNric);
             }
         });
     }
     return Array.from(connected);
+}
+
+
+function generateBusCardHtml(item, isAssigned = false) {
+    const dynColor = getProjectColor(item.group);
+    const shortName = item.shortName || item.displayName || item.name;
+    const roleColor = item.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (item.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
+    const roleShort = item.role.substring(0,3).toUpperCase();
+    const isFam = item.role === 'TRAINEE' && item.caregiverFor; 
+    const cgBadge = item.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-[10px] uppercase">[${item.caregiverFor}]</div>` : '';
+    
+    return `
+    <div class="dnd-bus-draggable relative bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-md cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col gap-1 w-full" data-nric="${item.nric}" onclick="openBusAssignSheet('${item.nric}')">
+        <div class="font-bold text-gray-900 dark:text-gray-100 text-xs md:text-sm leading-tight whitespace-normal break-words">${shortName.toUpperCase()}</div>
+        <div class="flex items-center gap-1 flex-wrap">
+            <span class="text-[10px] md:text-[10px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleShort}</span>
+            <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[10px] md:text-[10px] font-bold ${dynColor} whitespace-normal break-words inline-block" title="${(item.group || 'None').toUpperCase()}">${getProjectAbbreviation(item.group || 'None')}</span>
+        </div>
+        ${cgBadge}
+        ${isAssigned ? `<div class="remove-x" onclick="unassignFromBus('${item.nric}')">×</div>` : ''}
+    </div>
+    `;
+}
+
+function renderBuses() {
+    if(!globalLogistics || !document.getElementById('busListContainer')) return;
+    const query = document.getElementById('busSearchInput') ? document.getElementById('busSearchInput').value.toLowerCase().trim() : '';
+    
+    let unassigned = [];
+    let busMap = {};
+    activeBusesList.forEach(b => busMap[b] = []);
+
+    globalLogistics.participants.forEach(p => {
+        let pBus = String(p.bus || "").trim();
+        if (pBus && !activeBusesList.includes(pBus)) {
+            activeBusesList.push(pBus);
+            busMap[pBus] = [];
+        }
+        
+        let match = false;
+        if (query) {
+            const dName = (p.displayName || p.name).toLowerCase();
+            const fullName = (p.name || '').toLowerCase();
+            match = dName.includes(query) || fullName.includes(query) || p.nric.toLowerCase().includes(query) || pBus.toLowerCase().includes(query);
+        } else {
+            match = true;
+        }
+        
+        if (!match) return;
+
+        if (pBus) {
+            busMap[pBus].push(p);
+        } else {
+            unassigned.push(p);
+        }
+    });
+
+    document.getElementById('busUnassignedCount').innerText = unassigned.length;
+    if (window.sortParticipantsSpecial) window.sortParticipantsSpecial(unassigned, globalLogistics.participants);
+    
+    let unHtml = '';
+    unassigned.forEach(item => {
+        unHtml += generateBusCardHtml(item);
+    });
+    const el_busUnassignedPool = document.getElementById('busUnassignedPool'); 
+    if(el_busUnassignedPool) el_busUnassignedPool.innerHTML = unHtml || '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
+
+    let listHtml = '';
+    activeBusesList.forEach(b => {
+        if (window.sortParticipantsSpecial) window.sortParticipantsSpecial(busMap[b], globalLogistics.participants);
+        let itemsHtml = '';
+        busMap[b].forEach(item => {
+            itemsHtml += generateBusCardHtml(item, true);
+        });
+        listHtml += `
+        <div class="bg-gray-100 dark:bg-gray-800/80 p-2 md:p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 min-h-[120px] shadow-inner dnd-bus-zone flex flex-col transition" data-bus="${b}" ondragover="event.preventDefault();" ondrop="handleBusDrop(event, '${b}')">
+            <div class="flex justify-between items-center mb-2 shrink-0">
+                <h4 class="font-black text-gray-800 dark:text-gray-100 uppercase tracking-widest text-xs md:text-sm flex items-center gap-1.5"><svg class="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>${b}</h4>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold bg-white dark:bg-gray-900 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700 text-gray-500 shadow-sm">${busMap[b].length} PAX</span>
+                    <button onclick="promptDeleteGroupBus('bus', '${b}')" class="text-red-400 hover:text-red-600 transition focus:outline-none"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                </div>
+            </div>
+            <div class="flex-1 flex flex-col gap-1.5 md:gap-2">
+                ${itemsHtml || '<p class="text-[11px] text-gray-400 font-bold p-2 text-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded mt-1">Drop participants here</p>'}
+            </div>
+        </div>
+        `;
+    });
+    
+    listHtml += `
+    <div onclick="addGroupBusFromPopup()" class="cursor-pointer p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition">
+        <span class="text-sm font-black text-primary flex items-center gap-1"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg> Add New Bus</span>
+    </div>
+    `;
+
+    const el_busListContainer = document.getElementById('busListContainer');
+    if(el_busListContainer) el_busListContainer.innerHTML = listHtml;
+    
+    if (typeof initBusDragAndDrop === 'function') initBusDragAndDrop();
 }
 
 function autoGroup() {
@@ -2115,11 +2138,13 @@ function addGroupBusFromPopup() {
         if (!activeGroupsList.includes(val)) {
             activeGroupsList.push(val);
             localStorage.setItem('activeGroupsList', JSON.stringify(activeGroupsList));
+            apiCall('updateSyncMetadata', { payload: { groups: activeGroupsList } });
         }
     } else {
         if (!activeBusesList.includes(val)) {
             activeBusesList.push(val);
             localStorage.setItem('activeBusesList', JSON.stringify(activeBusesList));
+            apiCall('updateSyncMetadata', { payload: { buses: activeBusesList } });
         }
     }
     renderGroupBusOptions();

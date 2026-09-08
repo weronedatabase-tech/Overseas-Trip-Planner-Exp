@@ -765,7 +765,7 @@ function initDatePicker() {
 initDatePicker();
 
 
-let currentPickerTarget = null; 
+var currentPickerTarget = null; 
 const monthsArr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 

@@ -4,7 +4,7 @@ let lastAddedTraineeName = "";
 let currentCaregiverIdx = null;
 
 async function fetchPublicTrainees() {
-let attempts = 0;
+var attempts = 0;
 let success = false;
 while(attempts < 3 && !success) {
    try {

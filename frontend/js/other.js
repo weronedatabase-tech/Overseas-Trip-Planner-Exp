@@ -1,14 +1,14 @@
-let otherRosterData = [];
-let otherSearchQuery = '';
+var otherRosterData = [];
+var otherSearchQuery = '';
 
-let otherSortRules = JSON.parse(localStorage.getItem('otherSortRules_v2')) || [{ col: 'fullName', asc: true }];
-let otherCols = JSON.parse(localStorage.getItem('otherCols_v2')) || [
+var otherSortRules = JSON.parse(localStorage.getItem('otherSortRules_v2')) || [{ col: 'fullName', asc: true }];
+var otherCols = JSON.parse(localStorage.getItem('otherCols_v2')) || [
 { id: 'diet', label: 'Other Notes', width: 300, visible: true },
 { id: 'otherPoints', label: 'Other Notes', width: 220, visible: true }
 ];
 
 
-let traineeShortNames = {};
+var traineeShortNames = {};
 
 function buildOtherUI() {
 const el_tab_other = document.getElementById('tab-other'); if(el_tab_other) el_tab_other.innerHTML = `
@@ -105,9 +105,9 @@ otherSearchQuery = document.getElementById('otherSearch').value.toLowerCase().tr
 renderOtherTable();
 }
 
-let mResizingCol = null;
-let mStartX = 0;
-let mStartWidth = 0;
+var mResizingCol = null;
+var mStartX = 0;
+var mStartWidth = 0;
 
 function initOtherResize(e, colId) {
 e.stopPropagation();
@@ -146,7 +146,7 @@ document.removeEventListener('mousemove', onOtherMouseMove);
 document.removeEventListener('mouseup', onOtherMouseUp);
 }
 
-let otherDraggedColId = null;
+var otherDraggedColId = null;
 window.onOtherColDragStart = function(e, colId) {
 otherDraggedColId = colId;
 e.dataTransfer.effectAllowed = "move";

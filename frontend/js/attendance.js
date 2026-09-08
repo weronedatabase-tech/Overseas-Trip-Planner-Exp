@@ -262,6 +262,49 @@ document.getElementById('attNotCheckedCount').textContent = notCheckedCount;
 document.getElementById('attCheckedCount').textContent = checkedCount;
 }
 
+
+let attPressTimer = null;
+let attIsLongPress = false;
+let attStartX = 0;
+let attStartY = 0;
+
+window.attStartPress = function(e, nric, targetState) {
+    if (e.type.startsWith('mouse') && e.button !== 0) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    attStartX = clientX;
+    attStartY = clientY;
+    attIsLongPress = false;
+    attPressTimer = setTimeout(() => {
+        attIsLongPress = true;
+        if(typeof showParticipantSummaryModal === 'function') {
+            showParticipantSummaryModal(nric);
+        }
+    }, 600);
+};
+
+window.attEndPress = function(e, nric, targetState) {
+    if (attPressTimer) clearTimeout(attPressTimer);
+    if (!attIsLongPress) {
+        toggleAttendanceStatus(nric, targetState);
+    }
+    attIsLongPress = false;
+};
+
+window.attCancelPress = function(e) {
+    if (attPressTimer) clearTimeout(attPressTimer);
+    attIsLongPress = false;
+};
+
+window.attMovePress = function(e) {
+    if (!attPressTimer) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    if (Math.abs(clientX - attStartX) > 15 || Math.abs(clientY - attStartY) > 15) {
+        clearTimeout(attPressTimer);
+    }
+};
+
 function generateAttCard(p, isChecked) {
 const dynColor = getProjectColor(p.group);
 const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
@@ -269,7 +312,7 @@ const roleShort = p.role.substring(0,3).toUpperCase();
 const dName = p.displayName || p.name;
 
 return `
-<div id="att-card-${p.nric}" class="relative bg-white dark:bg-gray-800 p-1.5 md:p-2 rounded border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-300 flex items-center justify-between gap-1 select-none active:scale-95 cursor-pointer hover:border-primary dark:hover:border-primary" onclick="toggleAttendanceStatus('${p.nric}', ${!isChecked})">
+<div id="att-card-${p.nric}" class="relative bg-white dark:bg-gray-800 p-1.5 md:p-2 rounded border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-300 flex items-center justify-between gap-1 select-none active:scale-95 cursor-pointer hover:border-primary dark:hover:border-primary" onmousedown="attStartPress(event, '${p.nric}', ${!isChecked})" onmouseup="attEndPress(event, '${p.nric}', ${!isChecked})" onmouseleave="attCancelPress(event)" onmousemove="attMovePress(event)" ontouchstart="attStartPress(event, '${p.nric}', ${!isChecked})" ontouchend="attEndPress(event, '${p.nric}', ${!isChecked})" ontouchcancel="attCancelPress(event)" ontouchmove="attMovePress(event)">
   <div class="flex items-start min-w-0 flex-1">
       <div class="flex flex-col min-w-0 flex-1 gap-1">
           <span class="font-extrabold text-sm md:text-[12px] px-1.5 py-0.5 rounded shadow-md border ${dynColor} max-w-full break-words whitespace-normal leading-[1.1] text-left inline-block self-start" style="overflow-wrap: break-word;">${dName}</span>
