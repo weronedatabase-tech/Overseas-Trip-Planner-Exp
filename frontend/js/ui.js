@@ -597,7 +597,7 @@ window.isValidNRIC = function(str) {
 const TOP_NATIONALITIES = ["Singaporean", "Malaysian", "Indonesian", "Filipino", "Burmese", "Indian"];
 const ALL_NATIONALITIES = [
   "Afghan", "Albanian", "Algerian", "American", "Andorran", "Angolan", "Antiguans", "Argentinean", "Armenian", "Australian", "Austrian", "Azerbaijani",
-  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Barbudans", "Batswana", "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British", "Bruneian", "Bulgarian", "Burkinabe", "Burmese", "Burundian",
+  "Bahamian", "Bahraini", "Bangladeshi", "Barbadian", "Barbudans", "Batswana", "Belarusian", "Belgian", "Belizean", "Beninese", "Bhutanese", "Bolivian", "Bosnian", "Brazilian", "British Citizen", "British Overseas Territories Citizen (BOTC)", "British Overseas Citizen (BOC)", "British Subject", "British National (Overseas) (BNO)", "British Protected Person (BPP)", "Bruneian", "Bulgarian", "Burkinabe", "Burmese", "Burundian",
   "Cambodian", "Cameroonian", "Canadian", "Cape Verdean", "Central African", "Chadian", "Chilean", "Chinese", "Colombian", "Comoran", "Congolese", "Costa Rican", "Croatian", "Cuban", "Cypriot", "Czech",
   "Danish", "Djibouti", "Dominican", "Dutch",
   "East Timorese", "Ecuadorean", "Egyptian", "Emirian", "Equatorial Guinean", "Eritrean", "Estonian", "Ethiopian",
@@ -623,7 +623,7 @@ const ALL_NATIONALITIES = [
   "Zambian", "Zimbabwean"
 ];
 const OTHER_NATIONALITIES = ALL_NATIONALITIES.filter(n => !TOP_NATIONALITIES.includes(n)).sort((a, b) => a.localeCompare(b));
-window.NATIONALITIES_LIST = [...TOP_NATIONALITIES, ...OTHER_NATIONALITIES];
+window.NATIONALITIES_LIST = [...TOP_NATIONALITIES, ...OTHER_NATIONALITIES, 'Others'];
 
 window.setupNationalityDropdown = function(inputId) {
     const input = document.getElementById(inputId);
@@ -641,7 +641,7 @@ window.setupNationalityDropdown = function(inputId) {
 
     const displayBtn = document.createElement('button');
     displayBtn.type = 'button';
-    displayBtn.className = 'w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary flex justify-between items-center text-left min-h-[42px]';
+    displayBtn.className = 'w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary flex justify-between items-center text-left min-h-[42px] transition';
     
     const displaySpan = document.createElement('span');
     displaySpan.className = 'truncate text-sm ' + (input.value ? 'font-semibold' : 'text-gray-400');
@@ -653,6 +653,23 @@ window.setupNationalityDropdown = function(inputId) {
     displayBtn.appendChild(displaySpan);
     displayBtn.appendChild(chevron);
     wrapper.appendChild(displayBtn);
+
+    // Manual input container (for "Others")
+    const manualCont = document.createElement('div');
+    manualCont.className = 'hidden-force flex items-center w-full relative';
+    const manualInput = document.createElement('input');
+    manualInput.type = 'text';
+    manualInput.placeholder = 'Please specify...';
+    manualInput.className = 'w-full p-2.5 pr-10 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary text-sm font-semibold';
+    
+    const manualClearBtn = document.createElement('button');
+    manualClearBtn.type = 'button';
+    manualClearBtn.className = 'absolute right-2 p-1 text-gray-400 hover:text-red-500 focus:outline-none';
+    manualClearBtn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+    
+    manualCont.appendChild(manualInput);
+    manualCont.appendChild(manualClearBtn);
+    wrapper.appendChild(manualCont);
 
     const dropdown = document.createElement('div');
     dropdown.className = 'absolute z-[100] w-full mt-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg shadow-xl hidden-force flex flex-col max-h-64 overflow-hidden';
@@ -680,6 +697,39 @@ window.setupNationalityDropdown = function(inputId) {
     dropdown.appendChild(listCont);
     wrapper.appendChild(dropdown);
 
+    const setManualMode = (isActive) => {
+        if (isActive) {
+            displayBtn.classList.add('hidden-force');
+            manualCont.classList.remove('hidden-force');
+            manualInput.value = (input.value && input.value !== 'Others') ? input.value : '';
+            setTimeout(() => manualInput.focus(), 50);
+        } else {
+            displayBtn.classList.remove('hidden-force');
+            manualCont.classList.add('hidden-force');
+        }
+    };
+
+    // Initialize mode based on initial value
+    if (input.value && !window.NATIONALITIES_LIST.includes(input.value) && input.value !== 'Others') {
+        setManualMode(true);
+    }
+
+    manualInput.addEventListener('input', (e) => {
+        input.value = e.target.value;
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+        input.dispatchEvent(new Event('change', {bubbles:true}));
+    });
+
+    manualClearBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        input.value = '';
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+        input.dispatchEvent(new Event('change', {bubbles:true}));
+        displaySpan.textContent = 'Select Nationality';
+        displaySpan.className = 'truncate text-sm text-gray-400';
+        setManualMode(false);
+    });
+
     const renderList = (query) => {
         const q = (query || '').toLowerCase();
         let html = '';
@@ -690,7 +740,8 @@ window.setupNationalityDropdown = function(inputId) {
         } else {
             html = filtered.map(n => {
                 const isTop = TOP_NATIONALITIES.includes(n);
-                const styling = isTop ? 'font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/30' : 'font-medium text-gray-700 dark:text-gray-300';
+                let styling = isTop ? 'font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/30' : 'font-medium text-gray-700 dark:text-gray-300';
+                if (n === 'Others') styling = 'font-bold text-primary italic bg-green-50/50 dark:bg-green-900/20 border-t border-gray-100 dark:border-gray-700';
                 return `<div class="p-2.5 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${styling} nat-opt" data-val="${n}">${n}</div>`;
             }).join('');
         }
@@ -700,12 +751,23 @@ window.setupNationalityDropdown = function(inputId) {
             opt.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const val = opt.dataset.val;
+                
+                if (val === 'Others') {
+                    dropdown.classList.add('hidden-force');
+                    input.value = ''; // clear original input so manual input starts empty
+                    input.dispatchEvent(new Event('input', {bubbles:true}));
+                    input.dispatchEvent(new Event('change', {bubbles:true}));
+                    setManualMode(true);
+                    return;
+                }
+                
                 input.value = val;
                 input.dispatchEvent(new Event('input', {bubbles:true}));
                 input.dispatchEvent(new Event('change', {bubbles:true}));
                 displaySpan.textContent = val;
                 displaySpan.className = 'truncate text-sm font-semibold';
                 dropdown.classList.add('hidden-force');
+                setManualMode(false);
             });
         });
     };
@@ -741,6 +803,7 @@ window.setupNationalityDropdown = function(inputId) {
         displaySpan.className = 'truncate text-sm text-gray-400';
         dropdown.classList.add('hidden-force');
         dropdown.classList.remove('nat-dropdown-open');
+        setManualMode(false);
     });
 
     document.addEventListener('click', (e) => {

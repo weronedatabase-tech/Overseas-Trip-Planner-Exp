@@ -1221,6 +1221,7 @@ let unHtml = '';
                     <span class="text-[11px] bg-gray-200/50 dark:bg-gray-700/50 px-1.5 py-0.5 rounded border-2 border-gray-300 dark:border-gray-600 shrink-0 mt-0.5">${busMap[bName].length} Pax</span>
                 </div>
                 <div class="flex items-center gap-1 shrink-0 w-full lg:w-auto justify-end">
+                    <button onclick="showBusInfoPopup('${bName.replace(/'/g, '\\\'')}')" class="text-blue-500 hover:text-blue-600 transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md" title="Bus Info"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
                     <button onclick="openBusAddSheet('${bName.replace(/'/g, '\\\'')}')" class="text-[11px] bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 font-bold px-1.5 py-0.5 rounded hover:bg-green-100 transition focus:outline-none shadow-md">+ Add</button>
                     <button onclick="promptEditBus('${bName.replace(/'/g, '\\\'')}')" class="text-gray-400 hover:text-primary transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
                     <button onclick="removeBusList('${bName.replace(/'/g, '\\\'')}')" class="text-red-500 hover:text-red-600 transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
@@ -2453,4 +2454,56 @@ window.unassignFromBus = function(nric) {
     if(event) event.stopPropagation();
     handleBusDrop(nric, "");
     renderBuses();
+};
+
+
+window.showBusInfoPopup = function(bName) {
+    if (!globalLogistics || !globalLogistics.participants) return;
+    
+    let trainees = 0;
+    let caregivers = 0;
+    let volunteers = 0;
+    let total = 0;
+    
+    globalLogistics.participants.forEach(p => {
+        if (p.bus === bName) {
+            total++;
+            if (p.role === 'TRAINEE') trainees++;
+            else if (p.role === 'CAREGIVER') caregivers++;
+            else if (p.role === 'VOLUNTEER') volunteers++;
+        }
+    });
+
+    const overlay = document.createElement('div');
+    overlay.className = "fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 transition-opacity";
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+    
+    const html = `
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-5 w-full max-w-sm border-2 border-gray-200 dark:border-gray-700 animate-slide-up">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-black text-gray-900 dark:text-white">Bus ${bName} Breakdown</h3>
+            <button class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-bold focus:outline-none text-2xl leading-none" onclick="this.closest('.fixed').remove()">&times;</button>
+        </div>
+        <ul class="space-y-3 mb-4 text-sm">
+            <li class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-2">
+                <span class="font-bold text-gray-700 dark:text-gray-300">Trainees</span>
+                <span class="font-black text-green-600 dark:text-green-400">${trainees}</span>
+            </li>
+            <li class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-2">
+                <span class="font-bold text-gray-700 dark:text-gray-300">Caregivers</span>
+                <span class="font-black text-purple-600 dark:text-purple-400">${caregivers}</span>
+            </li>
+            <li class="flex justify-between items-center border-b-2 border-gray-100 dark:border-gray-700 pb-2">
+                <span class="font-bold text-gray-700 dark:text-gray-300">Volunteers</span>
+                <span class="font-black text-orange-600 dark:text-orange-400">${volunteers}</span>
+            </li>
+        </ul>
+        <div class="flex justify-between items-center font-black text-sm pt-2 text-primary">
+            <span>Total Passengers</span>
+            <span>${total} Pax</span>
+        </div>
+    </div>
+    `;
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
 };
