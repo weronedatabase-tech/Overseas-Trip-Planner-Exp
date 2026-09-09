@@ -168,7 +168,7 @@ loadedFamily.forEach((m, i) => {
            const formatPairingName = (tp) => {
                if (!tp) return 'Unknown';
                const name = tp.shortName || tp.name || tp.fullName || 'Unknown';
-               const isVol = currentUser && currentUser.role && currentUser.role.toUpperCase() === 'VOLUNTEER';
+               const isVol = m.role === 'VOLUNTEER';
                const clickHandler = isVol ? `onclick="window.showPairingDetails('${tp.nric}')"` : '';
                const clickClasses = isVol ? `cursor-pointer hover:underline decoration-2 underline-offset-2 relative z-10 focus:outline-none focus:ring-2 focus:ring-primary rounded-sm` : '';
                
@@ -207,7 +207,25 @@ loadedFamily.forEach((m, i) => {
                            if (pairs.length > 0) {
                                logPairing = pairs.map(pair => {
                                    const tp = globalLogistics.participants.find(x => x.nric === pair.traineeNric);
-                                   return tp ? formatPairingName(tp) : pair.traineeNric;
+                                   if (!tp) return `<span class="inline-flex mb-1 mr-3">${pair.traineeNric}</span>`;
+                                   
+                                   let tpStr = formatPairingName(tp);
+                                   const otherPairs = globalLogistics.pairings.filter(p => p.traineeNric === tp.nric && p.volNric !== lp.nric && p.status === 'ACTIVE');
+                                   
+                                   if (otherPairs.length > 0) {
+                                       let otherVolsStr = otherPairs.map(op => {
+                                           const ov = globalLogistics.participants.find(x => x.nric === op.volNric);
+                                           if (ov) {
+                                               const ovName = ov.shortName || ov.name || ov.fullName || 'Unknown';
+                                               const ovContactHtml = (ov.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(ov.contact) : (ov.contact || 'No contact');
+                                               return `<div class="text-[13px] font-bold text-gray-600 dark:text-gray-300 border-l-2 border-gray-300 dark:border-gray-600 pl-2 mt-1.5 ml-1 mb-2 flex items-center gap-1.5 flex-wrap"><span class="text-gray-500 dark:text-gray-400">Also paired with:</span> <span>${ovName}</span> <span class="font-mono text-xs scale-90 origin-left">${ovContactHtml}</span></div>`;
+                                           }
+                                           return '';
+                                       }).join('');
+                                       return `<div class="flex flex-col w-full">${tpStr}${otherVolsStr}</div>`;
+                                   }
+                                   
+                                   return tpStr;
                                }).join('');
                            }
                        }
@@ -310,7 +328,7 @@ let paymentHtml = `
 </div>
 `;
 
-let personalDetailsHeader = `<div class="flex justify-between items-center border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3 mt-4"><h3 class="text-lg font-black text-gray-900 dark:text-white tracking-tight">Personal Details</h3></div>`;
+let personalDetailsHeader = '';
 
 tabProfile.innerHTML = topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
 }
@@ -675,6 +693,20 @@ window.showPairingDetails = function(nric) {
                     <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Other Points</p>
                     <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">${other}</p>
                 </div>
+                ${member.role === 'TRAINEE' ? `
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Emergency Contact</p>
+                    <p class="font-semibold text-sm flex items-center gap-2 flex-wrap">
+                        ${member.emergencyName || 'N/A'} ${member.emergencyRelation ? `(${member.emergencyRelation})` : ''} 
+                        <span class="font-mono scale-90 origin-left">${(member.emergencyContact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(member.emergencyContact) : (member.emergencyContact || '-')}</span>
+                    </p>
+                </div>` : `
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Main Contact</p>
+                    <p class="font-semibold text-sm font-mono flex items-center">
+                        ${(member.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(member.contact) : (member.contact || 'N/A')}
+                    </p>
+                </div>`}
             </div>
         `;
     });
