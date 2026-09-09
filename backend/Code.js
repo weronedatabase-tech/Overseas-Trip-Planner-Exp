@@ -668,7 +668,14 @@ const participants = rosterData.map(p => ({
   pocNric: p.pocNric,
   bus: p.bus,
   logisticsGroup: p.logisticsGroup,
-  sleeping: p.sleeping
+  sleeping: p.sleeping,
+  contact: p.contact,
+  emergencyName: p.emergencyName,
+  emergencyContact: p.emergencyContact,
+  emergencyRelation: p.emergencyRelation,
+  diet: p.diet,
+  medical: p.medical,
+  otherPoints: p.otherPoints
 }));
 
 const pairRes = fetchPairingsOnly(forceRebuild);

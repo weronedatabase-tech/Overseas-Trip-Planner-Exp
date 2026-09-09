@@ -4,6 +4,8 @@ let finOptions = [];
 var globalFinanceRates = { "SGD": 1 };
 let myReceipts = [];
 
+let additionalProfiles = {};
+
 async function loadProfileData() {
 const tabProfile = document.getElementById('tab-profile');
 if(!tabProfile) return;
@@ -26,6 +28,31 @@ try {
  if(!familyNrics.includes(currentUser.nric)) familyNrics.push(currentUser.nric);
  myReceipts = (recRes.receipts || []).filter(r => (familyNrics.includes(r.uploaderNric) || familyNrics.includes(r.paidByNric)) && !r.isDeleted);
  globalLogistics = logRes || null;
+
+    additionalProfiles = {};
+    if (currentUser && currentUser.role === 'VOLUNTEER' && globalLogistics && globalLogistics.pairings) {
+        const myPairs = globalLogistics.pairings.filter(p => p.volNric === currentUser.nric && p.status === 'ACTIVE');
+        const nricsToFetch = new Set();
+        myPairs.forEach(p => {
+            globalLogistics.pairings.filter(op => op.traineeNric === p.traineeNric && op.volNric !== currentUser.nric && op.status === 'ACTIVE').forEach(op => {
+                nricsToFetch.add(op.volNric);
+            });
+        });
+        
+        const toFetch = Array.from(nricsToFetch).slice(0, 10);
+        if (toFetch.length > 0) {
+            await Promise.all(toFetch.map(async (n) => {
+                try {
+                    const res = await apiCall('getProfile', { nric: n });
+                    if (res && res.status === 'success' && res.family) {
+                        res.family.forEach(f => {
+                            additionalProfiles[f.nric] = f;
+                        });
+                    }
+                } catch(e) {}
+            }));
+        }
+    }
 
  renderProfileFullView();
 
@@ -216,8 +243,9 @@ loadedFamily.forEach((m, i) => {
                                        let otherVolsStr = otherPairs.map(op => {
                                            const ov = globalLogistics.participants.find(x => x.nric === op.volNric);
                                            if (ov) {
-                                               const ovName = ov.shortName || ov.name || ov.fullName || 'Unknown';
-                                               const ovContactHtml = (ov.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(ov.contact) : (ov.contact || 'No contact');
+                                               const fullOv = additionalProfiles[ov.nric] || ov;
+                                               const ovName = fullOv.shortName || fullOv.name || fullOv.fullName || 'Unknown';
+                                               const ovContactHtml = (fullOv.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(fullOv.contact) : (fullOv.contact || 'No contact');
                                                return `<div class="text-[13px] font-bold text-gray-600 dark:text-gray-300 border-l-2 border-gray-300 dark:border-gray-600 pl-2 mt-1.5 ml-1 mb-2 flex items-center gap-1.5 flex-wrap"><span class="text-gray-500 dark:text-gray-400">Also paired with:</span> <span>${ovName}</span> <span class="font-mono text-xs scale-90 origin-left">${ovContactHtml}</span></div>`;
                                            }
                                            return '';
@@ -626,15 +654,32 @@ document.addEventListener('click', function(e) {
     dds.forEach(dd => dd.classList.add('hidden-force'));
 });
 
-window.showPairingDetails = function(nric) {
+window.showPairingDetails = async function(nric) {
     if (!globalLogistics || !globalLogistics.participants) return;
     const p = globalLogistics.participants.find(x => x.nric === nric);
     if (!p) return;
     
     const existing = document.getElementById('pairing-details-modal'); if (existing) existing.remove();
     
+    document.body.insertAdjacentHTML('beforeend', `
+        <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="pairing-details-modal">
+            <div class="loader w-10 h-10 border-white"></div>
+        </div>
+    `);
+
     const pocNric = p.pocNric || p.nric;
-    let familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
+    let familyMembers = [];
+    
+    try {
+        const res = await apiCall('getProfile', { nric: pocNric });
+        if (res && res.status === 'success' && res.family) {
+            familyMembers = res.family;
+        } else {
+            familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
+        }
+    } catch(e) {
+        familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
+    }
     
     // Sort so the clicked trainee is first
     familyMembers.sort((a, b) => {
@@ -642,6 +687,9 @@ window.showPairingDetails = function(nric) {
         if (b.nric === p.nric) return 1;
         return 0;
     });
+
+    const modalToReplace = document.getElementById('pairing-details-modal');
+    if (modalToReplace) modalToReplace.remove();
 
     let membersHtml = '';
     
