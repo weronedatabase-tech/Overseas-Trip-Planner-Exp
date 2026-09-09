@@ -614,27 +614,41 @@ window.showPairingDetails = function(nric) {
     if (!p) return;
     
     const existing = document.getElementById('pairing-details-modal'); if (existing) existing.remove();
-    let room = 'None';
-    if (globalLogistics.rooms) {
-        const r = globalLogistics.rooms.find(r => r.occupants && r.occupants.includes(p.nric));
-        if (r) room = r.name;
-    }
-    const group = p.logisticsGroup || 'None';
-    const bus = p.bus || 'None';
-    const diet = p.diet || 'None';
-    const medical = p.medical || 'None';
-    const other = p.otherPoints || 'None';
     
-    const html = `
-    <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="pairing-details-modal">
-        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full border-2 border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
-            <div class="p-4 border-b-2 border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
-                <h3 class="font-black text-lg text-gray-900 dark:text-white">${p.shortName || p.name || p.fullName || 'Unknown'}</h3>
-                <button onclick="document.getElementById('pairing-details-modal').remove()" class="text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-lg focus:outline-none transition-colors">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="p-4 space-y-4">
+    const pocNric = p.pocNric || p.nric;
+    let familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
+    
+    // Sort so the clicked trainee is first
+    familyMembers.sort((a, b) => {
+        if (a.nric === p.nric) return -1;
+        if (b.nric === p.nric) return 1;
+        return 0;
+    });
+
+    let membersHtml = '';
+    
+    familyMembers.forEach((member, index) => {
+        let room = 'None';
+        if (globalLogistics.rooms) {
+            const r = globalLogistics.rooms.find(r => r.occupants && r.occupants.includes(member.nric));
+            if (r) room = r.name;
+        }
+        const group = member.logisticsGroup || 'None';
+        const bus = member.bus || 'None';
+        const diet = member.diet || 'None';
+        const medical = member.medical || 'None';
+        const other = member.otherPoints || 'None';
+        
+        const isMain = index === 0;
+        const headerLabel = isMain ? '' : `<div class="mb-2"><span class="text-[10px] font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest inline-block shadow-sm">Family Member</span></div>`;
+
+        membersHtml += `
+            <div class="${index > 0 ? 'mt-6 pt-6 border-t-4 border-gray-200 dark:border-gray-700' : ''}">
+                ${headerLabel}
+                <div class="flex items-center gap-2 mb-3">
+                    <h3 class="font-black text-lg text-gray-900 dark:text-white">${member.shortName || member.name || member.fullName || 'Unknown'}</h3>
+                    <span class="text-[10px] uppercase font-black ${member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400')} bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm border border-gray-200 dark:border-gray-700">${member.role}</span>
+                </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Room</p>
@@ -650,19 +664,34 @@ window.showPairingDetails = function(nric) {
                     </div>
                 </div>
                 
-                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3">
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
                     <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Dietary Needs</p>
                     <p class="font-bold text-sm text-red-600 dark:text-red-400">${diet}</p>
                 </div>
                 
-                ${p.role === 'TRAINEE' ? `<div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Medical Conditions</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${medical}</p></div>` : ''}
+                ${member.role === 'TRAINEE' ? `<div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3"><p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Medical Conditions</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${medical}</p></div>` : ''}
                 
-                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3">
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
                     <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Other Points</p>
                     <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">${other}</p>
                 </div>
             </div>
-            <div class="p-3 border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+        `;
+    });
+    
+    const html = `
+    <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="pairing-details-modal">
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full border-2 border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b-2 border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
+                <h3 class="font-black text-lg text-gray-900 dark:text-white">Pairing Details</h3>
+                <button onclick="document.getElementById('pairing-details-modal').remove()" class="text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-lg focus:outline-none transition-colors">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto custom-scrollbar">
+                ${membersHtml}
+            </div>
+            <div class="p-3 border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0">
                 <button onclick="document.getElementById('pairing-details-modal').remove()" class="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">Close</button>
             </div>
         </div>
