@@ -64,6 +64,7 @@ return type + "_v2_" + getDbId();
 }
 
 function putLargeCache(cacheKey, jsonStr) {
+removeLargeCache(cacheKey);
 const cache = CacheService.getScriptCache();
 try {
 if (jsonStr.length < 90000) {
@@ -598,26 +599,33 @@ results.push({
 }
 }
 
-  // In-memory self-healing of pocNric based on 'relatedTrainee' column (index 4)
+  // Optimized In-memory self-healing of pocNric based on 'relatedTrainee' column (index 4)
+  results.forEach(r => {
+      r._normFullName = (r.fullName || '').replace(/\s+/g, '').toLowerCase();
+      r._normShortName = (r.shortName || '').replace(/\s+/g, '').toLowerCase();
+      if (r.role === 'CAREGIVER' && r.relatedTrainee) {
+          r._normDesired = r.relatedTrainee.split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
+      }
+  });
+
   let changed = true;
-  while (changed) {
+  let iterations = 0;
+  while (changed && iterations < 5) {
       changed = false;
+      iterations++;
       results.forEach(r => {
-          if (r.role === 'CAREGIVER' && r.relatedTrainee) {
-              const desiredNames = r.relatedTrainee.split('|').map(n => n.replace(/\s+/g, '').toLowerCase()).filter(n => n);
+          if (r.role === 'CAREGIVER' && r._normDesired && r._normDesired.length > 0) {
+              const desiredNames = r._normDesired;
               results.forEach(j => {
                   if (j !== r) {
-                      const jName = (j.fullName || '').replace(/\s+/g, '').toLowerCase();
-                      const jShort = (j.shortName || '').replace(/\s+/g, '').toLowerCase();
-                      const isDesired = desiredNames.some(d => d.includes(jName) || jName.includes(d) || (jShort && d.includes(jShort)));
+                      const isDesired = desiredNames.some(d => d.includes(j._normFullName) || j._normFullName.includes(d) || (j._normShortName && d.includes(j._normShortName)));
                       if (isDesired) {
                           const rPoc = r.pocNric || r.nric;
                           const jPoc = j.pocNric || j.nric;
                           if (rPoc !== jPoc) {
-                              const targetPoc = rPoc;
                               results.forEach(x => {
                                   if ((x.pocNric || x.nric) === jPoc) {
-                                      x.pocNric = targetPoc;
+                                      x.pocNric = rPoc;
                                   }
                               });
                               changed = true;
@@ -628,6 +636,12 @@ results.push({
           }
       });
   }
+  
+  results.forEach(r => {
+      delete r._normFullName;
+      delete r._normShortName;
+      delete r._normDesired;
+  });
 
   results.forEach(r => {
       if (r.role === 'CAREGIVER') {

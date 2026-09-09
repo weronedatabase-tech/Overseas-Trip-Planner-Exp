@@ -74,3 +74,11 @@ input[type="text"], input[type="email"], input[type="tel"], input[type="number"]
     font-size: 115%; /* Increase even more on large desktop */
   }
 }
+@keyframes pulse-button {
+  0% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.7); transform: scale(1); }
+  50% { box-shadow: 0 0 0 4px rgba(168, 85, 247, 0); transform: scale(1.02); }
+  100% { box-shadow: 0 0 0 0 rgba(168, 85, 247, 0); transform: scale(1); }
+}
+.animate-pulse-button {
+  animation: pulse-button 2s infinite ease-in-out;
+}

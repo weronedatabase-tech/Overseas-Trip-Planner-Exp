@@ -30,14 +30,23 @@ try {
  globalLogistics = logRes || null;
 
     additionalProfiles = {};
-    if (currentUser && currentUser.role === 'VOLUNTEER' && globalLogistics && globalLogistics.pairings) {
-        const myPairs = globalLogistics.pairings.filter(p => p.volNric === currentUser.nric && p.status === 'ACTIVE');
+    if (currentUser && globalLogistics && globalLogistics.pairings) {
         const nricsToFetch = new Set();
-        myPairs.forEach(p => {
-            globalLogistics.pairings.filter(op => op.traineeNric === p.traineeNric && op.volNric !== currentUser.nric && op.status === 'ACTIVE').forEach(op => {
-                nricsToFetch.add(op.volNric);
+        if (currentUser.role === 'VOLUNTEER') {
+            const myPairs = globalLogistics.pairings.filter(p => p.volNric === currentUser.nric && p.status === 'ACTIVE');
+            myPairs.forEach(p => {
+                globalLogistics.pairings.filter(op => op.traineeNric === p.traineeNric && op.volNric !== currentUser.nric && op.status === 'ACTIVE').forEach(op => {
+                    nricsToFetch.add(op.volNric);
+                });
             });
-        });
+        } else if (currentUser.role === 'CAREGIVER') {
+            const myPoc = currentUser.pocNric || currentUser.nric;
+            const myTrainees = globalLogistics.participants.filter(x => x.role === 'TRAINEE' && (x.pocNric || x.nric) === myPoc);
+            myTrainees.forEach(t => {
+                const pairs = globalLogistics.pairings.filter(p => p.traineeNric === t.nric && p.status === 'ACTIVE');
+                pairs.forEach(p => nricsToFetch.add(p.volNric));
+            });
+        }
         
         const toFetch = Array.from(nricsToFetch).slice(0, 10);
         if (toFetch.length > 0) {
@@ -169,7 +178,7 @@ loadedFamily.forEach((m, i) => {
  }
 
  const mRoleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
- let headerLabel = i === 0 ? '<span class="text-xs font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">My Profile</span>' : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">Family Member</span>';
+ let headerLabel = i === 0 ? '<span class="text-base font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">My Profile</span>' : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">Family Member</span>';
 
  profilesHtml += `
    <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md relative mb-4" id="profCard_${i}">
@@ -197,7 +206,7 @@ loadedFamily.forEach((m, i) => {
                const name = tp.shortName || tp.name || tp.fullName || 'Unknown';
                const isVol = m.role === 'VOLUNTEER';
                const clickHandler = isVol ? `onclick="window.showPairingDetails('${tp.nric}')"` : '';
-               const clickClasses = isVol ? `cursor-pointer hover:underline decoration-2 underline-offset-2 relative z-10 focus:outline-none focus:ring-2 focus:ring-primary rounded-sm` : '';
+               const clickClasses = isVol ? `cursor-pointer hover:bg-purple-200 dark:hover:bg-purple-800 decoration-2 underline-offset-2 relative z-10 focus:outline-none focus:ring-2 focus:ring-primary rounded-md px-1.5 py-0.5 -ml-1 border-2 border-purple-400 dark:border-purple-600 shadow-sm animate-pulse-button text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40` : '';
                
                const roleMap = { 'VOLUNTEER': 'vol', 'CAREGIVER': 'car', 'TRAINEE': 'trn' };
                const rTag = roleMap[tp.role] || tp.role;
@@ -210,7 +219,16 @@ loadedFamily.forEach((m, i) => {
                    projTagHtml = `<span class="text-[10px] font-black px-1 py-[1px] rounded border shadow-sm ${projColor} ml-1.5 leading-none">${tp.group}</span>`;
                }
                
-               return `<span class="inline-flex items-center whitespace-nowrap mb-1 mr-3">` + (isVol ? `<button type="button" ${clickHandler} class="text-left font-bold ${clickClasses}">${name}</button>` : `<span class="font-bold">${name}</span>`) + `${projTagHtml}${roleTagHtml}</span>`;
+               let famTagHtml = '';
+               if (globalLogistics && globalLogistics.participants) {
+                   const pNric = tp.pocNric || tp.nric;
+                   const hasFamily = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pNric).length > 1;
+                   if (hasFamily) {
+                       famTagHtml = `<span class="text-[10px] uppercase font-black text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-900/30 px-1 py-[1px] rounded ml-1.5 leading-none shadow-sm border border-pink-200 dark:border-pink-800">FAM</span>`;
+                   }
+               }
+               
+               return `<span class="inline-flex items-center whitespace-nowrap mb-1 mr-3">` + (isVol ? `<button type="button" ${clickHandler} class="text-left font-bold ${clickClasses}">${name}</button>` : `<span class="font-bold">${name}</span>`) + `${projTagHtml}${roleTagHtml}${famTagHtml}</span>`;
            };
 
            if (globalLogistics && globalLogistics.participants) {
@@ -229,6 +247,23 @@ loadedFamily.forEach((m, i) => {
                                const vp = globalLogistics.participants.find(x => x.nric === pair.volNric);
                                if (vp) logPairing = formatPairingName(vp);
                            }
+                       } else if (lp.role === 'CAREGIVER') {
+                           const myPoc = lp.pocNric || lp.nric;
+                           const myTrainees = globalLogistics.participants.filter(x => x.role === 'TRAINEE' && (x.pocNric || x.nric) === myPoc);
+                           let pairingStrs = [];
+                           myTrainees.forEach(t => {
+                               const pairs = globalLogistics.pairings.filter(p => p.traineeNric === t.nric && p.status === 'ACTIVE');
+                               pairs.forEach(pair => {
+                                   const vp = globalLogistics.participants.find(x => x.nric === pair.volNric);
+                                   if (vp) {
+                                       const fullVp = additionalProfiles[vp.nric] || vp;
+                                       const vpName = fullVp.shortName || fullVp.name || fullVp.fullName || 'Unknown';
+                                       const vpContactHtml = (fullVp.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(fullVp.contact) : (fullVp.contact || 'No contact');
+                                       pairingStrs.push(`<div class="mb-1"><span>${formatPairingName(vp)}</span><br><span class="font-mono text-[11px] font-semibold flex items-center gap-1 mt-0.5">${vpContactHtml}</span></div>`);
+                                   }
+                               });
+                           });
+                           if (pairingStrs.length > 0) logPairing = pairingStrs.join('');
                        } else {
                            const pairs = globalLogistics.pairings.filter(p => p.volNric === lp.nric && p.status === 'ACTIVE');
                            if (pairs.length > 0) {
@@ -712,7 +747,7 @@ window.showPairingDetails = async function(nric) {
             <div class="${index > 0 ? 'mt-6 pt-6 border-t-4 border-gray-200 dark:border-gray-700' : ''}">
                 ${headerLabel}
                 <div class="flex items-center gap-2 mb-3">
-                    <h3 class="font-black text-lg text-gray-900 dark:text-white">${member.shortName || member.name || member.fullName || 'Unknown'}</h3>
+                    <h3 class="font-black text-lg text-gray-900 dark:text-white">${member.fullName || member.name || 'Unknown'}${member.shortName ? ' (' + member.shortName + ')' : ''}</h3>
                     <span class="text-[10px] uppercase font-black ${member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400')} bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-sm border border-gray-200 dark:border-gray-700">${member.role}</span>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
