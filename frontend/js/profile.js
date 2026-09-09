@@ -154,25 +154,93 @@ loadedFamily.forEach((m, i) => {
        </div>
        ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>` : ''}
      </div>
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-4 text-sm text-gray-800 dark:text-gray-200">
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Short Name</p><p class="font-bold text-sm md:text-base">${m.shortName || '-'}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-bold text-sm md:text-base uppercase">${m.nric}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-bold text-sm md:text-base">${m.dob}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-bold text-sm md:text-base">${m.gender} | ${m.nationality}</p></div>
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${renderPhoneLink(m.contact)} | ${m.email || 'N/A'}</div></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || 'None'}</span></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Home Address</p><p class="font-bold text-sm md:text-base">${m.address}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-bold text-sm md:text-base uppercase">${m.passportNo}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? 'font-bold text-red-600 dark:text-red-400' : 'font-semibold'}">${m.passportExpiry || '-'}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ''}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-bold text-sm md:text-base flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-sm md:text-base text-red-600 dark:text-red-400">${m.diet || 'None'}</p></div>
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Sleeping Arrangement</p><p class="font-bold text-sm md:text-base text-green-600 dark:text-green-400">${m.sleeping || 'No special request'}</p></div>
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-bold text-sm md:text-base">${m.otherPoints || 'None'}</p></div>
-       ${m.role === 'TRAINEE' ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs md:text-sm uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-sm md:text-base">${m.medical || 'None'}</p></div>` : ''}
+     
+     
+     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || '-'}</p></div>
+       
+       ${(() => {
+           let logRoom = 'None';
+           let logGroup = m.logisticsGroup || 'None';
+           let logBus = m.bus || 'None';
+           let logPairing = 'None';
+           
+           const formatPairingName = (tp) => {
+               if (!tp) return 'Unknown';
+               const name = tp.shortName || tp.name || tp.fullName || 'Unknown';
+               const isVol = currentUser && currentUser.role && currentUser.role.toUpperCase() === 'VOLUNTEER';
+               const clickHandler = isVol ? `onclick="window.showPairingDetails('${tp.nric}')"` : '';
+               const clickClasses = isVol ? `cursor-pointer hover:underline decoration-2 underline-offset-2 relative z-10 focus:outline-none focus:ring-2 focus:ring-primary rounded-sm` : '';
+               
+               const roleMap = { 'VOLUNTEER': 'vol', 'CAREGIVER': 'car', 'TRAINEE': 'trn' };
+               const rTag = roleMap[tp.role] || tp.role;
+               const rColor = tp.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (tp.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
+               const roleTagHtml = `<span class="text-[10px] uppercase font-black ${rColor} bg-gray-100 dark:bg-gray-800 px-1 py-[1px] rounded ml-1.5 leading-none shadow-sm border border-gray-200 dark:border-gray-700">${rTag}</span>`;
+               
+               let projTagHtml = '';
+               if (tp.group) {
+                   const projColor = typeof getProjectColor === 'function' ? getProjectColor(tp.group) : 'bg-gray-100 text-gray-800 border-gray-200';
+                   projTagHtml = `<span class="text-[10px] font-black px-1 py-[1px] rounded border shadow-sm ${projColor} ml-1.5 leading-none">${tp.group}</span>`;
+               }
+               
+               return `<span class="inline-flex items-center whitespace-nowrap mb-1 mr-3">` + (isVol ? `<button type="button" ${clickHandler} class="text-left font-bold ${clickClasses}">${name}</button>` : `<span class="font-bold">${name}</span>`) + `${projTagHtml}${roleTagHtml}</span>`;
+           };
 
+           if (globalLogistics && globalLogistics.participants) {
+               const lp = globalLogistics.participants.find(p => p.nric.toUpperCase() === m.nric.toUpperCase());
+               if (lp) {
+                   logGroup = lp.logisticsGroup || 'None';
+                   logBus = lp.bus || 'None';
+                   if (globalLogistics.rooms) {
+                       const r = globalLogistics.rooms.find(r => r.occupants && r.occupants.includes(lp.nric));
+                       if (r) logRoom = r.name;
+                   }
+                   if (globalLogistics.pairings) {
+                       if (lp.role === 'TRAINEE') {
+                           const pair = globalLogistics.pairings.find(p => p.traineeNric === lp.nric && p.status === 'ACTIVE');
+                           if (pair) {
+                               const vp = globalLogistics.participants.find(x => x.nric === pair.volNric);
+                               if (vp) logPairing = formatPairingName(vp);
+                           }
+                       } else {
+                           const pairs = globalLogistics.pairings.filter(p => p.volNric === lp.nric && p.status === 'ACTIVE');
+                           if (pairs.length > 0) {
+                               logPairing = pairs.map(pair => {
+                                   const tp = globalLogistics.participants.find(x => x.nric === pair.traineeNric);
+                                   return tp ? formatPairingName(tp) : pair.traineeNric;
+                               }).join('');
+                           }
+                       }
+                   }
+               }
+           }
+           
+           return `
+              <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p><div class="font-black text-lg text-purple-600 dark:text-purple-400 flex flex-wrap items-center w-full">${logPairing}</div></div>
+              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-black text-lg text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
+              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
+              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
+           `;
+       })()}
+
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-red-600 dark:text-red-400">${m.diet || 'None'}</p></div>
+       ${m.role === 'TRAINEE' ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-red-600 dark:text-red-400">${m.medical || 'None'}</p></div>` : ''}
+       
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${m.email || 'N/A'}">${m.email || 'N/A'}</span></div></div>
+       
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${formatDDMmmYYYY(m.dob)}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || 'None'}</span></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? 'font-bold text-red-600 dark:text-red-400' : 'font-semibold'}">${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : '-'}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ''}</p></div>
+       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
+       
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Sleeping Arrangement Request</p><p class="font-semibold text-green-600 dark:text-green-400">${m.sleeping || 'No special request'}</p></div>
+       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${m.otherPoints || 'None'}</p></div>
      </div>
    </div>
-   
    <form id="profEdit_${i}" onsubmit="event.preventDefault(); saveProfileEdit(${i}, this.querySelector('button[type=submit]'));" class="hidden-force bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border border-primary dark:border-green-500 space-y-3 shadow-[0_4px_15px_-5px_rgba(22,163,74,0.2)]">
      <h4 class="font-black text-sm mb-1 border-b-2 border-gray-100 dark:border-gray-800 pb-1.5 text-gray-900 dark:text-white tracking-tight">Edit Details</h4>
      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -485,8 +553,8 @@ const updated = {
 
 try { 
  await apiCall('updateProfile', { member: updated }); 
- showToast("Profile Updated!"); 
- loadProfileData(); 
+ showToast("Profile Updated!");
+  setTimeout(() => window.location.reload(), 800); 
 } catch (e) { 
  showToast(e.message, true); 
 } finally { 
@@ -539,3 +607,66 @@ document.addEventListener('click', function(e) {
     const dds = document.querySelectorAll('[id^="edRelatedDropdown_"]');
     dds.forEach(dd => dd.classList.add('hidden-force'));
 });
+
+window.showPairingDetails = function(nric) {
+    if (!globalLogistics || !globalLogistics.participants) return;
+    const p = globalLogistics.participants.find(x => x.nric === nric);
+    if (!p) return;
+    
+    const existing = document.getElementById('pairing-details-modal'); if (existing) existing.remove();
+    let room = 'None';
+    if (globalLogistics.rooms) {
+        const r = globalLogistics.rooms.find(r => r.occupants && r.occupants.includes(p.nric));
+        if (r) room = r.name;
+    }
+    const group = p.logisticsGroup || 'None';
+    const bus = p.bus || 'None';
+    const diet = p.diet || 'None';
+    const medical = p.medical || 'None';
+    const other = p.otherPoints || 'None';
+    
+    const html = `
+    <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="pairing-details-modal">
+        <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full border-2 border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col">
+            <div class="p-4 border-b-2 border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                <h3 class="font-black text-lg text-gray-900 dark:text-white">${p.shortName || p.name || p.fullName || 'Unknown'}</h3>
+                <button onclick="document.getElementById('pairing-details-modal').remove()" class="text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-lg focus:outline-none transition-colors">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Room</p>
+                        <p class="font-black text-blue-600 dark:text-blue-400">${room}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Bus</p>
+                        <p class="font-black text-teal-600 dark:text-teal-400">${bus}</p>
+                    </div>
+                    <div class="col-span-2">
+                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Group</p>
+                        <p class="font-black text-amber-600 dark:text-amber-400">${group}</p>
+                    </div>
+                </div>
+                
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Dietary Needs</p>
+                    <p class="font-bold text-sm text-red-600 dark:text-red-400">${diet}</p>
+                </div>
+                
+                ${p.role === 'TRAINEE' ? `<div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3"><p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Medical Conditions</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${medical}</p></div>` : ''}
+                
+                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3">
+                    <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Other Points</p>
+                    <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">${other}</p>
+                </div>
+            </div>
+            <div class="p-3 border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                <button onclick="document.getElementById('pairing-details-modal').remove()" class="w-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white font-bold py-2 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">Close</button>
+            </div>
+        </div>
+    </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+};
