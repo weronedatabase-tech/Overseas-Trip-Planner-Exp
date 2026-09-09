@@ -623,7 +623,7 @@ const ALL_NATIONALITIES = [
   "Zambian", "Zimbabwean"
 ];
 const OTHER_NATIONALITIES = ALL_NATIONALITIES.filter(n => !TOP_NATIONALITIES.includes(n)).sort((a, b) => a.localeCompare(b));
-window.NATIONALITIES_LIST = [...TOP_NATIONALITIES, ...OTHER_NATIONALITIES, 'Others'];
+window.NATIONALITIES_LIST = [...TOP_NATIONALITIES, ...OTHER_NATIONALITIES];
 
 window.setupNationalityDropdown = function(inputId) {
     const input = document.getElementById(inputId);
@@ -733,18 +733,28 @@ window.setupNationalityDropdown = function(inputId) {
     const renderList = (query) => {
         const q = (query || '').toLowerCase();
         let html = '';
-        const filtered = window.NATIONALITIES_LIST.filter(n => n.toLowerCase().includes(q));
         
-        if (filtered.length === 0) {
-            html = '<div class="p-3 text-xs text-center text-gray-500">No results found</div>';
+        const filtered = window.NATIONALITIES_LIST.filter(n => n !== 'Others' && n.toLowerCase().includes(q));
+        
+        const othersHtml = `<div class="p-2.5 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-bold text-primary italic bg-green-50/50 dark:bg-green-900/20 nat-opt" data-val="Others">Others (Please specify)</div>`;
+        
+        const mappedFiltered = filtered.map(n => {
+            const isTop = TOP_NATIONALITIES.includes(n);
+            let styling = isTop ? 'font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/30' : 'font-medium text-gray-700 dark:text-gray-300';
+            return `<div class="p-2.5 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${styling} nat-opt" data-val="${n}">${n}</div>`;
+        }).join('');
+
+        if (q === '') {
+            html += othersHtml + mappedFiltered;
         } else {
-            html = filtered.map(n => {
-                const isTop = TOP_NATIONALITIES.includes(n);
-                let styling = isTop ? 'font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900/30' : 'font-medium text-gray-700 dark:text-gray-300';
-                if (n === 'Others') styling = 'font-bold text-primary italic bg-green-50/50 dark:bg-green-900/20 border-t border-gray-100 dark:border-gray-700';
-                return `<div class="p-2.5 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm ${styling} nat-opt" data-val="${n}">${n}</div>`;
-            }).join('');
+            if (filtered.length === 0) {
+                html += '<div class="p-3 text-xs text-center text-gray-500">No results found in list. Use "Others" below to specify manually.</div>';
+            } else {
+                html += mappedFiltered;
+            }
+            html += othersHtml;
         }
+        
         listCont.innerHTML = html;
         
         Array.from(listCont.getElementsByClassName('nat-opt')).forEach(opt => {
