@@ -201,6 +201,7 @@ case 'addProjectGroup': result = modifyProjectGroups(data.groupName, true, data.
 case 'removeProjectGroup': result = modifyProjectGroups(data.groupName, false, data.callerNric); break;
 case 'modifyJunctures': result = modifyJunctures(data.actionType, data.oldName, data.newName); break;
 case 'saveSortingRules': result = saveSortingRules(data.rules, data.callerNric); break;
+case 'saveCustomViewsOrder': result = saveCustomViewsOrder(data.order, data.callerNric); break;
 case 'saveTripSettings': result = saveTripSettings(data.title, data.year, data.start, data.end); break;
 case 'clearCache': result = clearGlobalCache(); break;
 case 'fetchAdminRoster': result = fetchAdminRoster(); break;
@@ -270,7 +271,8 @@ projectGroups: props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getPropert
 projectColors: props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {}, 
 activeProjects: activeProjects, 
 junctures: props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly'],
-sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty('SORTING_RULES')) : ['project', 'family', 'role', 'name'], 
+sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty('SORTING_RULES')) : ['project', 'family', 'role', 'name'],
+customViewsOrder: props.getProperty('CUSTOM_VIEWS_ORDER') ? JSON.parse(props.getProperty('CUSTOM_VIEWS_ORDER')) : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
 driveAccessList: props.getProperty('APP_GRANTED_ACCESS') ? JSON.parse(props.getProperty('APP_GRANTED_ACCESS')) : {}, 
 tripTitle: props.getProperty('TRIP_TITLE') || '', tripYear: props.getProperty('TRIP_YEAR') || '',
 tripStartDate: props.getProperty('TRIP_START_DATE') || '', tripEndDate: props.getProperty('TRIP_END_DATE') || ''
@@ -1381,6 +1383,8 @@ props.setProperty('ATTENDANCE_JUNCTURES', JSON.stringify(list)); return { status
 }
 
 function saveSortingRules(rules, callerNric) { PropertiesService.getScriptProperties().setProperty('SORTING_RULES', JSON.stringify(rules)); return { status: 'success', sortingRules: rules }; }
+function saveCustomViewsOrder(order, callerNric) { PropertiesService.getScriptProperties().setProperty('CUSTOM_VIEWS_ORDER', JSON.stringify(order)); return { status: 'success', customViewsOrder: order }; }
+
 
 // ==========================================
 // DRIVE & FILE MANAGEMENT

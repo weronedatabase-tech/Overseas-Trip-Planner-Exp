@@ -83,11 +83,17 @@ document.getElementById('tab-participants').innerHTML = `
        <div class="flex items-center gap-2">
            <select id="customViewSelect" onchange="handleCustomViewChange(this.value)"  class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
                <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
-               <option value="reset_filter" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">All Participants</option>
-               <option value="medical.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Medical</option>
-               <option value="diet.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Dietary</option>
-               <option value="expired.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Expired Passports</option>
-               <option value="other.html" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Other Notes</option>
+               ${(() => {
+                   const viewLabels = {
+                       'reset_filter': 'All Participants',
+                       'medical.html': 'Medical',
+                       'diet.html': 'Dietary',
+                       'expired.html': 'Expired Passports',
+                       'other.html': 'Other Notes'
+                   };
+                   const order = (typeof appSettings !== 'undefined' && appSettings.customViewsOrder) ? appSettings.customViewsOrder : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'];
+                   return order.map(val => `<option value="${val}" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">${viewLabels[val] || val}</option>`).join('');
+               })()}
                <optgroup id="logisticsGroupOptgroup" label="Logistics Groups" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"></optgroup>
            </select>
        </div>
