@@ -730,12 +730,27 @@ window.showPairingDetails = async function(nric) {
     
     familyMembers.forEach((member, index) => {
         let room = 'None';
-        if (globalLogistics.rooms) {
+        let group = 'None';
+        let bus = 'None';
+        
+        let lp = null;
+        if (globalLogistics && globalLogistics.participants) {
+            lp = globalLogistics.participants.find(p => p.nric.toUpperCase() === member.nric.toUpperCase());
+        }
+        
+        if (globalLogistics && globalLogistics.rooms) {
             const r = globalLogistics.rooms.find(r => r.occupants && r.occupants.includes(member.nric));
             if (r) room = r.name;
         }
-        const group = member.logisticsGroup || 'None';
-        const bus = member.bus || 'None';
+        
+        if (lp) {
+            group = lp.logisticsGroup || member.logisticsGroup || 'None';
+            bus = lp.bus || member.bus || 'None';
+        } else {
+            group = member.logisticsGroup || 'None';
+            bus = member.bus || 'None';
+        }
+        
         const diet = member.diet || 'None';
         const medical = member.medical || 'None';
         const other = member.otherPoints || 'None';
