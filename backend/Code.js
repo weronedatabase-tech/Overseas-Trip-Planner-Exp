@@ -304,14 +304,13 @@ if (nric) {
  }
 }
 
-const rosterRes = fetchAdminRoster();
-const data = rosterRes.roster;
-
 if (password.length >= 5) {
  const possibleYearStr = password.slice(-4);
  const possibleNric = password.slice(0, -4).toUpperCase();
  
  if (!isNaN(parseInt(possibleYearStr))) {
+   const rosterRes = fetchAdminRoster();
+   const data = rosterRes.roster;
    const user = data.find(r => r.nric === possibleNric);
    if (user) {
      let birthYear = '';
@@ -330,6 +329,8 @@ if (password.length >= 5) {
 }
 
 if (nric) {
+ const rosterRes = fetchAdminRoster();
+ const data = rosterRes.roster;
  const user = data.find(r => r.nric === nric);
  if (user) {
    let birthYear = '';
