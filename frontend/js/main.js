@@ -240,6 +240,27 @@ async function showParticipantSummaryModal(nric) {
                             const vp = logistics.participants.find(x => x.nric === pair.volNric);
                             if (vp) logPairing = vp.shortName || vp.fullName || pair.volNric;
                         }
+                    } else if (lp.role === 'CAREGIVER') {
+                        const traineeNrics = familyArr.filter(f => f.role === 'TRAINEE').map(f => f.nric.toUpperCase());
+                        if (traineeNrics.length > 0) {
+                            const pairs = logistics.pairings.filter(p => traineeNrics.includes(p.traineeNric.toUpperCase()) && p.status === 'ACTIVE');
+                            if (pairs.length > 0) {
+                                logPairing = pairs.map(pair => {
+                                    const vp = logistics.participants.find(x => x.nric.toUpperCase() === pair.volNric.toUpperCase());
+                                    if (vp) {
+                                        const vpName = vp.shortName || vp.fullName || pair.volNric;
+                                        const tp = logistics.participants.find(x => x.nric.toUpperCase() === pair.traineeNric.toUpperCase());
+                                        const tpName = tp ? (tp.shortName || tp.fullName) : pair.traineeNric;
+                                        const contactHtml = (vp.contact && typeof renderPhoneLink === 'function') ? renderPhoneLink(vp.contact) : (vp.contact || 'No contact');
+                                        return `<div class="flex flex-col mt-1.5 p-2 bg-gray-50 dark:bg-gray-800 rounded border-2 border-gray-200 dark:border-gray-700">
+                                            <span class="font-bold text-xs text-purple-600 dark:text-purple-400 leading-tight">${vpName} <span class="text-gray-500 dark:text-gray-400 font-medium text-[10px]">(for ${tpName})</span></span>
+                                            <div class="text-xs font-mono font-medium mt-1 text-gray-700 dark:text-gray-300">${contactHtml}</div>
+                                        </div>`;
+                                    }
+                                    return pair.volNric;
+                                }).join('');
+                            }
+                        }
                     } else {
                         const pairs = logistics.pairings.filter(p => p.volNric === lp.nric && p.status === 'ACTIVE');
                         if (pairs.length > 0) {
@@ -270,7 +291,10 @@ async function showParticipantSummaryModal(nric) {
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
           <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || '-'}</p></div>
-          <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p><p class="font-black text-lg text-purple-600 dark:text-purple-400 truncate w-full" title="${logPairing}">${logPairing}</p></div>
+          <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0">
+             <p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p>
+             ${m.role === 'CAREGIVER' && logPairing !== 'None' ? `<div class="w-full">${logPairing}</div>` : `<p class="font-black text-lg text-purple-600 dark:text-purple-400 truncate w-full" title="${logPairing}">${logPairing}</p>`}
+          </div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-black text-lg text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
           <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
