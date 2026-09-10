@@ -7,6 +7,7 @@ let rosterSortRules = JSON.parse(localStorage.getItem('rosterSortRules')) || [{ 
 let rosterCols = JSON.parse(localStorage.getItem('rosterCols')) || [
 { id: 'role', label: 'Role', width: 90, visible: false },
 { id: 'group', label: 'Project', width: 100, visible: false },
+{ id: 'logisticsGroup', label: 'Logistics Group', width: 140, visible: true },
 { id: 'room', label: 'Room', width: 120, visible: true },
 { id: 'pairings', label: 'Pairing(s)', width: 150, visible: true },
 { id: 'bus', label: 'Bus', width: 90, visible: true },
@@ -27,6 +28,11 @@ let rosterCols = JSON.parse(localStorage.getItem('rosterCols')) || [
 ];
 
 // Ensure backwards compatibility with older stored column states
+if (!rosterCols.find(c => c.id === 'logisticsGroup')) {
+    const groupIdx = rosterCols.findIndex(c => c.id === 'group');
+    rosterCols.splice(groupIdx > -1 ? groupIdx + 1 : 2, 0, { id: 'logisticsGroup', label: 'Logistics Group', width: 140, visible: true });
+    localStorage.setItem('rosterCols', JSON.stringify(rosterCols));
+}
 if (!rosterCols.find(c => c.id === 'bus')) {
     const pairIdx = rosterCols.findIndex(c => c.id === 'pairings');
     rosterCols.splice(pairIdx > -1 ? pairIdx + 1 : rosterCols.length, 0, { id: 'bus', label: 'Bus', width: 90, visible: true });
@@ -84,17 +90,23 @@ document.getElementById('tab-participants').innerHTML = `
            <select id="customViewSelect" onchange="handleCustomViewChange(this.value)"  class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition">
                <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
                ${(() => {
-                   const viewLabels = {
-                       'reset_filter': 'All Participants',
-                       'medical.html': 'Medical',
-                       'diet.html': 'Dietary',
-                       'expired.html': 'Expired Passports',
-                       'other.html': 'Other Notes'
-                   };
-                   const order = (typeof appSettings !== 'undefined' && appSettings.customViewsOrder) ? appSettings.customViewsOrder : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'];
-                   return order.map(val => `<option value="${val}" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">${viewLabels[val] || val}</option>`).join('');
-               })()}
-               <optgroup id="logisticsGroupOptgroup" label="Logistics Groups" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"></optgroup>
+                    const viewLabels = {
+                        'reset_filter': 'All Participants',
+                        'medical.html': 'Medical',
+                        'diet.html': 'Dietary',
+                        'expired.html': 'Expired Passports',
+                        'other.html': 'Other Notes',
+                        'logistics_groups': 'Logistics Groups'
+                    };
+                    let order = (typeof appSettings !== 'undefined' && appSettings.customViewsOrder) ? appSettings.customViewsOrder : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html', 'logistics_groups'];
+                     if (order && !order.includes('logistics_groups')) order = [...order, 'logistics_groups'];
+                    return order.map(val => {
+                        if (val === 'logistics_groups') {
+                            return '<optgroup id="logisticsGroupOptgroup" label="Logistics Groups" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white"></optgroup>';
+                        }
+                        return '<option value="' + val + '" class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">' + (viewLabels[val] || val) + '</option>';
+                    }).join('');
+                })()}
            </select>
        </div>
    </div>
