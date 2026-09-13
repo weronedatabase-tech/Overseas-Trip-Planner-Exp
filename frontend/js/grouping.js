@@ -211,7 +211,9 @@ html += `
 <div class="${headerBg} px-3 py-2 rounded-t-lg font-black flex justify-between items-center text-xs md:text-sm uppercase tracking-wide border-b-2 ${borderCol} relative">
 <div class="flex items-center gap-2">
    <span>${title}</span>
-   ${!isUnassigned ? `<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-red-500 text-red-500 hover:text-white dark:hover:bg-red-600 rounded shadow-none hover:shadow-md transition-colors opacity-70 hover:opacity-100" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
+   ${!isUnassigned ? `
+<button onclick="openAssignICModal(currentGroupingSheetUrl)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-orange-500 text-orange-600 hover:text-white dark:hover:bg-orange-600 rounded shadow-none hover:shadow-md transition-colors opacity-70 hover:opacity-100" title="Assign ICs"><i class="fa-solid fa-crown text-xs"></i></button>
+<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-red-500 text-red-500 hover:text-white dark:hover:bg-red-600 rounded shadow-none hover:shadow-md transition-colors opacity-70 hover:opacity-100" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ''}
 </div>
 <span class="bg-white/60 dark:bg-black/50 px-2.5 py-0.5 rounded-full text-[10px] shadow-inner">${colTrainees.length}</span>
 </div>
