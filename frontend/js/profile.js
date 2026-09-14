@@ -835,18 +835,8 @@ window.showPairingDetails = async function(nric) {
     `);
 
     const pocNric = p.pocNric || p.nric;
-    let familyMembers = [];
-    
-    try {
-        const res = await apiCall('getProfile', { nric: pocNric });
-        if (res && res.status === 'success' && res.family) {
-            familyMembers = res.family;
-        } else {
-            familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
-        }
-    } catch(e) {
-        familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
-    }
+    // Removed slow API call, construct locally instantly from globalLogistics
+    let familyMembers = globalLogistics.participants.filter(x => (x.pocNric || x.nric) === pocNric);
     
     // Sort so the clicked trainee is first
     familyMembers.sort((a, b) => {
