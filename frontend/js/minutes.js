@@ -25,7 +25,9 @@ return String(dateVal);
 }
 
 function buildMinutesUI() {
-document.getElementById('tab-minutes').innerHTML = `
+const tabMin = document.getElementById('tab-minutes');
+if (!tabMin) return;
+tabMin.innerHTML = `
 <div class="flex flex-col h-full w-full relative">
    <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 p-3 shrink-0 flex flex-col md:flex-row justify-between items-center shadow-md rounded-t-xl md:rounded-none gap-3">
        <div class="flex items-center gap-2 w-full md:w-auto">

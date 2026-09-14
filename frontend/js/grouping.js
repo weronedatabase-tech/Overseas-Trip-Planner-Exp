@@ -551,12 +551,16 @@ document.querySelectorAll('.assign-ic-dropdown-list').forEach(list => list.class
 }
 });
 
-function generateCustomDropdownHtml(type, targetId, label, options, currentICName) {
+function generateCustomDropdownHtml(type, targetId, label, options, currentICNames) {
+if (!Array.isArray(currentICNames)) {
+    currentICNames = currentICNames ? [currentICNames] : [];
+}
+
 const jsSafeTarget = targetId.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
 const dropdownId = `dropdown-${type}-${targetId.replace(/[^a-zA-Z0-9]/g, '')}`;
 
 let listHtml = `<div class="p-2 border-b-2 border-gray-100 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 cursor-pointer transition-colors" onclick="handleAssignICChange('${type}', '${jsSafeTarget}', '')">
-<div class="font-bold text-sm text-gray-500">-- No IC Assigned --</div>
+<div class="font-bold text-sm text-gray-500">-- Clear Selection --</div>
 </div>`;
 
 if (options.length === 0) {
@@ -564,7 +568,7 @@ listHtml += `<div class="p-3 text-xs text-gray-400 italic text-center">No eligib
 } else {
 options.forEach(v => {
 const remark = (v.extra && v.extra.remark) ? `<div class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 whitespace-normal leading-tight break-words"><i class="fa-solid fa-note-sticky text-yellow-500 mr-1"></i>${v.extra.remark}</div>` : '';
-const isSelected = (v.name === currentICName);
+const isSelected = currentICNames.includes(v.name);
 const bgClass = isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-500' : 'hover:bg-gray-50 dark:hover:bg-zinc-700 border-l-2 border-transparent';
 
 const jsSafeVolName = v.name.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -579,7 +583,7 @@ listHtml += `<div class="p-2 border-b-2 border-gray-100 dark:border-zinc-800 ${b
 });
 }
 
-const displayLabel = currentICName || "-- No IC Assigned --";
+const displayLabel = currentICNames.length > 0 ? currentICNames.join(', ') : "-- No IC Assigned --";
 
 return `
 <div class="bg-gray-50 dark:bg-zinc-800/50 p-3 md:p-4 rounded-xl border-2 border-gray-200 dark:border-zinc-700 relative">
@@ -599,6 +603,7 @@ return `
 
 function renderAssignICModal() {
 const container = document.getElementById('assignICContainer');
+if (!container) return;
 let html = '<div class="space-y-6">';
 
 const volLookup = new Map();
@@ -623,15 +628,15 @@ tList.forEach(t => {
 });
 
 let options = [];
-let currentICName = "";
+let currentICNames = [];
 Array.from(groupVolKeys).sort().forEach(vKey => {
  const vObj = volLookup.get(vKey);
  if (vObj) {
-     if (vObj.groupIC) currentICName = vObj.name;
+     if (vObj.groupIC) currentICNames.push(vObj.name);
      options.push(vObj);
  }
 });
-html += generateCustomDropdownHtml('group', g, `Group ${g} IC`, options, currentICName);
+html += generateCustomDropdownHtml('group', g, `Group ${g} IC`, options, currentICNames);
 });
 html += `</div></div>`;
 } else {
@@ -645,15 +650,15 @@ if (meetingLocs.length > 0) {
 html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-location-dot text-blue-500 mr-2"></i>Meeting ICs</h4><div class="space-y-3">`;
 meetingLocs.forEach(loc => {
 let options = [];
-let currentICName = "";
+let currentICNames = [];
 (groupingData.volunteers || []).forEach(v => {
  if(v.extra && v.extra.v_meet && v.extra.v_meet.toLowerCase() === loc.toLowerCase()) {
-     if(v.meetIC) currentICName = v.name;
+     if(v.meetIC) currentICNames.push(v.name);
      options.push(v);
  }
 });
 options.sort((a,b) => a.name.localeCompare(b.name));
-html += generateCustomDropdownHtml('meet', loc, `Meet: ${loc}`, options, currentICName);
+html += generateCustomDropdownHtml('meet', loc, `Meet: ${loc}`, options, currentICNames);
 });
 html += `</div></div>`;
 }
@@ -664,15 +669,15 @@ if (dismissalLocs.length > 0) {
 html += `<div><h4 class="font-black text-gray-900 dark:text-white border-b-2 border-gray-200 dark:border-zinc-700 pb-2 mb-3"><i class="fa-solid fa-flag-checkered text-purple-500 mr-2"></i>Dismissal ICs</h4><div class="space-y-3">`;
 dismissalLocs.forEach(loc => {
 let options = [];
-let currentICName = "";
+let currentICNames = [];
 (groupingData.volunteers || []).forEach(v => {
  if(v.extra && v.extra.v_dismiss && v.extra.v_dismiss.toLowerCase() === loc.toLowerCase()) {
-     if(v.dismissIC) currentICName = v.name;
+     if(v.dismissIC) currentICNames.push(v.name);
      options.push(v);
  }
 });
 options.sort((a,b) => a.name.localeCompare(b.name));
-html += generateCustomDropdownHtml('dismiss', loc, `Dismiss: ${loc}`, options, currentICName);
+html += generateCustomDropdownHtml('dismiss', loc, `Dismiss: ${loc}`, options, currentICNames);
 });
 html += `</div></div>`;
 }
@@ -714,12 +719,21 @@ const newVolKey = newVolName ? newVolName.toLowerCase() : null;
 const vKey = v.name.toLowerCase();
 
 if (groupVolKeys.has(vKey)) {
-const shouldBeIC = (vKey === newVolKey);
+let shouldBeIC;
+if (newVolKey) {
+    if (vKey === newVolKey) {
+        shouldBeIC = (type === 'group') ? !v.groupIC : ((type === 'meet') ? !v.meetIC : !v.dismissIC);
+    } else {
+        shouldBeIC = (type === 'group') ? v.groupIC : ((type === 'meet') ? v.meetIC : v.dismissIC);
+    }
+} else {
+    shouldBeIC = false; // Clear selection
+}
 
 let changed = false;
-if (type === 'group' && v.groupIC !== shouldBeIC) { v.groupIC = shouldBeIC; changed = true; }
-else if (type === 'meet' && v.meetIC !== shouldBeIC) { v.meetIC = shouldBeIC; changed = true; }
-else if (type === 'dismiss' && v.dismissIC !== shouldBeIC) { v.dismissIC = shouldBeIC; changed = true; }
+if (type === 'group' && v.groupIC !== !!shouldBeIC) { v.groupIC = !!shouldBeIC; changed = true; }
+else if (type === 'meet' && v.meetIC !== !!shouldBeIC) { v.meetIC = !!shouldBeIC; changed = true; }
+else if (type === 'dismiss' && v.dismissIC !== !!shouldBeIC) { v.dismissIC = !!shouldBeIC; changed = true; }
 
 if (changed) {
  let updateIndex = pendingGroupingUpdates.findIndex(u => u.name === v.name && u.role === 'VOLUNTEER');
@@ -727,9 +741,9 @@ if (changed) {
      pendingGroupingUpdates.push({ role: 'VOLUNTEER', name: v.name });
      updateIndex = pendingGroupingUpdates.length - 1;
  }
- if (type === 'group') pendingGroupingUpdates[updateIndex].groupIC = shouldBeIC;
- if (type === 'meet') pendingGroupingUpdates[updateIndex].meetIC = shouldBeIC;
- if (type === 'dismiss') pendingGroupingUpdates[updateIndex].dismissIC = shouldBeIC;
+ if (type === 'group') pendingGroupingUpdates[updateIndex].groupIC = !!shouldBeIC;
+ if (type === 'meet') pendingGroupingUpdates[updateIndex].meetIC = !!shouldBeIC;
+ if (type === 'dismiss') pendingGroupingUpdates[updateIndex].dismissIC = !!shouldBeIC;
 }
 }
 });
@@ -780,6 +794,7 @@ document.getElementById('exportTableModal').classList.add('hidden');
 
 function buildExportTable() {
 const container = document.getElementById('exportTableContainer');
+if (!container) return;
 container.classList.remove('min-w-max');
 container.classList.add('w-full');
 

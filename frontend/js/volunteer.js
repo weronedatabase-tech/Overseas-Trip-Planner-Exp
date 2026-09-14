@@ -84,7 +84,8 @@ function setVolType(type, btn) {
 selectedVolType = type; 
 currentVolTypeRequest = type; 
 allNames = []; 
-document.getElementById('volNameList').innerHTML = ""; 
+const volList = document.getElementById('volNameList');
+if (volList) volList.innerHTML = ""; 
 resetSearch(); 
 document.querySelectorAll('.vol-type-btn').forEach(b => { 
 b.classList.remove('bg-green-600', 'text-white', 'border-transparent'); 
@@ -131,7 +132,7 @@ function loadVolNames(requestedType) {
 const url = document.getElementById('volSheetSelector').value; 
 const input = document.getElementById('volNameSearch'); 
 const list = document.getElementById('volNameList');
-if(!url || !requestedType || url === "Select an Event") return; 
+if(!url || !requestedType || url === "Select an Event" || !list || !input) return; 
 
 input.placeholder = "Loading names..."; 
 input.disabled = true; 
@@ -371,6 +372,8 @@ const fieldsDiv = document.getElementById('dynamicFields');
 const title = document.getElementById('formTitle'); 
 const submitBtn = document.getElementById('volSubmitBtn'); 
 const projectContainer = document.getElementById('newVolProjectContainer'); 
+
+if(!container || !fieldsDiv || !title || !submitBtn) return;
 
 container.classList.remove('hidden'); 
 

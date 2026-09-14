@@ -2078,16 +2078,16 @@ function renderGroupBusOptions() {
         
         let icHtml = '';
         if (activeAssignType === 'group') {
-            const currentIC = globalLogistics.participants.find(p => p.logisticsGroup === nameStr && p.isGroupIC);
-            let icName = currentIC ? (currentIC.displayName || currentIC.name || 'Unknown') : 'None';
+            const currentICs = globalLogistics.participants.filter(p => p.logisticsGroup === nameStr && p.isGroupIC);
+            let icName = currentICs.length > 0 ? currentICs.map(c => c.displayName || c.name || 'Unknown').join(', ') : 'None';
             if (!activeAssignNric) { // Manage Mode
-                icHtml = `<div class="mt-1 flex items-center gap-2">
-                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>IC: ${icName}</span>
-                    <button onclick="window.openGroupICSheet('${nameStr.replace(/'/g, "\\'")}')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition">Change IC</button>
+                icHtml = `<div class="mt-1 flex items-center gap-2 flex-wrap">
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${icName}</span>
+                    <button onclick="window.openGroupICSheet('${nameStr.replace(/'/g, "\\'")}')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition">Manage ICs</button>
                 </div>`;
             } else { // Assign Mode
                 icHtml = `<div class="mt-1">
-                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>IC: ${icName}</span>
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${icName}</span>
                 </div>`;
             }
         }
@@ -2398,7 +2398,7 @@ window.assignToGroupFromSheet = function(nric, gName) {
 
 window.openGroupICSheet = function(gName) {
     const el_sheetTitle = document.getElementById('sheetTitle'); 
-    if(el_sheetTitle) el_sheetTitle.innerHTML = `Assign IC for <span class="ml-1 font-black text-primary">${gName}</span>`;
+    if(el_sheetTitle) el_sheetTitle.innerHTML = `Assign ICs for <span class="ml-1 font-black text-primary">${gName}</span>`;
     const searchInput = document.getElementById('sheetSearchInput');
     if(searchInput) searchInput.value = '';
     document.getElementById('selectionBottomSheet').classList.remove('hidden-force');
@@ -2424,31 +2424,22 @@ window.openGroupICSheet = function(gName) {
 };
 
 window.assignICToGroupFromSheet = async function(nric, gName) {
-    const groupMembers = globalLogistics.participants.filter(p => p.logisticsGroup === gName);
-    const updates = [];
-    
-    groupMembers.forEach(p => {
-        if (p.isGroupIC && p.nric !== nric) {
-            p.isGroupIC = false;
-            updates.push({ nric: p.nric, value: false });
-        }
-    });
-    
     const target = globalLogistics.participants.find(p => p.nric === nric);
-    if (target) {
-        target.isGroupIC = true;
-        updates.push({ nric: nric, value: true });
-    }
+    if (!target) return;
     
-    closeSelectionSheet();
+    const newValue = !target.isGroupIC;
+    target.isGroupIC = newValue;
+    const updates = [{ nric: nric, value: newValue }];
+    
     renderGroups(); 
+    window.openGroupICSheet(gName); // refresh sheet to show updated status
     
-    showToast("Assigning Group IC...");
+    showToast(newValue ? "Assigning Group IC..." : "Removing Group IC...");
     try {
         await apiCall('syncAssignments', { updates: updates, column: 'isGroupIC' });
-        showToast("Group IC assigned successfully.");
+        showToast(newValue ? "Group IC assigned successfully." : "Group IC removed successfully.");
     } catch (e) {
-        showToast("Error assigning Group IC", true);
+        showToast("Error updating Group IC", true);
     }
 };
 

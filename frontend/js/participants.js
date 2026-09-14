@@ -71,7 +71,9 @@ var traineeShortNames = {};
 
 function buildParticipantsUI() {
     setTimeout(window.populateLogisticsDropdown, 50);
-document.getElementById('tab-participants').innerHTML = `
+    const tabPart = document.getElementById('tab-participants');
+    if (!tabPart) return;
+tabPart.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
    <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap min-w-0">

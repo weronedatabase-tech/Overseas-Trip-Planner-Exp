@@ -1035,18 +1035,21 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
         (appSettings.junctures || []).forEach(j => {
             adminHtml += `<option value="${j}">${j}</option>`;
         });
-        document.getElementById('optgroup-admin-junctures').innerHTML = adminHtml;
+        const optAdmin = document.getElementById('optgroup-admin-junctures');
+        if (optAdmin) optAdmin.innerHTML = adminHtml;
 
         let icHtml = '';
         loadedIcJunctures.forEach(j => {
             icHtml += `<option value="[IC] ${j}">${j}</option>`;
         });
-        document.getElementById('optgroup-ic-junctures').innerHTML = icHtml;
+        const optIc = document.getElementById('optgroup-ic-junctures');
+        if (optIc) optIc.innerHTML = icHtml;
     }
 
     const juncture = select.value;
     const container = document.getElementById('icAttendanceContainer');
     const searchWrapper = document.getElementById('icAttendanceSearchWrapper');
+    if (!container) return;
     if (!juncture) {
         container.innerHTML = 'Select a juncture to take attendance';
         if (searchWrapper) searchWrapper.classList.add('hidden-force');
@@ -1287,7 +1290,8 @@ window.promptAddIcJuncture = async function() {
             loadedIcJunctures.forEach(j => {
                 icHtml += `<option value="[IC] ${j}">${j}</option>`;
             });
-            document.getElementById('optgroup-ic-junctures').innerHTML = icHtml;
+            const optIc = document.getElementById('optgroup-ic-junctures');
+            if (optIc) optIc.innerHTML = icHtml;
             select.value = `[IC] ${name.trim()}`;
             renderGroupAttendance();
             showToast("Juncture created!");
@@ -1317,7 +1321,8 @@ window.promptDeleteIcJuncture = async function() {
             loadedIcJunctures.forEach(j => {
                 icHtml += `<option value="[IC] ${j}">${j}</option>`;
             });
-            document.getElementById('optgroup-ic-junctures').innerHTML = icHtml;
+            const optIc = document.getElementById('optgroup-ic-junctures');
+            if (optIc) optIc.innerHTML = icHtml;
             select.value = '';
             renderGroupAttendance();
             showToast("Juncture deleted.");
