@@ -792,7 +792,7 @@ window.generateChatGroupsList = function() {
     const busAll = document.getElementById('cgBusAll').checked;
     const selectedBuses = Array.from(document.querySelectorAll('input[name="cgBus"]:checked')).map(cb => cb.value);
 
-    let rows = [["Given Name", "Phone 1 - Value"]];
+    let rows = [["Name", "Phone"]];
 
     if (typeof adminRosterData !== 'undefined') {
         adminRosterData.forEach(p => {

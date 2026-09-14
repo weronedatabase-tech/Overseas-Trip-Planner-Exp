@@ -1394,7 +1394,7 @@ window.generateIcExportList = function() {
         return;
     }
 
-    let rows = [["Given Name", "Phone 1 - Value"]];
+    let rows = [["Name", "Phone"]];
 
     if (loadedGroupMembers && loadedGroupMembers.length > 0) {
         loadedGroupMembers.forEach(p => {
