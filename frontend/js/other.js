@@ -1,19 +1,22 @@
 var otherRosterData = [];
-var otherSearchQuery = '';
+var otherSearchQuery = "";
 
-var otherSortRules = JSON.parse(localStorage.getItem('otherSortRules_v2')) || [{ col: 'fullName', asc: true }];
-var otherCols = JSON.parse(localStorage.getItem('otherCols_v2')) || [
-{ id: 'diet', label: 'Other Notes', width: 300, visible: true },
-{ id: 'otherPoints', label: 'Other Notes', width: 220, visible: true }
+var otherSortRules = JSON.parse(localStorage.getItem("otherSortRules_v2")) || [
+  { col: "fullName", asc: true },
 ];
-
+var otherCols = JSON.parse(localStorage.getItem("otherCols_v2")) || [
+  { id: "diet", label: "Other Notes", width: 300, visible: true },
+  { id: "otherPoints", label: "Other Notes", width: 220, visible: true },
+];
 
 var traineeShortNames = {};
 
 function buildOtherUI() {
-const el_tab_other = document.getElementById('tab-other'); if(el_tab_other) el_tab_other.innerHTML = `
+  const el_tab_other = document.getElementById("tab-other");
+  if (el_tab_other)
+    el_tab_other.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
                <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m3.75 9v6m3-3H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
@@ -21,7 +24,7 @@ const el_tab_other = document.getElementById('tab-other'); if(el_tab_other) el_t
            </h3>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0 max-w-full">
                <option value="" disabled>Custom Views</option>
                <option value="medical.html">Medical</option>
                <option value="diet.html">Dietary</option>
@@ -57,52 +60,70 @@ const el_tab_other = document.getElementById('tab-other'); if(el_tab_other) el_t
    </div>
 </div>
 `;
-loadOtherData();
+  loadOtherData();
 }
 
 async function loadOtherData() {
-    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (window.adminRosterData && window.adminRosterData.length > 0) {
     otherRosterData = window.adminRosterData;
-    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(otherRosterData);
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(otherRosterData);
     traineeShortNames = {};
-    otherRosterData.forEach(p => {
-        if(p.role === 'TRAINEE' && p.fullName) {
-            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-        }
+    otherRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
     });
     renderOtherTable();
-    const loader = document.getElementById('otherLoading');
-    if(loader) loader.classList.add('hidden-force');
+    const loader = document.getElementById("otherLoading");
+    if (loader) loader.classList.add("hidden-force");
     return;
-}
-const loader = document.getElementById('otherLoading');
-if(loader) loader.classList.remove('hidden-force');
+  }
+  const loader = document.getElementById("otherLoading");
+  if (loader) loader.classList.remove("hidden-force");
 
-try {
-   const res = await apiCall('fetchAdminRoster');
-   otherRosterData = res.roster || []; window.adminRosterData = otherRosterData;
-   if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(otherRosterData);
+  try {
+    const res = await apiCall("fetchAdminRoster");
+    otherRosterData = res.roster || [];
+    window.adminRosterData = otherRosterData;
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(otherRosterData);
 
-   traineeShortNames = {};
-   otherRosterData.forEach(p => {
-       if(p.role === 'TRAINEE' && p.fullName) {
-           traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-       }
-   });
+    traineeShortNames = {};
+    otherRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
+    });
 
-   renderOtherTable();
-} catch(e) {
-   showToast("Failed to load medical data.", true);
-} finally {
-   if(loader) loader.classList.add('hidden-force');
-}
+    renderOtherTable();
+  } catch (e) {
+    showToast("Failed to load medical data.", true);
+  } finally {
+    if (loader) loader.classList.add("hidden-force");
+  }
 }
 
 function handleOtherSearch() {
-otherSearchQuery = document.getElementById('otherSearch').value.toLowerCase().trim();
-renderOtherTable();
+  otherSearchQuery = document
+    .getElementById("otherSearch")
+    .value.toLowerCase()
+    .trim();
+  renderOtherTable();
 }
 
 var mResizingCol = null;
@@ -110,108 +131,148 @@ var mStartX = 0;
 var mStartWidth = 0;
 
 function initOtherResize(e, colId) {
-e.stopPropagation();
-mResizingCol = colId;
-mStartX = e.clientX;
-const colDef = colId === 'fullName' ? {width: 250} : otherCols.find(c => c.id === colId);
-mStartWidth = colDef.width || 150;
-document.addEventListener('mousemove', onOtherMouseMove);
-document.addEventListener('mouseup', onOtherMouseUp);
+  e.stopPropagation();
+  mResizingCol = colId;
+  mStartX = e.clientX;
+  const colDef =
+    colId === "fullName"
+      ? { width: 250 }
+      : otherCols.find((c) => c.id === colId);
+  mStartWidth = colDef.width || 150;
+  document.addEventListener("mousemove", onOtherMouseMove);
+  document.addEventListener("mouseup", onOtherMouseUp);
 }
 
 function onOtherMouseMove(e) {
-if (!mResizingCol) return;
-const diff = e.clientX - mStartX;
-let newWidth = Math.max(50, mStartWidth + diff);
+  if (!mResizingCol) return;
+  const diff = e.clientX - mStartX;
+  let newWidth = Math.max(50, mStartWidth + diff);
 
-if (mResizingCol === 'fullName') {
-   const cells = document.querySelectorAll(`.med-col-fullName`);
-   cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-} else {
-   const cDef = otherCols.find(c => c.id === mResizingCol);
-   if (cDef) {
-       cDef.width = newWidth;
-       const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
-       cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-   }
-}
+  if (mResizingCol === "fullName") {
+    const cells = document.querySelectorAll(`.med-col-fullName`);
+    cells.forEach((c) => {
+      c.style.width = newWidth + "px";
+      c.style.minWidth = newWidth + "px";
+      c.style.maxWidth = newWidth + "px";
+    });
+  } else {
+    const cDef = otherCols.find((c) => c.id === mResizingCol);
+    if (cDef) {
+      cDef.width = newWidth;
+      const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
+      cells.forEach((c) => {
+        c.style.width = newWidth + "px";
+        c.style.minWidth = newWidth + "px";
+        c.style.maxWidth = newWidth + "px";
+      });
+    }
+  }
 }
 
 function onOtherMouseUp() {
-if (mResizingCol && mResizingCol !== 'fullName') {
-   localStorage.setItem('otherCols_v2', JSON.stringify(otherCols));
-}
-mResizingCol = null;
-document.removeEventListener('mousemove', onOtherMouseMove);
-document.removeEventListener('mouseup', onOtherMouseUp);
+  if (mResizingCol && mResizingCol !== "fullName") {
+    localStorage.setItem("otherCols_v2", JSON.stringify(otherCols));
+  }
+  mResizingCol = null;
+  document.removeEventListener("mousemove", onOtherMouseMove);
+  document.removeEventListener("mouseup", onOtherMouseUp);
 }
 
 var otherDraggedColId = null;
-window.onOtherColDragStart = function(e, colId) {
-otherDraggedColId = colId;
-e.dataTransfer.effectAllowed = "move";
-e.target.classList.add('opacity-50');
-}
-window.onOtherColDragEnd = function(e) {
-e.target.classList.remove('opacity-50');
-document.querySelectorAll('th').forEach(th => th.classList.remove('bg-gray-200', 'dark:bg-gray-700'));
-}
-window.onOtherColDragOver = function(e) {
-e.preventDefault();
-e.dataTransfer.dropEffect = "move";
-const th = e.target.closest('th');
-if(th && th.dataset.colId !== otherDraggedColId && th.dataset.colId !== 'fullName') {
-   th.classList.add('bg-gray-200', 'dark:bg-gray-700');
-}
-}
-window.onOtherColDragLeave = function(e) {
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-}
-window.onOtherColDrop = function(e, targetColId) {
-e.preventDefault();
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+window.onOtherColDragStart = function (e, colId) {
+  otherDraggedColId = colId;
+  e.dataTransfer.effectAllowed = "move";
+  e.target.classList.add("opacity-50");
+};
+window.onOtherColDragEnd = function (e) {
+  e.target.classList.remove("opacity-50");
+  document
+    .querySelectorAll("th")
+    .forEach((th) => th.classList.remove("bg-gray-200", "dark:bg-gray-700"));
+};
+window.onOtherColDragOver = function (e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const th = e.target.closest("th");
+  if (
+    th &&
+    th.dataset.colId !== otherDraggedColId &&
+    th.dataset.colId !== "fullName"
+  ) {
+    th.classList.add("bg-gray-200", "dark:bg-gray-700");
+  }
+};
+window.onOtherColDragLeave = function (e) {
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
+};
+window.onOtherColDrop = function (e, targetColId) {
+  e.preventDefault();
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
 
-if (!otherDraggedColId || otherDraggedColId === targetColId || targetColId === 'fullName' || otherDraggedColId === 'fullName') return;
+  if (
+    !otherDraggedColId ||
+    otherDraggedColId === targetColId ||
+    targetColId === "fullName" ||
+    otherDraggedColId === "fullName"
+  )
+    return;
 
-const fromIdx = otherCols.findIndex(c => c.id === otherDraggedColId);
-const toIdx = otherCols.findIndex(c => c.id === targetColId);
-if(fromIdx > -1 && toIdx > -1) {
-   const [moved] = otherCols.splice(fromIdx, 1);
-   otherCols.splice(toIdx, 0, moved);
-   localStorage.setItem('otherCols_v2', JSON.stringify(otherCols));
-   renderOtherTable();
-}
-}
+  const fromIdx = otherCols.findIndex((c) => c.id === otherDraggedColId);
+  const toIdx = otherCols.findIndex((c) => c.id === targetColId);
+  if (fromIdx > -1 && toIdx > -1) {
+    const [moved] = otherCols.splice(fromIdx, 1);
+    otherCols.splice(toIdx, 0, moved);
+    localStorage.setItem("otherCols_v2", JSON.stringify(otherCols));
+    renderOtherTable();
+  }
+};
 
 function renderOtherTable() {
-let data = otherRosterData.filter(p => {
-    const notes = p.otherPoints ? p.otherPoints.trim().toLowerCase() : '';
-    const sleep = p.sleeping ? p.sleeping.trim().toLowerCase() : '';
-    const hasNotes = notes !== '' && notes !== '-' && notes !== 'nil' && notes !== 'na' && notes !== 'n/a' && notes !== 'none' && notes !== 'no';
-    const hasSleep = sleep !== '' && sleep !== '-' && sleep !== 'nil' && sleep !== 'na' && sleep !== 'n/a' && sleep !== 'none' && sleep !== 'no';
+  let data = otherRosterData.filter((p) => {
+    const notes = p.otherPoints ? p.otherPoints.trim().toLowerCase() : "";
+    const sleep = p.sleeping ? p.sleeping.trim().toLowerCase() : "";
+    const hasNotes =
+      notes !== "" &&
+      notes !== "-" &&
+      notes !== "nil" &&
+      notes !== "na" &&
+      notes !== "n/a" &&
+      notes !== "none" &&
+      notes !== "no";
+    const hasSleep =
+      sleep !== "" &&
+      sleep !== "-" &&
+      sleep !== "nil" &&
+      sleep !== "na" &&
+      sleep !== "n/a" &&
+      sleep !== "none" &&
+      sleep !== "no";
     return hasNotes || hasSleep;
-});
-if (otherSearchQuery) {
-   data = data.filter(p => {
-       return (p.fullName && p.fullName.toLowerCase().includes(otherSearchQuery)) ||
-              (p.shortName && p.shortName.toLowerCase().includes(otherSearchQuery)) ||
-              (p.diet && p.diet.toLowerCase().includes(otherSearchQuery)) ||
-              (p.otherPoints && p.otherPoints.toLowerCase().includes(otherSearchQuery)) ||
-              (p.sleeping && p.sleeping.toLowerCase().includes(otherSearchQuery));
-   });
-}
-data.sort((a, b) => {
-   let valA = (a.fullName || '').toString().toLowerCase();
-   let valB = (b.fullName || '').toString().toLowerCase();
-   if (valA < valB) return -1;
-   if (valA > valB) return 1;
-   return 0;
-});
+  });
+  if (otherSearchQuery) {
+    data = data.filter((p) => {
+      return (
+        (p.fullName && p.fullName.toLowerCase().includes(otherSearchQuery)) ||
+        (p.shortName && p.shortName.toLowerCase().includes(otherSearchQuery)) ||
+        (p.diet && p.diet.toLowerCase().includes(otherSearchQuery)) ||
+        (p.otherPoints &&
+          p.otherPoints.toLowerCase().includes(otherSearchQuery)) ||
+        (p.sleeping && p.sleeping.toLowerCase().includes(otherSearchQuery))
+      );
+    });
+  }
+  data.sort((a, b) => {
+    let valA = (a.fullName || "").toString().toLowerCase();
+    let valB = (b.fullName || "").toString().toLowerCase();
+    if (valA < valB) return -1;
+    if (valA > valB) return 1;
+    return 0;
+  });
 
-const thead = document.getElementById('otherTableHead');
-let headHtml = `<tr>
+  const thead = document.getElementById("otherTableHead");
+  let headHtml = `<tr>
    <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%] text-left">
        <div class="font-bold text-gray-700 dark:text-gray-300">Participant</div>
    </th>
@@ -219,45 +280,57 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Other Notes</div>
    </th>
 </tr>`;
-if (thead) thead.innerHTML = headHtml;
+  if (thead) thead.innerHTML = headHtml;
 
-const tbody = document.getElementById('otherTableBody');
-let html = '';
-data.forEach(p => {
-   const roleStr = p.role.substring(0, 3).toUpperCase();
-   const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-   const fullNameUpper = (p.fullName || '').toUpperCase();
-   const shortNameUpper = (p.shortName || '').toUpperCase();
-   const nameClass = 'font-bold text-gray-900 dark:text-gray-100';
-   
-   html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+  const tbody = document.getElementById("otherTableBody");
+  let html = "";
+  data.forEach((p) => {
+    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleColor =
+      p.role === "TRAINEE"
+        ? "text-green-600 dark:text-green-400"
+        : p.role === "CAREGIVER"
+          ? "text-purple-600 dark:text-purple-400"
+          : "text-orange-600 dark:text-orange-400";
+    const fullNameUpper = (p.fullName || "").toUpperCase();
+    const shortNameUpper = (p.shortName || "").toUpperCase();
+    const nameClass = "font-bold text-gray-900 dark:text-gray-100";
+
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
                <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
 
-   
-   const hasNotes = p.otherPoints && p.otherPoints.trim() && p.otherPoints.trim().toLowerCase() !== 'nil' && p.otherPoints.trim().toLowerCase() !== 'none';
-   const hasSleep = p.sleeping && p.sleeping.trim() && p.sleeping.trim().toLowerCase() !== 'nil' && p.sleeping.trim().toLowerCase() !== 'none';
-   if (hasSleep) {
-       html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.sleeping}</span></div>`;
-   }
-   if (hasNotes) {
-       html += `<div><span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.otherPoints}</span></div>`;
-   }
+    const hasNotes =
+      p.otherPoints &&
+      p.otherPoints.trim() &&
+      p.otherPoints.trim().toLowerCase() !== "nil" &&
+      p.otherPoints.trim().toLowerCase() !== "none";
+    const hasSleep =
+      p.sleeping &&
+      p.sleeping.trim() &&
+      p.sleeping.trim().toLowerCase() !== "nil" &&
+      p.sleeping.trim().toLowerCase() !== "none";
+    if (hasSleep) {
+      html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.sleeping}</span></div>`;
+    }
+    if (hasNotes) {
+      html += `<div><span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.otherPoints}</span></div>`;
+    }
 
-   
-   
-   
-   html += `</div></td></tr>`;
-});
+    html += `</div></td></tr>`;
+  });
 
-if (tbody) tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+  if (tbody)
+    tbody.innerHTML =
+      html ||
+      `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }

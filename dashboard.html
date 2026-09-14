@@ -1,71 +1,149 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="light">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Profile Dashboard | Overseas Trip</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="frontend/js/tailwind.config.js"></script>
-<link rel="stylesheet" href="frontend/css/styles.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-</head>
-<body class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Profile Dashboard | Overseas Trip</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="frontend/js/tailwind.config.js"></script>
+    <link rel="stylesheet" href="frontend/css/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    />
+  </head>
+  <body
+    class="bg-gray-100 dark:bg-gray-950 text-gray-900 dark:text-gray-100 h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-primary selection:text-white"
+  >
+    <div id="devModeBar" class="hidden-force"></div>
+    <div
+      id="toast"
+      class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border-2 border-gray-700 dark:border-gray-200"
+    ></div>
+    <div
+      id="viewLoading"
+      class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"
+    >
+      <div class="loader w-10 h-10"></div>
+    </div>
 
-<div id="devModeBar" class="hidden-force"></div>
-<div id="toast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 px-4 py-2 rounded-lg shadow-2xl z-[100] transition-opacity duration-300 opacity-0 pointer-events-none text-sm font-bold border-2 border-gray-700 dark:border-gray-200"></div>
-<div id="viewLoading" class="fixed inset-0 z-50 flex justify-center items-center bg-gray-100 dark:bg-gray-950"><div class="loader w-10 h-10"></div></div>
+    <div
+      id="authLayout"
+      class="flex-1 flex flex-col md:flex-row w-full bg-gray-50 dark:bg-gray-900 overflow-hidden"
+    >
+      <div
+        class="order-1 md:order-2 flex-1 flex flex-col min-w-0 h-full overflow-hidden relative"
+      >
+        <header
+          class="flex items-center justify-between bg-white dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 px-3 md:px-4 py-1 shrink-0 z-20 shadow-md"
+        >
+          <div class="flex flex-col w-1/2 min-w-0">
+            <span
+              class="font-black text-lg text-primary leading-tight truncate tracking-tight"
+              >Overseas Trip</span
+            >
+            <span
+              id="mobTripName"
+              class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate"
+            ></span>
+          </div>
 
-<div id="authLayout" class="flex-1 flex flex-col md:flex-row w-full bg-gray-50 dark:bg-gray-900 overflow-hidden">
+          <div
+            id="headerLegend"
+            class="hidden md:flex flex-wrap gap-1 flex-1 px-4 min-w-0"
+          ></div>
 
+          <div
+            class="flex items-center gap-1.5 md:gap-3 shrink-0 justify-end w-1/2 md:w-auto"
+          >
+            <button
+              onclick="updateApp(this)"
+              class="relative p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none"
+            >
+              <svg
+                class="w-5 h-5 md:w-5 md:h-5 transition-transform duration-500 active:rotate-180 btn-icon"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                ></path>
+              </svg>
+              <div
+                class="btn-spinner spinner-primary dark:spinner-white hidden-force !w-4 !h-4 border-2 absolute inset-0 m-auto"
+              ></div>
+            </button>
+            <button
+              onclick="toggleTheme()"
+              class="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none"
+            >
+              🌗
+            </button>
+            <button
+              onclick="logout(this)"
+              class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition focus:outline-none"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                />
+              </svg>
+            </button>
+          </div>
+        </header>
 
+        <div
+          id="mobHeaderLegend"
+          class="md:hidden bg-white dark:bg-gray-950 border-b-2 border-gray-100 dark:border-gray-800 px-3 py-0.5 flex flex-wrap gap-1 shrink-0 empty:hidden"
+        ></div>
 
-<div class="order-1 md:order-2 flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-<header class="flex items-center justify-between bg-white dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 px-3 md:px-4 py-1 shrink-0 z-20 shadow-md">
-   <div class="flex flex-col w-1/2 min-w-0">
-       <span class="font-black text-lg text-primary leading-tight truncate tracking-tight">Overseas Trip</span>
-       <span id="mobTripName" class="text-xs font-bold text-gray-500 uppercase tracking-wider truncate"></span>
-   </div>
-   
-   <div id="headerLegend" class="hidden md:flex flex-wrap gap-1 flex-1 px-4 min-w-0"></div>
-   
-   <div class="flex items-center gap-1.5 md:gap-3 shrink-0 justify-end w-1/2 md:w-auto">
-       <button onclick="updateApp(this)" class="relative p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">
-          <svg class="w-5 h-5 md:w-5 md:h-5 transition-transform duration-500 active:rotate-180 btn-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-          <div class="btn-spinner spinner-primary dark:spinner-white hidden-force !w-4 !h-4 border-2 absolute inset-0 m-auto"></div>
-       </button>
-       <button onclick="toggleTheme()" class="p-1.5 md:p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none">🌗</button>
-       <button onclick="logout(this)" class="p-1.5 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition focus:outline-none">
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
-       </button>
-   </div>
-</header>
+        <main
+          id="tabContainer"
+          class="flex-1 overflow-y-auto overflow-x-hidden p-1 md:p-2 w-full relative custom-scrollbar"
+        >
+          <div
+            id="tab-profile"
+            class="pb-10 w-full max-w-5xl mx-auto space-y-4"
+          ></div>
+        </main>
+      </div>
+    </div>
 
-<div id="mobHeaderLegend" class="md:hidden bg-white dark:bg-gray-950 border-b-2 border-gray-100 dark:border-gray-800 px-3 py-0.5 flex flex-wrap gap-1 shrink-0 empty:hidden"></div>
+    <!-- DATE PICKER MODAL -->
+    <script src="backend/config.js"></script>
+    <script src="frontend/js/api.js"></script>
+    <script src="frontend/js/state.js"></script>
+    <script src="frontend/js/ui.js"></script>
+    <script src="frontend/js/main.js"></script>
 
-<main id="tabContainer" class="flex-1 overflow-y-auto overflow-x-hidden p-1 md:p-2 w-full relative custom-scrollbar">
-   <div id="tab-profile" class="pb-10 w-full max-w-5xl mx-auto space-y-4"></div>
-</main>
-</div>
-
-</div>
-
-<!-- DATE PICKER MODAL -->
-<script src="backend/config.js"></script>
-<script src="frontend/js/api.js"></script>
-<script src="frontend/js/state.js"></script>
-<script src="frontend/js/ui.js"></script>
-<script src="frontend/js/main.js"></script>
-
-<script src="frontend/js/profile.js"></script>
-<script src="frontend/js/auth.js"></script>
-<script>
- window.initPage = () => {
-   if(currentUser && currentUser.role === 'admin') {
-     navigateTo('roster.html');
-     return;
-   }
-   loadProfileData();
- };
-</script>
-</body>
+    <script src="frontend/js/profile.js"></script>
+    <script src="frontend/js/auth.js"></script>
+    <script>
+      window.initPage = () => {
+        if (currentUser && currentUser.role === "admin") {
+          navigateTo("roster.html");
+          return;
+        }
+        loadProfileData();
+      };
+    </script>
+  </body>
 </html>

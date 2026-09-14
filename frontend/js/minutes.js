@@ -3,31 +3,34 @@ let pendingMinutesUpdates = new Map();
 let minutesSyncTimeout = null;
 let minutesPollInterval = null;
 let isMinutesSyncing = false;
-let minutesSearchQuery = '';
+let minutesSearchQuery = "";
 
 function generateUUID() {
-return 'note_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  return "note_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
 }
 
 function formatYMD(dateVal) {
-if (!dateVal) return '';
-if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateVal.trim())) {
+  if (!dateVal) return "";
+  if (
+    typeof dateVal === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(dateVal.trim())
+  ) {
     return dateVal.trim();
-}
-const d = new Date(dateVal);
-if (!isNaN(d.getTime())) {
+  }
+  const d = new Date(dateVal);
+  if (!isNaN(d.getTime())) {
     const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
-}
-return String(dateVal);
+  }
+  return String(dateVal);
 }
 
 function buildMinutesUI() {
-const tabMin = document.getElementById('tab-minutes');
-if (!tabMin) return;
-tabMin.innerHTML = `
+  const tabMin = document.getElementById("tab-minutes");
+  if (!tabMin) return;
+  tabMin.innerHTML = `
 <div class="flex flex-col h-full w-full relative">
    <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 p-3 shrink-0 flex flex-col md:flex-row justify-between items-center shadow-md rounded-t-xl md:rounded-none gap-3">
        <div class="flex items-center gap-2 w-full md:w-auto">
@@ -59,271 +62,309 @@ tabMin.innerHTML = `
 </div>
 `;
 
-loadInitialMinutes();
+  loadInitialMinutes();
 }
 
 async function loadInitialMinutes() {
-    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-if (minutesMap.size > 0) {
-  renderAllMinutes();
-  startMinutesPolling();
-  const loader = document.getElementById('minutesLoadingOverlay');
-  if(loader) loader.classList.add('hidden-force');
-  return;
-}
-const overlay = document.getElementById('minutesLoadingOverlay');
-if (overlay) overlay.classList.remove('hidden-force');
+  if (minutesMap.size > 0) {
+    renderAllMinutes();
+    startMinutesPolling();
+    const loader = document.getElementById("minutesLoadingOverlay");
+    if (loader) loader.classList.add("hidden-force");
+    return;
+  }
+  const overlay = document.getElementById("minutesLoadingOverlay");
+  if (overlay) overlay.classList.remove("hidden-force");
 
-try {
-   const res = await apiCall('fetchMinutes');
-   minutesMap.clear();
-   if (res.minutes && Array.isArray(res.minutes)) {
-       res.minutes.forEach(m => minutesMap.set(m.id, m));
-   }
-   renderAllMinutes();
-   startMinutesPolling();
-} catch(e) {
-   showToast("Failed to load meeting notes.", true);
-} finally {
-   if (overlay) overlay.classList.add('hidden-force');
-}
+  try {
+    const res = await apiCall("fetchMinutes");
+    minutesMap.clear();
+    if (res.minutes && Array.isArray(res.minutes)) {
+      res.minutes.forEach((m) => minutesMap.set(m.id, m));
+    }
+    renderAllMinutes();
+    startMinutesPolling();
+  } catch (e) {
+    showToast("Failed to load meeting notes.", true);
+  } finally {
+    if (overlay) overlay.classList.add("hidden-force");
+  }
 }
 
 function handleMinutesSearch() {
-minutesSearchQuery = document.getElementById('minutesSearchInput').value.toLowerCase().trim();
-renderAllMinutes();
+  minutesSearchQuery = document
+    .getElementById("minutesSearchInput")
+    .value.toLowerCase()
+    .trim();
+  renderAllMinutes();
 }
 
 function addMinuteNote() {
-const d = new Date();
-const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-const newNote = {
-   id: generateUUID(),
-   date: today,
-   content: '',
-   assignedTo: '',
-   ts: Date.now(),
-   updatedBy: (currentUser.name || 'ADMIN').toUpperCase(),
-   isDeleted: false
-};
+  const newNote = {
+    id: generateUUID(),
+    date: today,
+    content: "",
+    assignedTo: "",
+    ts: Date.now(),
+    updatedBy: (currentUser.name || "ADMIN").toUpperCase(),
+    isDeleted: false,
+  };
 
-minutesMap.set(newNote.id, newNote);
-queueMinuteUpdate(newNote.id);
+  minutesMap.set(newNote.id, newNote);
+  queueMinuteUpdate(newNote.id);
 
-clearSearch('minutesSearchInput', 'handleMinutesSearch');
+  clearSearch("minutesSearchInput", "handleMinutesSearch");
 
-const container = document.getElementById('minutesListContainer');
-if(container && !minutesSearchQuery) {
-   const emptyMsg = container.querySelector('.empty-notes-msg');
-   if(emptyMsg) emptyMsg.remove();
-   
-   const noteEl = createNoteDOM(newNote);
-   if (!document.getElementById(`min-card-${newNote.id}`)) {
-       container.insertBefore(noteEl, container.firstChild);
-   }
-   
-   setTimeout(() => {
-       const ta = document.getElementById(`min-card-${newNote.id}`)?.querySelector('textarea');
-       if(ta) ta.focus();
-   }, 50);
-}
+  const container = document.getElementById("minutesListContainer");
+  if (container && !minutesSearchQuery) {
+    const emptyMsg = container.querySelector(".empty-notes-msg");
+    if (emptyMsg) emptyMsg.remove();
+
+    const noteEl = createNoteDOM(newNote);
+    if (!document.getElementById(`min-card-${newNote.id}`)) {
+      container.insertBefore(noteEl, container.firstChild);
+    }
+
+    setTimeout(() => {
+      const ta = document
+        .getElementById(`min-card-${newNote.id}`)
+        ?.querySelector("textarea");
+      if (ta) ta.focus();
+    }, 50);
+  }
 }
 
 function deleteMinuteNote(id) {
-if (!confirm("Delete this meeting note?")) return;
-const note = minutesMap.get(id);
-if(note) {
-   note.isDeleted = true;
-   note.ts = Date.now();
-   note.updatedBy = (currentUser.name || 'ADMIN').toUpperCase();
-   queueMinuteUpdate(id);
-   
-   const el = document.getElementById(`min-card-${id}`);
-   if(el) {
-       el.classList.add('opacity-0', 'scale-95');
-       setTimeout(() => el.remove(), 200);
-   }
-}
+  if (!confirm("Delete this meeting note?")) return;
+  const note = minutesMap.get(id);
+  if (note) {
+    note.isDeleted = true;
+    note.ts = Date.now();
+    note.updatedBy = (currentUser.name || "ADMIN").toUpperCase();
+    queueMinuteUpdate(id);
+
+    const el = document.getElementById(`min-card-${id}`);
+    if (el) {
+      el.classList.add("opacity-0", "scale-95");
+      setTimeout(() => el.remove(), 200);
+    }
+  }
 }
 
 function handleMinuteInput(id, field, value) {
-const note = minutesMap.get(id);
-if(note) {
-   note[field] = value;
-   note.ts = Date.now();
-   note.updatedBy = (currentUser.name || 'ADMIN').toUpperCase();
-   queueMinuteUpdate(id);
-   
-   const byEl = document.getElementById(`min-by-${id}`);
-   if(byEl) {
-       byEl.textContent = `Just now by ${note.updatedBy}`;
-       byEl.classList.add('text-primary');
-       setTimeout(() => byEl.classList.remove('text-primary'), 2000);
-   }
-}
+  const note = minutesMap.get(id);
+  if (note) {
+    note[field] = value;
+    note.ts = Date.now();
+    note.updatedBy = (currentUser.name || "ADMIN").toUpperCase();
+    queueMinuteUpdate(id);
+
+    const byEl = document.getElementById(`min-by-${id}`);
+    if (byEl) {
+      byEl.textContent = `Just now by ${note.updatedBy}`;
+      byEl.classList.add("text-primary");
+      setTimeout(() => byEl.classList.remove("text-primary"), 2000);
+    }
+  }
 }
 
 function queueMinuteUpdate(id) {
-pendingMinutesUpdates.set(id, minutesMap.get(id));
-updateMinutesSyncUI('saving');
+  pendingMinutesUpdates.set(id, minutesMap.get(id));
+  updateMinutesSyncUI("saving");
 
-if (minutesSyncTimeout) clearTimeout(minutesSyncTimeout);
-minutesSyncTimeout = setTimeout(() => { executeMinutesSync(); }, 1500); 
+  if (minutesSyncTimeout) clearTimeout(minutesSyncTimeout);
+  minutesSyncTimeout = setTimeout(() => {
+    executeMinutesSync();
+  }, 1500);
 }
 
 async function executeMinutesSync() {
-if (pendingMinutesUpdates.size === 0) return;
+  if (pendingMinutesUpdates.size === 0) return;
 
-isMinutesSyncing = true;
-updateMinutesSyncUI('saving');
+  isMinutesSyncing = true;
+  updateMinutesSyncUI("saving");
 
-const updates = Array.from(pendingMinutesUpdates.values());
-pendingMinutesUpdates.clear();
+  const updates = Array.from(pendingMinutesUpdates.values());
+  pendingMinutesUpdates.clear();
 
-try {
-   const res = await apiCall('syncMinutes', { updates: updates, takenBy: currentUser.name });
-   if (res.minutes) {
-       res.minutes.forEach(sNote => {
-           const lNote = minutesMap.get(sNote.id);
-           if (!lNote || (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))) {
-               minutesMap.set(sNote.id, sNote);
-               updateNoteDOM(sNote);
-           }
-       });
-   }
-   updateMinutesSyncUI('saved');
-} catch(e) {
-   updates.forEach(u => pendingMinutesUpdates.set(u.id, u));
-   updateMinutesSyncUI('error');
-} finally {
-   isMinutesSyncing = false;
-}
+  try {
+    const res = await apiCall("syncMinutes", {
+      updates: updates,
+      takenBy: currentUser.name,
+    });
+    if (res.minutes) {
+      res.minutes.forEach((sNote) => {
+        const lNote = minutesMap.get(sNote.id);
+        if (
+          !lNote ||
+          (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))
+        ) {
+          minutesMap.set(sNote.id, sNote);
+          updateNoteDOM(sNote);
+        }
+      });
+    }
+    updateMinutesSyncUI("saved");
+  } catch (e) {
+    updates.forEach((u) => pendingMinutesUpdates.set(u.id, u));
+    updateMinutesSyncUI("error");
+  } finally {
+    isMinutesSyncing = false;
+  }
 }
 
 function startMinutesPolling() {
-if (minutesPollInterval) clearInterval(minutesPollInterval);
+  if (minutesPollInterval) clearInterval(minutesPollInterval);
 
-minutesPollInterval = setInterval(async () => {
-   const tab = document.getElementById('tab-minutes');
-   if (!tab || tab.classList.contains('hidden-force') || isMinutesSyncing || pendingMinutesUpdates.size > 0) return;
-   
-   const fetchStartTime = Date.now();
+  minutesPollInterval = setInterval(async () => {
+    const tab = document.getElementById("tab-minutes");
+    if (
+      !tab ||
+      tab.classList.contains("hidden-force") ||
+      isMinutesSyncing ||
+      pendingMinutesUpdates.size > 0
+    )
+      return;
 
-   try {
-       const res = await apiCall('fetchMinutes');
-       if (lastLocalChange > fetchStartTime) return;
+    const fetchStartTime = Date.now();
 
-       if (res.minutes) {
-           let hasRemoteChanges = false;
-           res.minutes.forEach(sNote => {
-               const lNote = minutesMap.get(sNote.id);
-               if (!lNote || (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))) {
-                   minutesMap.set(sNote.id, sNote);
-                   updateNoteDOM(sNote);
-                   hasRemoteChanges = true;
-               }
-           });
-           
-           if (hasRemoteChanges && pendingMinutesUpdates.size === 0) {
-               updateMinutesSyncUI('saved');
-           }
-       }
-   } catch(e) {}
-}, 8000);
+    try {
+      const res = await apiCall("fetchMinutes");
+      if (lastLocalChange > fetchStartTime) return;
+
+      if (res.minutes) {
+        let hasRemoteChanges = false;
+        res.minutes.forEach((sNote) => {
+          const lNote = minutesMap.get(sNote.id);
+          if (
+            !lNote ||
+            (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))
+          ) {
+            minutesMap.set(sNote.id, sNote);
+            updateNoteDOM(sNote);
+            hasRemoteChanges = true;
+          }
+        });
+
+        if (hasRemoteChanges && pendingMinutesUpdates.size === 0) {
+          updateMinutesSyncUI("saved");
+        }
+      }
+    } catch (e) {}
+  }, 8000);
 }
 
 function renderAllMinutes() {
-const container = document.getElementById('minutesListContainer');
-if (!container) return;
+  const container = document.getElementById("minutesListContainer");
+  if (!container) return;
 
-let sorted = Array.from(minutesMap.values())
-   .filter(n => !n.isDeleted)
-   .sort((a, b) => b.ts - a.ts); 
-   
-if (minutesSearchQuery) {
-   sorted = sorted.filter(n => {
-       return (n.content && n.content.toLowerCase().includes(minutesSearchQuery)) ||
-              (n.assignedTo && n.assignedTo.toLowerCase().includes(minutesSearchQuery)) ||
-              (n.date && n.date.toLowerCase().includes(minutesSearchQuery)) ||
-              (n.updatedBy && n.updatedBy.toLowerCase().includes(minutesSearchQuery));
-   });
-}
-   
-if (sorted.length === 0) {
-   if (minutesSearchQuery) {
-       container.innerHTML = `<div class="empty-notes-msg w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><p class="text-xs font-bold uppercase tracking-widest">No matching notes found.</p></div>`;
-   } else {
-       container.innerHTML = `<div class="empty-notes-msg w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><svg class="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg><p class="text-xs font-bold uppercase tracking-widest">No meeting notes found</p></div>`;
-   }
-   return;
-}
+  let sorted = Array.from(minutesMap.values())
+    .filter((n) => !n.isDeleted)
+    .sort((a, b) => b.ts - a.ts);
 
-container.innerHTML = '';
-sorted.forEach(note => {
-   container.appendChild(createNoteDOM(note));
-});
+  if (minutesSearchQuery) {
+    sorted = sorted.filter((n) => {
+      return (
+        (n.content && n.content.toLowerCase().includes(minutesSearchQuery)) ||
+        (n.assignedTo &&
+          n.assignedTo.toLowerCase().includes(minutesSearchQuery)) ||
+        (n.date && n.date.toLowerCase().includes(minutesSearchQuery)) ||
+        (n.updatedBy && n.updatedBy.toLowerCase().includes(minutesSearchQuery))
+      );
+    });
+  }
+
+  if (sorted.length === 0) {
+    if (minutesSearchQuery) {
+      container.innerHTML = `<div class="empty-notes-msg w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><p class="text-xs font-bold uppercase tracking-widest">No matching notes found.</p></div>`;
+    } else {
+      container.innerHTML = `<div class="empty-notes-msg w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><svg class="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg><p class="text-xs font-bold uppercase tracking-widest">No meeting notes found</p></div>`;
+    }
+    return;
+  }
+
+  container.innerHTML = "";
+  sorted.forEach((note) => {
+    container.appendChild(createNoteDOM(note));
+  });
 }
 
 function updateNoteDOM(note) {
-const card = document.getElementById(`min-card-${note.id}`);
+  const card = document.getElementById(`min-card-${note.id}`);
 
-if (note.isDeleted) {
-   if (card) card.remove();
-   return;
-}
+  if (note.isDeleted) {
+    if (card) card.remove();
+    return;
+  }
 
-if (minutesSearchQuery) {
-   const matches = (note.content && note.content.toLowerCase().includes(minutesSearchQuery)) ||
-                   (note.assignedTo && note.assignedTo.toLowerCase().includes(minutesSearchQuery)) ||
-                   (note.date && note.date.toLowerCase().includes(minutesSearchQuery)) ||
-                   (note.updatedBy && note.updatedBy.toLowerCase().includes(minutesSearchQuery));
-   if (!matches) {
-       if (card) card.remove();
-       return;
-   }
-}
+  if (minutesSearchQuery) {
+    const matches =
+      (note.content &&
+        note.content.toLowerCase().includes(minutesSearchQuery)) ||
+      (note.assignedTo &&
+        note.assignedTo.toLowerCase().includes(minutesSearchQuery)) ||
+      (note.date && note.date.toLowerCase().includes(minutesSearchQuery)) ||
+      (note.updatedBy &&
+        note.updatedBy.toLowerCase().includes(minutesSearchQuery));
+    if (!matches) {
+      if (card) card.remove();
+      return;
+    }
+  }
 
-if (!card) {
-   const container = document.getElementById('minutesListContainer');
-   if (container) {
-       const emptyMsg = container.querySelector('.empty-notes-msg');
-       if(emptyMsg) emptyMsg.remove();
-       container.insertBefore(createNoteDOM(note), container.firstChild);
-   }
-   return;
-}
+  if (!card) {
+    const container = document.getElementById("minutesListContainer");
+    if (container) {
+      const emptyMsg = container.querySelector(".empty-notes-msg");
+      if (emptyMsg) emptyMsg.remove();
+      container.insertBefore(createNoteDOM(note), container.firstChild);
+    }
+    return;
+  }
 
-const dateEl = card.querySelector('.note-date');
-const contentEl = card.querySelector('.note-content');
-const assignedEl = card.querySelector('.note-assigned');
-const metaEl = card.querySelector('.note-meta');
+  const dateEl = card.querySelector(".note-date");
+  const contentEl = card.querySelector(".note-content");
+  const assignedEl = card.querySelector(".note-assigned");
+  const metaEl = card.querySelector(".note-meta");
 
-if (document.activeElement !== dateEl) dateEl.value = formatYMD(note.date);
-if (document.activeElement !== contentEl) contentEl.value = note.content;
-if (document.activeElement !== assignedEl) assignedEl.value = note.assignedTo;
+  if (document.activeElement !== dateEl) dateEl.value = formatYMD(note.date);
+  if (document.activeElement !== contentEl) contentEl.value = note.content;
+  if (document.activeElement !== assignedEl) assignedEl.value = note.assignedTo;
 
-if (metaEl) {
-   const timeStr = new Date(note.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-   metaEl.textContent = `${timeStr} by ${(note.updatedBy||'').toUpperCase()}`;
-}
+  if (metaEl) {
+    const timeStr = new Date(note.ts).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    metaEl.textContent = `${timeStr} by ${(note.updatedBy || "").toUpperCase()}`;
+  }
 }
 
 function createNoteDOM(note) {
-const div = document.createElement('div');
-div.id = `min-card-${note.id}`;
-div.className = "bg-white dark:bg-gray-800 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 transform";
+  const div = document.createElement("div");
+  div.id = `min-card-${note.id}`;
+  div.className =
+    "bg-white dark:bg-gray-800 rounded-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.1)] border-2 border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-300 transform";
 
-const timeStr = note.ts ? new Date(note.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'New';
+  const timeStr = note.ts
+    ? new Date(note.ts).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "New";
 
-div.innerHTML = `
+  div.innerHTML = `
    <div class="flex justify-between items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 md:p-3 border-b-2 border-gray-100 dark:border-gray-700 shrink-0">
        <div class="flex items-center gap-2">
            <input type="date" value="${formatYMD(note.date)}" 
                class="note-date min-w-[120px] [color-scheme:light] dark:[color-scheme:dark] text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 shadow-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
                onchange="handleMinuteInput('${note.id}', 'date', this.value)">
-           <span id="min-by-${note.id}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${timeStr} by ${(note.updatedBy||'').toUpperCase()}</span>
+           <span id="min-by-${note.id}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${timeStr} by ${(note.updatedBy || "").toUpperCase()}</span>
        </div>
        <button onclick="deleteMinuteNote('${note.id}')" class="text-red-500 hover:text-red-600 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 p-1.5 rounded shadow-md hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none">
            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
@@ -344,26 +385,30 @@ div.innerHTML = `
    </div>
 `;
 
-return div;
+  return div;
 }
 
 function updateMinutesSyncUI(state) {
-const el = document.getElementById('minutesSyncStatus');
-if (!el) return;
+  const el = document.getElementById("minutesSyncStatus");
+  if (!el) return;
 
-if (state === 'saving') {
-   el.textContent = "Syncing...";
-   el.className = "ml-2 text-[11px] font-bold text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
-} else if (state === 'saved') {
-   el.textContent = "Saved";
-   el.className = "ml-2 text-[11px] font-bold text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
-   setTimeout(() => {
-       if (pendingMinutesUpdates.size === 0) {
-           el.className = "ml-2 text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
-       }
-   }, 2000);
-} else if (state === 'error') {
-   el.textContent = "Offline / Error";
-   el.className = "ml-2 text-[11px] font-bold text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
-}
+  if (state === "saving") {
+    el.textContent = "Syncing...";
+    el.className =
+      "ml-2 text-[11px] font-bold text-yellow-700 bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
+  } else if (state === "saved") {
+    el.textContent = "Saved";
+    el.className =
+      "ml-2 text-[11px] font-bold text-green-700 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
+    setTimeout(() => {
+      if (pendingMinutesUpdates.size === 0) {
+        el.className =
+          "ml-2 text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
+      }
+    }, 2000);
+  } else if (state === "error") {
+    el.textContent = "Offline / Error";
+    el.className =
+      "ml-2 text-[11px] font-bold text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider transition-colors";
+  }
 }

@@ -1,23 +1,34 @@
 var medicalRosterData = [];
-var medicalSearchQuery = '';
+var medicalSearchQuery = "";
 
-var medSortRules = JSON.parse(localStorage.getItem('medicalSortRules_v2')) || [{ col: 'fullName', asc: true }];
-var medCols = JSON.parse(localStorage.getItem('medicalCols_v2')) || [
-{ id: 'medical', label: 'Medical & Medications', width: 300, visible: true },
-{ id: 'otherPoints', label: 'Other Notes', width: 220, visible: true },
-{ id: 'emergencyName', label: 'Emergency Contact Name', width: 180, visible: true },
-{ id: 'emergencyContact', label: 'Emergency Contact No.', width: 180, visible: true }
+var medSortRules = JSON.parse(localStorage.getItem("medicalSortRules_v2")) || [
+  { col: "fullName", asc: true },
 ];
-
+var medCols = JSON.parse(localStorage.getItem("medicalCols_v2")) || [
+  { id: "medical", label: "Medical & Medications", width: 300, visible: true },
+  { id: "otherPoints", label: "Other Notes", width: 220, visible: true },
+  {
+    id: "emergencyName",
+    label: "Emergency Contact Name",
+    width: 180,
+    visible: true,
+  },
+  {
+    id: "emergencyContact",
+    label: "Emergency Contact No.",
+    width: 180,
+    visible: true,
+  },
+];
 
 var traineeShortNames = {};
 
 function buildMedicalUI() {
-const tabMed = document.getElementById('tab-medical');
-if (!tabMed) return;
-tabMed.innerHTML = `
+  const tabMed = document.getElementById("tab-medical");
+  if (!tabMed) return;
+  tabMed.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
                <svg class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zM12 9v6m-3-3h6" /></svg>
@@ -25,7 +36,7 @@ tabMed.innerHTML = `
            </h3>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0 max-w-full">
                <option value="" disabled>Custom Views</option>
                <option value="medical.html" selected>Medical</option>
                <option value="diet.html">Dietary</option>
@@ -61,52 +72,70 @@ tabMed.innerHTML = `
    </div>
 </div>
 `;
-loadMedicalData();
+  loadMedicalData();
 }
 
 async function loadMedicalData() {
-    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (window.adminRosterData && window.adminRosterData.length > 0) {
     medicalRosterData = window.adminRosterData;
-    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(medicalRosterData);
     traineeShortNames = {};
-    medicalRosterData.forEach(p => {
-        if(p.role === 'TRAINEE' && p.fullName) {
-            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-        }
+    medicalRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
     });
     renderMedicalTable();
-    const loader = document.getElementById('medicalLoading');
-    if(loader) loader.classList.add('hidden-force');
+    const loader = document.getElementById("medicalLoading");
+    if (loader) loader.classList.add("hidden-force");
     return;
-}
-const loader = document.getElementById('medicalLoading');
-if(loader) loader.classList.remove('hidden-force');
+  }
+  const loader = document.getElementById("medicalLoading");
+  if (loader) loader.classList.remove("hidden-force");
 
-try {
-   const res = await apiCall('fetchAdminRoster');
-   medicalRosterData = res.roster || []; window.adminRosterData = medicalRosterData;
-   if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
+  try {
+    const res = await apiCall("fetchAdminRoster");
+    medicalRosterData = res.roster || [];
+    window.adminRosterData = medicalRosterData;
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(medicalRosterData);
 
-   traineeShortNames = {};
-   medicalRosterData.forEach(p => {
-       if(p.role === 'TRAINEE' && p.fullName) {
-           traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-       }
-   });
+    traineeShortNames = {};
+    medicalRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
+    });
 
-   renderMedicalTable();
-} catch(e) {
-   showToast("Failed to load medical data.", true);
-} finally {
-   if(loader) loader.classList.add('hidden-force');
-}
+    renderMedicalTable();
+  } catch (e) {
+    showToast("Failed to load medical data.", true);
+  } finally {
+    if (loader) loader.classList.add("hidden-force");
+  }
 }
 
 function handleMedicalSearch() {
-medicalSearchQuery = document.getElementById('medicalSearch').value.toLowerCase().trim();
-renderMedicalTable();
+  medicalSearchQuery = document
+    .getElementById("medicalSearch")
+    .value.toLowerCase()
+    .trim();
+  renderMedicalTable();
 }
 
 var mResizingCol = null;
@@ -114,107 +143,141 @@ var mStartX = 0;
 var mStartWidth = 0;
 
 function initMedResize(e, colId) {
-e.stopPropagation();
-mResizingCol = colId;
-mStartX = e.clientX;
-const colDef = colId === 'fullName' ? {width: 250} : medCols.find(c => c.id === colId);
-mStartWidth = colDef.width || 150;
-document.addEventListener('mousemove', onMedMouseMove);
-document.addEventListener('mouseup', onMedMouseUp);
+  e.stopPropagation();
+  mResizingCol = colId;
+  mStartX = e.clientX;
+  const colDef =
+    colId === "fullName" ? { width: 250 } : medCols.find((c) => c.id === colId);
+  mStartWidth = colDef.width || 150;
+  document.addEventListener("mousemove", onMedMouseMove);
+  document.addEventListener("mouseup", onMedMouseUp);
 }
 
 function onMedMouseMove(e) {
-if (!mResizingCol) return;
-const diff = e.clientX - mStartX;
-let newWidth = Math.max(50, mStartWidth + diff);
+  if (!mResizingCol) return;
+  const diff = e.clientX - mStartX;
+  let newWidth = Math.max(50, mStartWidth + diff);
 
-if (mResizingCol === 'fullName') {
-   const cells = document.querySelectorAll(`.med-col-fullName`);
-   cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-} else {
-   const cDef = medCols.find(c => c.id === mResizingCol);
-   if (cDef) {
-       cDef.width = newWidth;
-       const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
-       cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-   }
-}
+  if (mResizingCol === "fullName") {
+    const cells = document.querySelectorAll(`.med-col-fullName`);
+    cells.forEach((c) => {
+      c.style.width = newWidth + "px";
+      c.style.minWidth = newWidth + "px";
+      c.style.maxWidth = newWidth + "px";
+    });
+  } else {
+    const cDef = medCols.find((c) => c.id === mResizingCol);
+    if (cDef) {
+      cDef.width = newWidth;
+      const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
+      cells.forEach((c) => {
+        c.style.width = newWidth + "px";
+        c.style.minWidth = newWidth + "px";
+        c.style.maxWidth = newWidth + "px";
+      });
+    }
+  }
 }
 
 function onMedMouseUp() {
-if (mResizingCol && mResizingCol !== 'fullName') {
-   localStorage.setItem('medicalCols_v2', JSON.stringify(medCols));
-}
-mResizingCol = null;
-document.removeEventListener('mousemove', onMedMouseMove);
-document.removeEventListener('mouseup', onMedMouseUp);
+  if (mResizingCol && mResizingCol !== "fullName") {
+    localStorage.setItem("medicalCols_v2", JSON.stringify(medCols));
+  }
+  mResizingCol = null;
+  document.removeEventListener("mousemove", onMedMouseMove);
+  document.removeEventListener("mouseup", onMedMouseUp);
 }
 
 var medDraggedColId = null;
-window.onMedColDragStart = function(e, colId) {
-medDraggedColId = colId;
-e.dataTransfer.effectAllowed = "move";
-e.target.classList.add('opacity-50');
-}
-window.onMedColDragEnd = function(e) {
-e.target.classList.remove('opacity-50');
-document.querySelectorAll('th').forEach(th => th.classList.remove('bg-gray-200', 'dark:bg-gray-700'));
-}
-window.onMedColDragOver = function(e) {
-e.preventDefault();
-e.dataTransfer.dropEffect = "move";
-const th = e.target.closest('th');
-if(th && th.dataset.colId !== medDraggedColId && th.dataset.colId !== 'fullName') {
-   th.classList.add('bg-gray-200', 'dark:bg-gray-700');
-}
-}
-window.onMedColDragLeave = function(e) {
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-}
-window.onMedColDrop = function(e, targetColId) {
-e.preventDefault();
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+window.onMedColDragStart = function (e, colId) {
+  medDraggedColId = colId;
+  e.dataTransfer.effectAllowed = "move";
+  e.target.classList.add("opacity-50");
+};
+window.onMedColDragEnd = function (e) {
+  e.target.classList.remove("opacity-50");
+  document
+    .querySelectorAll("th")
+    .forEach((th) => th.classList.remove("bg-gray-200", "dark:bg-gray-700"));
+};
+window.onMedColDragOver = function (e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const th = e.target.closest("th");
+  if (
+    th &&
+    th.dataset.colId !== medDraggedColId &&
+    th.dataset.colId !== "fullName"
+  ) {
+    th.classList.add("bg-gray-200", "dark:bg-gray-700");
+  }
+};
+window.onMedColDragLeave = function (e) {
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
+};
+window.onMedColDrop = function (e, targetColId) {
+  e.preventDefault();
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
 
-if (!medDraggedColId || medDraggedColId === targetColId || targetColId === 'fullName' || medDraggedColId === 'fullName') return;
+  if (
+    !medDraggedColId ||
+    medDraggedColId === targetColId ||
+    targetColId === "fullName" ||
+    medDraggedColId === "fullName"
+  )
+    return;
 
-const fromIdx = medCols.findIndex(c => c.id === medDraggedColId);
-const toIdx = medCols.findIndex(c => c.id === targetColId);
-if(fromIdx > -1 && toIdx > -1) {
-   const [moved] = medCols.splice(fromIdx, 1);
-   medCols.splice(toIdx, 0, moved);
-   localStorage.setItem('medicalCols_v2', JSON.stringify(medCols));
-   renderMedicalTable();
-}
-}
+  const fromIdx = medCols.findIndex((c) => c.id === medDraggedColId);
+  const toIdx = medCols.findIndex((c) => c.id === targetColId);
+  if (fromIdx > -1 && toIdx > -1) {
+    const [moved] = medCols.splice(fromIdx, 1);
+    medCols.splice(toIdx, 0, moved);
+    localStorage.setItem("medicalCols_v2", JSON.stringify(medCols));
+    renderMedicalTable();
+  }
+};
 
 function renderMedicalTable() {
-let data = medicalRosterData.filter(p => {
+  let data = medicalRosterData.filter((p) => {
     if (!p.medical) return false;
     const med = p.medical.trim().toLowerCase();
-    if (med === '' || med === '-' || med === 'nil' || med === 'na' || med === 'n/a' || med === 'none' || med === 'no') return false;
+    if (
+      med === "" ||
+      med === "-" ||
+      med === "nil" ||
+      med === "na" ||
+      med === "n/a" ||
+      med === "none" ||
+      med === "no"
+    )
+      return false;
     return true;
-});
-if (medicalSearchQuery) {
-   data = data.filter(p => {
-       return (p.fullName && p.fullName.toLowerCase().includes(medicalSearchQuery)) ||
-              (p.shortName && p.shortName.toLowerCase().includes(medicalSearchQuery)) ||
-              (p.diet && p.diet.toLowerCase().includes(medicalSearchQuery)) ||
-              (p.medical && p.medical.toLowerCase().includes(medicalSearchQuery)) ||
-              (p.otherPoints && p.otherPoints.toLowerCase().includes(medicalSearchQuery));
-   });
-}
-data.sort((a, b) => {
-   let valA = (a.fullName || '').toString().toLowerCase();
-   let valB = (b.fullName || '').toString().toLowerCase();
-   if (valA < valB) return -1;
-   if (valA > valB) return 1;
-   return 0;
-});
+  });
+  if (medicalSearchQuery) {
+    data = data.filter((p) => {
+      return (
+        (p.fullName && p.fullName.toLowerCase().includes(medicalSearchQuery)) ||
+        (p.shortName &&
+          p.shortName.toLowerCase().includes(medicalSearchQuery)) ||
+        (p.diet && p.diet.toLowerCase().includes(medicalSearchQuery)) ||
+        (p.medical && p.medical.toLowerCase().includes(medicalSearchQuery)) ||
+        (p.otherPoints &&
+          p.otherPoints.toLowerCase().includes(medicalSearchQuery))
+      );
+    });
+  }
+  data.sort((a, b) => {
+    let valA = (a.fullName || "").toString().toLowerCase();
+    let valB = (b.fullName || "").toString().toLowerCase();
+    if (valA < valB) return -1;
+    if (valA > valB) return 1;
+    return 0;
+  });
 
-const thead = document.getElementById('medicalTableHead');
-let headHtml = `<tr>
+  const thead = document.getElementById("medicalTableHead");
+  let headHtml = `<tr>
    <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%] text-left">
        <div class="font-bold text-gray-700 dark:text-gray-300">Participant</div>
    </th>
@@ -222,47 +285,56 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Medical & Emergency Details</div>
    </th>
 </tr>`;
-thead.innerHTML = headHtml;
+  thead.innerHTML = headHtml;
 
-const tbody = document.getElementById('medicalTableBody');
-let html = '';
-data.forEach(p => {
-   const roleStr = p.role.substring(0, 3).toUpperCase();
-   const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-   const fullNameUpper = (p.fullName || '').toUpperCase();
-   const shortNameUpper = (p.shortName || '').toUpperCase();
-   const nameClass = 'font-bold text-gray-900 dark:text-gray-100';
-   
-   html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+  const tbody = document.getElementById("medicalTableBody");
+  let html = "";
+  data.forEach((p) => {
+    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleColor =
+      p.role === "TRAINEE"
+        ? "text-green-600 dark:text-green-400"
+        : p.role === "CAREGIVER"
+          ? "text-purple-600 dark:text-purple-400"
+          : "text-orange-600 dark:text-orange-400";
+    const fullNameUpper = (p.fullName || "").toUpperCase();
+    const shortNameUpper = (p.shortName || "").toUpperCase();
+    const nameClass = "font-bold text-gray-900 dark:text-gray-100";
+
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
                <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
 
-   const hasMedical = p.medical && p.medical.trim() && p.medical.trim().toLowerCase() !== 'nil' && p.medical.trim().toLowerCase() !== 'none';
-   if (hasMedical) {
-       html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Medical & Medications:</span> <span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.medical}</span></div>`;
-   }
-   
-   
-   
-   if (p.emergencyName || p.emergencyContact) {
-       html += `<div class="p-2 bg-gray-50 dark:bg-gray-800 rounded border-2 border-gray-100 dark:border-gray-700">
+    const hasMedical =
+      p.medical &&
+      p.medical.trim() &&
+      p.medical.trim().toLowerCase() !== "nil" &&
+      p.medical.trim().toLowerCase() !== "none";
+    if (hasMedical) {
+      html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Medical & Medications:</span> <span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.medical}</span></div>`;
+    }
+
+    if (p.emergencyName || p.emergencyContact) {
+      html += `<div class="p-2 bg-gray-50 dark:bg-gray-800 rounded border-2 border-gray-100 dark:border-gray-700">
            <div class="text-[11px] text-gray-400 uppercase tracking-widest font-bold mb-1">Emergency Contact</div>
-           <div class="font-bold text-gray-800 dark:text-gray-200">${(p.emergencyName || '-').toUpperCase()} ${p.emergencyRelation ? `(${p.emergencyRelation.toUpperCase()})` : ''}</div>
+           <div class="font-bold text-gray-800 dark:text-gray-200">${(p.emergencyName || "-").toUpperCase()} ${p.emergencyRelation ? `(${p.emergencyRelation.toUpperCase()})` : ""}</div>
            <div class="font-mono text-green-600 dark:text-green-400 font-bold mt-0.5">${renderPhoneLink(p.emergencyContact)}</div>
        </div>`;
-   }
+    }
 
-   html += `</div></td></tr>`;
-});
+    html += `</div></td></tr>`;
+  });
 
-tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+  tbody.innerHTML =
+    html ||
+    `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }

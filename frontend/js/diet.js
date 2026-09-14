@@ -1,20 +1,22 @@
 var dietRosterData = [];
-var dietSearchQuery = '';
+var dietSearchQuery = "";
 
-var dietSortRules = JSON.parse(localStorage.getItem('dietSortRules_v2')) || [{ col: 'fullName', asc: true }];
-var dietCols = JSON.parse(localStorage.getItem('dietCols_v2')) || [
-{ id: 'diet', label: 'Dietary Restrictions', width: 300, visible: true },
-{ id: 'otherPoints', label: 'Other Notes', width: 220, visible: true }
+var dietSortRules = JSON.parse(localStorage.getItem("dietSortRules_v2")) || [
+  { col: "fullName", asc: true },
 ];
-
+var dietCols = JSON.parse(localStorage.getItem("dietCols_v2")) || [
+  { id: "diet", label: "Dietary Restrictions", width: 300, visible: true },
+  { id: "otherPoints", label: "Other Notes", width: 220, visible: true },
+];
 
 var traineeShortNames = {};
 
 function buildDietUI() {
-const el_tab_diet = document.getElementById('tab-diet');
-if(el_tab_diet) el_tab_diet.innerHTML = `
+  const el_tab_diet = document.getElementById("tab-diet");
+  if (el_tab_diet)
+    el_tab_diet.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
                <svg class="w-5 h-5 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
@@ -22,7 +24,7 @@ if(el_tab_diet) el_tab_diet.innerHTML = `
            </h3>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0 max-w-full">
                <option value="" disabled>Custom Views</option>
                <option value="medical.html">Medical</option>
                <option value="diet.html" selected>Dietary</option>
@@ -58,52 +60,70 @@ if(el_tab_diet) el_tab_diet.innerHTML = `
    </div>
 </div>
 `;
-loadDietData();
+  loadDietData();
 }
 
 async function loadDietData() {
-    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (window.adminRosterData && window.adminRosterData.length > 0) {
     dietRosterData = window.adminRosterData;
-    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(dietRosterData);
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(dietRosterData);
     traineeShortNames = {};
-    dietRosterData.forEach(p => {
-        if(p.role === 'TRAINEE' && p.fullName) {
-            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-        }
+    dietRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
     });
     renderDietTable();
-    const loader = document.getElementById('dietLoading');
-    if(loader) loader.classList.add('hidden-force');
+    const loader = document.getElementById("dietLoading");
+    if (loader) loader.classList.add("hidden-force");
     return;
-}
-const loader = document.getElementById('dietLoading');
-if(loader) loader.classList.remove('hidden-force');
+  }
+  const loader = document.getElementById("dietLoading");
+  if (loader) loader.classList.remove("hidden-force");
 
-try {
-   const res = await apiCall('fetchAdminRoster');
-   dietRosterData = res.roster || []; window.adminRosterData = dietRosterData;
-   if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(dietRosterData);
+  try {
+    const res = await apiCall("fetchAdminRoster");
+    dietRosterData = res.roster || [];
+    window.adminRosterData = dietRosterData;
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(dietRosterData);
 
-   traineeShortNames = {};
-   dietRosterData.forEach(p => {
-       if(p.role === 'TRAINEE' && p.fullName) {
-           traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-       }
-   });
+    traineeShortNames = {};
+    dietRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
+    });
 
-   renderDietTable();
-} catch(e) {
-   showToast("Failed to load medical data.", true);
-} finally {
-   if(loader) loader.classList.add('hidden-force');
-}
+    renderDietTable();
+  } catch (e) {
+    showToast("Failed to load medical data.", true);
+  } finally {
+    if (loader) loader.classList.add("hidden-force");
+  }
 }
 
 function handleDietSearch() {
-dietSearchQuery = document.getElementById('dietSearch').value.toLowerCase().trim();
-renderDietTable();
+  dietSearchQuery = document
+    .getElementById("dietSearch")
+    .value.toLowerCase()
+    .trim();
+  renderDietTable();
 }
 
 var mResizingCol = null;
@@ -111,106 +131,141 @@ var mStartX = 0;
 var mStartWidth = 0;
 
 function initDietResize(e, colId) {
-e.stopPropagation();
-mResizingCol = colId;
-mStartX = e.clientX;
-const colDef = colId === 'fullName' ? {width: 250} : dietCols.find(c => c.id === colId);
-mStartWidth = colDef.width || 150;
-document.addEventListener('mousemove', onDietMouseMove);
-document.addEventListener('mouseup', onDietMouseUp);
+  e.stopPropagation();
+  mResizingCol = colId;
+  mStartX = e.clientX;
+  const colDef =
+    colId === "fullName"
+      ? { width: 250 }
+      : dietCols.find((c) => c.id === colId);
+  mStartWidth = colDef.width || 150;
+  document.addEventListener("mousemove", onDietMouseMove);
+  document.addEventListener("mouseup", onDietMouseUp);
 }
 
 function onDietMouseMove(e) {
-if (!mResizingCol) return;
-const diff = e.clientX - mStartX;
-let newWidth = Math.max(50, mStartWidth + diff);
+  if (!mResizingCol) return;
+  const diff = e.clientX - mStartX;
+  let newWidth = Math.max(50, mStartWidth + diff);
 
-if (mResizingCol === 'fullName') {
-   const cells = document.querySelectorAll(`.med-col-fullName`);
-   cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-} else {
-   const cDef = dietCols.find(c => c.id === mResizingCol);
-   if (cDef) {
-       cDef.width = newWidth;
-       const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
-       cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-   }
-}
+  if (mResizingCol === "fullName") {
+    const cells = document.querySelectorAll(`.med-col-fullName`);
+    cells.forEach((c) => {
+      c.style.width = newWidth + "px";
+      c.style.minWidth = newWidth + "px";
+      c.style.maxWidth = newWidth + "px";
+    });
+  } else {
+    const cDef = dietCols.find((c) => c.id === mResizingCol);
+    if (cDef) {
+      cDef.width = newWidth;
+      const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
+      cells.forEach((c) => {
+        c.style.width = newWidth + "px";
+        c.style.minWidth = newWidth + "px";
+        c.style.maxWidth = newWidth + "px";
+      });
+    }
+  }
 }
 
 function onDietMouseUp() {
-if (mResizingCol && mResizingCol !== 'fullName') {
-   localStorage.setItem('dietCols_v2', JSON.stringify(dietCols));
-}
-mResizingCol = null;
-document.removeEventListener('mousemove', onDietMouseMove);
-document.removeEventListener('mouseup', onDietMouseUp);
+  if (mResizingCol && mResizingCol !== "fullName") {
+    localStorage.setItem("dietCols_v2", JSON.stringify(dietCols));
+  }
+  mResizingCol = null;
+  document.removeEventListener("mousemove", onDietMouseMove);
+  document.removeEventListener("mouseup", onDietMouseUp);
 }
 
 var dietDraggedColId = null;
-window.onDietColDragStart = function(e, colId) {
-dietDraggedColId = colId;
-e.dataTransfer.effectAllowed = "move";
-e.target.classList.add('opacity-50');
-}
-window.onDietColDragEnd = function(e) {
-e.target.classList.remove('opacity-50');
-document.querySelectorAll('th').forEach(th => th.classList.remove('bg-gray-200', 'dark:bg-gray-700'));
-}
-window.onDietColDragOver = function(e) {
-e.preventDefault();
-e.dataTransfer.dropEffect = "move";
-const th = e.target.closest('th');
-if(th && th.dataset.colId !== dietDraggedColId && th.dataset.colId !== 'fullName') {
-   th.classList.add('bg-gray-200', 'dark:bg-gray-700');
-}
-}
-window.onDietColDragLeave = function(e) {
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-}
-window.onDietColDrop = function(e, targetColId) {
-e.preventDefault();
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+window.onDietColDragStart = function (e, colId) {
+  dietDraggedColId = colId;
+  e.dataTransfer.effectAllowed = "move";
+  e.target.classList.add("opacity-50");
+};
+window.onDietColDragEnd = function (e) {
+  e.target.classList.remove("opacity-50");
+  document
+    .querySelectorAll("th")
+    .forEach((th) => th.classList.remove("bg-gray-200", "dark:bg-gray-700"));
+};
+window.onDietColDragOver = function (e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const th = e.target.closest("th");
+  if (
+    th &&
+    th.dataset.colId !== dietDraggedColId &&
+    th.dataset.colId !== "fullName"
+  ) {
+    th.classList.add("bg-gray-200", "dark:bg-gray-700");
+  }
+};
+window.onDietColDragLeave = function (e) {
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
+};
+window.onDietColDrop = function (e, targetColId) {
+  e.preventDefault();
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
 
-if (!dietDraggedColId || dietDraggedColId === targetColId || targetColId === 'fullName' || dietDraggedColId === 'fullName') return;
+  if (
+    !dietDraggedColId ||
+    dietDraggedColId === targetColId ||
+    targetColId === "fullName" ||
+    dietDraggedColId === "fullName"
+  )
+    return;
 
-const fromIdx = dietCols.findIndex(c => c.id === dietDraggedColId);
-const toIdx = dietCols.findIndex(c => c.id === targetColId);
-if(fromIdx > -1 && toIdx > -1) {
-   const [moved] = dietCols.splice(fromIdx, 1);
-   dietCols.splice(toIdx, 0, moved);
-   localStorage.setItem('dietCols_v2', JSON.stringify(dietCols));
-   renderDietTable();
-}
-}
+  const fromIdx = dietCols.findIndex((c) => c.id === dietDraggedColId);
+  const toIdx = dietCols.findIndex((c) => c.id === targetColId);
+  if (fromIdx > -1 && toIdx > -1) {
+    const [moved] = dietCols.splice(fromIdx, 1);
+    dietCols.splice(toIdx, 0, moved);
+    localStorage.setItem("dietCols_v2", JSON.stringify(dietCols));
+    renderDietTable();
+  }
+};
 
 function renderDietTable() {
-let data = dietRosterData.filter(p => {
+  let data = dietRosterData.filter((p) => {
     if (!p.diet) return false;
     const diet = p.diet.trim().toLowerCase();
-    if (diet === '' || diet === '-' || diet === 'nil' || diet === 'na' || diet === 'n/a' || diet === 'none' || diet === 'no' || diet === 'normal') return false;
+    if (
+      diet === "" ||
+      diet === "-" ||
+      diet === "nil" ||
+      diet === "na" ||
+      diet === "n/a" ||
+      diet === "none" ||
+      diet === "no" ||
+      diet === "normal"
+    )
+      return false;
     return true;
-});
-if (dietSearchQuery) {
-   data = data.filter(p => {
-       return (p.fullName && p.fullName.toLowerCase().includes(dietSearchQuery)) ||
-              (p.shortName && p.shortName.toLowerCase().includes(dietSearchQuery)) ||
-              (p.diet && p.diet.toLowerCase().includes(dietSearchQuery)) ||
-              (p.otherPoints && p.otherPoints.toLowerCase().includes(dietSearchQuery));
-   });
-}
-data.sort((a, b) => {
-   let valA = (a.fullName || '').toString().toLowerCase();
-   let valB = (b.fullName || '').toString().toLowerCase();
-   if (valA < valB) return -1;
-   if (valA > valB) return 1;
-   return 0;
-});
+  });
+  if (dietSearchQuery) {
+    data = data.filter((p) => {
+      return (
+        (p.fullName && p.fullName.toLowerCase().includes(dietSearchQuery)) ||
+        (p.shortName && p.shortName.toLowerCase().includes(dietSearchQuery)) ||
+        (p.diet && p.diet.toLowerCase().includes(dietSearchQuery)) ||
+        (p.otherPoints && p.otherPoints.toLowerCase().includes(dietSearchQuery))
+      );
+    });
+  }
+  data.sort((a, b) => {
+    let valA = (a.fullName || "").toString().toLowerCase();
+    let valB = (b.fullName || "").toString().toLowerCase();
+    if (valA < valB) return -1;
+    if (valA > valB) return 1;
+    return 0;
+  });
 
-const thead = document.getElementById('dietTableHead');
-let headHtml = `<tr>
+  const thead = document.getElementById("dietTableHead");
+  let headHtml = `<tr>
    <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%] text-left">
        <div class="font-bold text-gray-700 dark:text-gray-300">Participant</div>
    </th>
@@ -218,39 +273,48 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Dietary Restrictions</div>
    </th>
 </tr>`;
-thead.innerHTML = headHtml;
+  thead.innerHTML = headHtml;
 
-const tbody = document.getElementById('dietTableBody');
-let html = '';
-data.forEach(p => {
-   const roleStr = p.role.substring(0, 3).toUpperCase();
-   const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-   const fullNameUpper = (p.fullName || '').toUpperCase();
-   const shortNameUpper = (p.shortName || '').toUpperCase();
-   const nameClass = 'font-bold text-gray-900 dark:text-gray-100';
-   
-   html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+  const tbody = document.getElementById("dietTableBody");
+  let html = "";
+  data.forEach((p) => {
+    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleColor =
+      p.role === "TRAINEE"
+        ? "text-green-600 dark:text-green-400"
+        : p.role === "CAREGIVER"
+          ? "text-purple-600 dark:text-purple-400"
+          : "text-orange-600 dark:text-orange-400";
+    const fullNameUpper = (p.fullName || "").toUpperCase();
+    const shortNameUpper = (p.shortName || "").toUpperCase();
+    const nameClass = "font-bold text-gray-900 dark:text-gray-100";
+
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
                <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
 
-   const hasDiet = p.diet && p.diet.trim() && p.diet.trim().toLowerCase() !== 'nil' && p.diet.trim().toLowerCase() !== 'none';
-   if (hasDiet) {
-       html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Dietary Restrictions:</span> <span class="text-red-700 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.diet}</span></div>`;
-   }
-   
-   
-   
-   html += `</div></td></tr>`;
-});
+    const hasDiet =
+      p.diet &&
+      p.diet.trim() &&
+      p.diet.trim().toLowerCase() !== "nil" &&
+      p.diet.trim().toLowerCase() !== "none";
+    if (hasDiet) {
+      html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Dietary Restrictions:</span> <span class="text-red-700 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.diet}</span></div>`;
+    }
 
-tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+    html += `</div></td></tr>`;
+  });
+
+  tbody.innerHTML =
+    html ||
+    `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }

@@ -1,20 +1,23 @@
 var medicalRosterData = [];
-var expiredSearchQuery = '';
+var expiredSearchQuery = "";
 
-var medSortRules = JSON.parse(localStorage.getItem('expiredSortRules')) || [{ col: 'fullName', asc: true }];
-var medCols = JSON.parse(localStorage.getItem('expiredCols')) || [
-{ id: 'passportNo', label: 'Passport No.', width: 150, visible: true },
-{ id: 'passportExpiry', label: 'Expiry Date', width: 150, visible: true },
-{ id: 'nationality', label: 'Nationality', width: 120, visible: true }
+var medSortRules = JSON.parse(localStorage.getItem("expiredSortRules")) || [
+  { col: "fullName", asc: true },
 ];
-
+var medCols = JSON.parse(localStorage.getItem("expiredCols")) || [
+  { id: "passportNo", label: "Passport No.", width: 150, visible: true },
+  { id: "passportExpiry", label: "Expiry Date", width: 150, visible: true },
+  { id: "nationality", label: "Nationality", width: 120, visible: true },
+];
 
 var traineeShortNames = {};
 
 function buildExpiredUI() {
-const el_tab_expired = document.getElementById('tab-expired'); if(el_tab_expired) el_tab_expired.innerHTML = `
+  const el_tab_expired = document.getElementById("tab-expired");
+  if (el_tab_expired)
+    el_tab_expired.innerHTML = `
 <div class="flex flex-col h-full w-full relative bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
-   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex justify-between items-center gap-2 shrink-0">
+   <div class="py-1.5 px-2 md:px-3 border-b-2 border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
        <div class="flex items-center gap-2">
            <h3 class="font-black text-gray-900 dark:text-white text-base md:text-lg flex items-center gap-2">
                <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-3.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm3-.75a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
@@ -22,7 +25,7 @@ const el_tab_expired = document.getElementById('tab-expired'); if(el_tab_expired
            </h3>
        </div>
        <div class="flex items-center gap-2">
-           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0">
+           <select onchange="if(this.value) navigateTo(this.value)" class="bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-xs md:text-xs font-bold px-2.5 py-1.5 rounded-md hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-md cursor-pointer shrink-0 max-w-full">
                <option value="" disabled>Custom Views</option>
                <option value="medical.html">Medical</option>
                <option value="diet.html">Dietary</option>
@@ -58,52 +61,69 @@ const el_tab_expired = document.getElementById('tab-expired'); if(el_tab_expired
    </div>
 </div>
 `;
-loadExpiredData();
+  loadExpiredData();
 }
 
 async function loadExpiredData() {
-    await new Promise(resolve => setTimeout(resolve, 10)); // Yield to allow browser paint
+  await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (window.adminRosterData && window.adminRosterData.length > 0) {
     expiredRosterData = window.adminRosterData;
-    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(expiredRosterData);
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(expiredRosterData);
     traineeShortNames = {};
-    expiredRosterData.forEach(p => {
-        if(p.role === 'TRAINEE' && p.fullName) {
-            traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-        }
+    expiredRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
     });
     renderExpiredTable();
-    const loader = document.getElementById('expiredLoading');
-    if(loader) loader.classList.add('hidden-force');
+    const loader = document.getElementById("expiredLoading");
+    if (loader) loader.classList.add("hidden-force");
     return;
-}
-const loader = document.getElementById('medicalLoading');
-if(loader) loader.classList.remove('hidden-force');
+  }
+  const loader = document.getElementById("medicalLoading");
+  if (loader) loader.classList.remove("hidden-force");
 
-try {
-   const res = await apiCall('fetchAdminRoster');
-   medicalRosterData = res.roster || [];
-   if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(medicalRosterData);
+  try {
+    const res = await apiCall("fetchAdminRoster");
+    medicalRosterData = res.roster || [];
+    if (typeof applyCaregiverLabels === "function")
+      applyCaregiverLabels(medicalRosterData);
 
-   traineeShortNames = {};
-   medicalRosterData.forEach(p => {
-       if(p.role === 'TRAINEE' && p.fullName) {
-           traineeShortNames[String(p.fullName || '').trim().toUpperCase()] = String(p.shortName || p.fullName || '').trim().toUpperCase();
-       }
-   });
+    traineeShortNames = {};
+    medicalRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[
+          String(p.fullName || "")
+            .trim()
+            .toUpperCase()
+        ] = String(p.shortName || p.fullName || "")
+          .trim()
+          .toUpperCase();
+      }
+    });
 
-   renderExpiredTable();
-} catch(e) {
-   showToast("Failed to load medical data.", true);
-} finally {
-   if(loader) loader.classList.add('hidden-force');
-}
+    renderExpiredTable();
+  } catch (e) {
+    showToast("Failed to load medical data.", true);
+  } finally {
+    if (loader) loader.classList.add("hidden-force");
+  }
 }
 
 function handleExpiredSearch() {
-expiredSearchQuery = document.getElementById('expiredSearch').value.toLowerCase().trim();
-renderExpiredTable();
+  expiredSearchQuery = document
+    .getElementById("expiredSearch")
+    .value.toLowerCase()
+    .trim();
+  renderExpiredTable();
 }
 
 var mResizingCol = null;
@@ -111,124 +131,150 @@ var mStartX = 0;
 var mStartWidth = 0;
 
 function initMedResize(e, colId) {
-e.stopPropagation();
-mResizingCol = colId;
-mStartX = e.clientX;
-const colDef = colId === 'fullName' ? {width: 250} : medCols.find(c => c.id === colId);
-mStartWidth = colDef.width || 150;
-document.addEventListener('mousemove', onMedMouseMove);
-document.addEventListener('mouseup', onMedMouseUp);
+  e.stopPropagation();
+  mResizingCol = colId;
+  mStartX = e.clientX;
+  const colDef =
+    colId === "fullName" ? { width: 250 } : medCols.find((c) => c.id === colId);
+  mStartWidth = colDef.width || 150;
+  document.addEventListener("mousemove", onMedMouseMove);
+  document.addEventListener("mouseup", onMedMouseUp);
 }
 
 function onMedMouseMove(e) {
-if (!mResizingCol) return;
-const diff = e.clientX - mStartX;
-let newWidth = Math.max(50, mStartWidth + diff);
+  if (!mResizingCol) return;
+  const diff = e.clientX - mStartX;
+  let newWidth = Math.max(50, mStartWidth + diff);
 
-if (mResizingCol === 'fullName') {
-   const cells = document.querySelectorAll(`.med-col-fullName`);
-   cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-} else {
-   const cDef = medCols.find(c => c.id === mResizingCol);
-   if (cDef) {
-       cDef.width = newWidth;
-       const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
-       cells.forEach(c => { c.style.width = newWidth + 'px'; c.style.minWidth = newWidth + 'px'; c.style.maxWidth = newWidth + 'px'; });
-   }
-}
+  if (mResizingCol === "fullName") {
+    const cells = document.querySelectorAll(`.med-col-fullName`);
+    cells.forEach((c) => {
+      c.style.width = newWidth + "px";
+      c.style.minWidth = newWidth + "px";
+      c.style.maxWidth = newWidth + "px";
+    });
+  } else {
+    const cDef = medCols.find((c) => c.id === mResizingCol);
+    if (cDef) {
+      cDef.width = newWidth;
+      const cells = document.querySelectorAll(`.med-col-${mResizingCol}`);
+      cells.forEach((c) => {
+        c.style.width = newWidth + "px";
+        c.style.minWidth = newWidth + "px";
+        c.style.maxWidth = newWidth + "px";
+      });
+    }
+  }
 }
 
 function onMedMouseUp() {
-if (mResizingCol && mResizingCol !== 'fullName') {
-   localStorage.setItem('expiredCols', JSON.stringify(medCols));
-}
-mResizingCol = null;
-document.removeEventListener('mousemove', onMedMouseMove);
-document.removeEventListener('mouseup', onMedMouseUp);
+  if (mResizingCol && mResizingCol !== "fullName") {
+    localStorage.setItem("expiredCols", JSON.stringify(medCols));
+  }
+  mResizingCol = null;
+  document.removeEventListener("mousemove", onMedMouseMove);
+  document.removeEventListener("mouseup", onMedMouseUp);
 }
 
 var medDraggedColId = null;
-window.onMedColDragStart = function(e, colId) {
-medDraggedColId = colId;
-e.dataTransfer.effectAllowed = "move";
-e.target.classList.add('opacity-50');
-}
-window.onMedColDragEnd = function(e) {
-e.target.classList.remove('opacity-50');
-document.querySelectorAll('th').forEach(th => th.classList.remove('bg-gray-200', 'dark:bg-gray-700'));
-}
-window.onMedColDragOver = function(e) {
-e.preventDefault();
-e.dataTransfer.dropEffect = "move";
-const th = e.target.closest('th');
-if(th && th.dataset.colId !== medDraggedColId && th.dataset.colId !== 'fullName') {
-   th.classList.add('bg-gray-200', 'dark:bg-gray-700');
-}
-}
-window.onMedColDragLeave = function(e) {
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
-}
-window.onMedColDrop = function(e, targetColId) {
-e.preventDefault();
-const th = e.target.closest('th');
-if(th) th.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+window.onMedColDragStart = function (e, colId) {
+  medDraggedColId = colId;
+  e.dataTransfer.effectAllowed = "move";
+  e.target.classList.add("opacity-50");
+};
+window.onMedColDragEnd = function (e) {
+  e.target.classList.remove("opacity-50");
+  document
+    .querySelectorAll("th")
+    .forEach((th) => th.classList.remove("bg-gray-200", "dark:bg-gray-700"));
+};
+window.onMedColDragOver = function (e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const th = e.target.closest("th");
+  if (
+    th &&
+    th.dataset.colId !== medDraggedColId &&
+    th.dataset.colId !== "fullName"
+  ) {
+    th.classList.add("bg-gray-200", "dark:bg-gray-700");
+  }
+};
+window.onMedColDragLeave = function (e) {
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
+};
+window.onMedColDrop = function (e, targetColId) {
+  e.preventDefault();
+  const th = e.target.closest("th");
+  if (th) th.classList.remove("bg-gray-200", "dark:bg-gray-700");
 
-if (!medDraggedColId || medDraggedColId === targetColId || targetColId === 'fullName' || medDraggedColId === 'fullName') return;
+  if (
+    !medDraggedColId ||
+    medDraggedColId === targetColId ||
+    targetColId === "fullName" ||
+    medDraggedColId === "fullName"
+  )
+    return;
 
-const fromIdx = medCols.findIndex(c => c.id === medDraggedColId);
-const toIdx = medCols.findIndex(c => c.id === targetColId);
-if(fromIdx > -1 && toIdx > -1) {
-   const [moved] = medCols.splice(fromIdx, 1);
-   medCols.splice(toIdx, 0, moved);
-   localStorage.setItem('expiredCols', JSON.stringify(medCols));
-   renderExpiredTable();
-}
-}
+  const fromIdx = medCols.findIndex((c) => c.id === medDraggedColId);
+  const toIdx = medCols.findIndex((c) => c.id === targetColId);
+  if (fromIdx > -1 && toIdx > -1) {
+    const [moved] = medCols.splice(fromIdx, 1);
+    medCols.splice(toIdx, 0, moved);
+    localStorage.setItem("expiredCols", JSON.stringify(medCols));
+    renderExpiredTable();
+  }
+};
 
 function renderExpiredTable() {
+  let tripEnd = appSettings.tripEndDate
+    ? new Date(appSettings.tripEndDate)
+    : null;
+  let minExpiry = null;
+  if (tripEnd && !isNaN(tripEnd.getTime())) {
+    minExpiry = new Date(tripEnd);
+    minExpiry.setMonth(minExpiry.getMonth() + 6);
+  }
 
-
-let tripEnd = appSettings.tripEndDate ? new Date(appSettings.tripEndDate) : null;
-let minExpiry = null;
-if (tripEnd && !isNaN(tripEnd.getTime())) {
-   minExpiry = new Date(tripEnd);
-   minExpiry.setMonth(minExpiry.getMonth() + 6);
-}
-
-let data = medicalRosterData.filter(p => {
+  let data = medicalRosterData.filter((p) => {
     if (!p.passportExpiry) return false; // If they don't have an expiry date, exclude them from expired
     const expD = new Date(p.passportExpiry);
     // Include if valid date AND expires before minExpiry (6 months after trip)
     if (!isNaN(expD.getTime()) && minExpiry && expD < minExpiry) {
-        return true;
+      return true;
     }
     // If no trip date is set, just show everything with an expiry for now, or fallback to current date + 6m
     if (!minExpiry) {
-        const fallback = new Date();
-        fallback.setMonth(fallback.getMonth() + 6);
-        if (!isNaN(expD.getTime()) && expD < fallback) return true;
+      const fallback = new Date();
+      fallback.setMonth(fallback.getMonth() + 6);
+      if (!isNaN(expD.getTime()) && expD < fallback) return true;
     }
     return false;
-});
-if (expiredSearchQuery) {
-   data = data.filter(p => {
-       return (p.fullName && p.fullName.toLowerCase().includes(expiredSearchQuery)) ||
-              (p.shortName && p.shortName.toLowerCase().includes(expiredSearchQuery)) ||
-              (p.passportNo && p.passportNo.toLowerCase().includes(expiredSearchQuery)) ||
-              (p.nationality && p.nationality.toLowerCase().includes(expiredSearchQuery));
-   });
-}
-data.sort((a, b) => {
-   let valA = (a.fullName || '').toString().toLowerCase();
-   let valB = (b.fullName || '').toString().toLowerCase();
-   if (valA < valB) return -1;
-   if (valA > valB) return 1;
-   return 0;
-});
+  });
+  if (expiredSearchQuery) {
+    data = data.filter((p) => {
+      return (
+        (p.fullName && p.fullName.toLowerCase().includes(expiredSearchQuery)) ||
+        (p.shortName &&
+          p.shortName.toLowerCase().includes(expiredSearchQuery)) ||
+        (p.passportNo &&
+          p.passportNo.toLowerCase().includes(expiredSearchQuery)) ||
+        (p.nationality &&
+          p.nationality.toLowerCase().includes(expiredSearchQuery))
+      );
+    });
+  }
+  data.sort((a, b) => {
+    let valA = (a.fullName || "").toString().toLowerCase();
+    let valB = (b.fullName || "").toString().toLowerCase();
+    if (valA < valB) return -1;
+    if (valA > valB) return 1;
+    return 0;
+  });
 
-const thead = document.getElementById('medicalTableHead');
-let headHtml = `<tr>
+  const thead = document.getElementById("medicalTableHead");
+  let headHtml = `<tr>
    <th class="py-1.5 px-2 bg-gray-100 dark:bg-gray-800 align-top sticky top-0 left-0 z-20 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%] text-left">
        <div class="font-bold text-gray-700 dark:text-gray-300">Participant</div>
    </th>
@@ -236,55 +282,67 @@ let headHtml = `<tr>
        <div class="font-bold text-gray-700 dark:text-gray-300">Passport Details</div>
    </th>
 </tr>`;
-if (thead) thead.innerHTML = headHtml;
+  if (thead) thead.innerHTML = headHtml;
 
-const tbody = document.getElementById('medicalTableBody');
-let html = '';
-data.forEach(p => {
-   const roleStr = p.role.substring(0, 3).toUpperCase();
-   const roleColor = p.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (p.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-   const fullNameUpper = (p.fullName || '').toUpperCase();
-   const shortNameUpper = (p.shortName || '').toUpperCase();
-   const nameClass = 'font-bold text-gray-900 dark:text-gray-100';
-   
-   html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+  const tbody = document.getElementById("medicalTableBody");
+  let html = "";
+  data.forEach((p) => {
+    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleColor =
+      p.role === "TRAINEE"
+        ? "text-green-600 dark:text-green-400"
+        : p.role === "CAREGIVER"
+          ? "text-purple-600 dark:text-purple-400"
+          : "text-orange-600 dark:text-orange-400";
+    const fullNameUpper = (p.fullName || "").toUpperCase();
+    const shortNameUpper = (p.shortName || "").toUpperCase();
+    const nameClass = "font-bold text-gray-900 dark:text-gray-100";
+
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
            <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ''}
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
                <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || 'None').toUpperCase()}">${getProjectAbbreviation(p.group || 'None')}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ''}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-2">`;
 
-   html += `<div class="grid grid-cols-2 gap-4">
+    html += `<div class="grid grid-cols-2 gap-4">
        <div>
            <span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Passport Number</span>
-           <div class="font-mono font-bold text-gray-800 dark:text-gray-200">${(p.passportNo || '-').toUpperCase()}</div>
+           <div class="font-mono font-bold text-gray-800 dark:text-gray-200">${(p.passportNo || "-").toUpperCase()}</div>
        </div>
        <div>
            <span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Nationality</span>
-           <div class="font-bold text-gray-800 dark:text-gray-200">${(p.nationality || '-').toUpperCase()}</div>
+           <div class="font-bold text-gray-800 dark:text-gray-200">${(p.nationality || "-").toUpperCase()}</div>
        </div>
    </div>`;
 
-   let isExpired = false;
-   if (minExpiry && p.passportExpiry) {
-       const expD = new Date(p.passportExpiry);
-       if (!isNaN(expD.getTime()) && expD < minExpiry) isExpired = true;
-   }
-   const expiryDisplay = p.passportExpiry ? (typeof formatDDMmmYYYY === 'function' ? formatDDMmmYYYY(p.passportExpiry) : new Date(p.passportExpiry).toLocaleDateString('en-GB')) : '-';
-   
-   html += `<div class="mt-2 p-2 rounded border ${isExpired ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}">
-       <span class="font-bold ${isExpired ? 'text-red-500' : 'text-gray-500'} uppercase text-xs block mb-0.5">Expiry Date</span>
-       <div class="font-bold ${isExpired ? 'text-red-700 dark:text-red-400' : 'text-gray-800 dark:text-gray-200'}">${expiryDisplay} ${isExpired ? '<span class="ml-2 px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[11px] uppercase tracking-wider">Expires within 6 months of trip</span>' : ''}</div>
+    let isExpired = false;
+    if (minExpiry && p.passportExpiry) {
+      const expD = new Date(p.passportExpiry);
+      if (!isNaN(expD.getTime()) && expD < minExpiry) isExpired = true;
+    }
+    const expiryDisplay = p.passportExpiry
+      ? typeof formatDDMmmYYYY === "function"
+        ? formatDDMmmYYYY(p.passportExpiry)
+        : new Date(p.passportExpiry).toLocaleDateString("en-GB")
+      : "-";
+
+    html += `<div class="mt-2 p-2 rounded border ${isExpired ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800" : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"}">
+       <span class="font-bold ${isExpired ? "text-red-500" : "text-gray-500"} uppercase text-xs block mb-0.5">Expiry Date</span>
+       <div class="font-bold ${isExpired ? "text-red-700 dark:text-red-400" : "text-gray-800 dark:text-gray-200"}">${expiryDisplay} ${isExpired ? '<span class="ml-2 px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[11px] uppercase tracking-wider">Expires within 6 months of trip</span>' : ""}</div>
    </div>`;
 
-   html += `</div></td></tr>`;
-});
+    html += `</div></td></tr>`;
+  });
 
-if (tbody) tbody.innerHTML = html || `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+  if (tbody)
+    tbody.innerHTML =
+      html ||
+      `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
 }

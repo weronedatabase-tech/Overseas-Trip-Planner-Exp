@@ -1,17 +1,17 @@
 let financeOptions = [];
 let pendingFinanceUpdates = new Map();
 let pendingReceiptUpdates = new Map();
-var globalFinanceRates = { "SGD": 1, "MYR": 0.28 };
+var globalFinanceRates = { SGD: 1, MYR: 0.28 };
 let globalReceipts = [];
 let financeConfig = {
-globalPaxMode: 'individual', 
-globalPaxCount: 0,
-ts: 0,
-customRates: {},
-finalOptionId: null,
-perPersonFee: 0,
-feeDeviations: {},
-feesReceived: {}
+  globalPaxMode: "individual",
+  globalPaxCount: 0,
+  ts: 0,
+  customRates: {},
+  finalOptionId: null,
+  perPersonFee: 0,
+  feeDeviations: {},
+  feesReceived: {},
 };
 let isFinanceCollapsed = false;
 let financeSyncTimeout = null;
@@ -19,53 +19,92 @@ let receiptSyncTimeout = null;
 let financePollInterval = null;
 let isFinanceSyncing = false;
 let isReceiptSyncing = false;
-let finSearchQuery = '';
+let finSearchQuery = "";
 
-let finDndState = { active: false, row: null, placeholder: null, container: null, optId: null, yOffset: 0, xOffset: 0 };
+let finDndState = {
+  active: false,
+  row: null,
+  placeholder: null,
+  container: null,
+  optId: null,
+  yOffset: 0,
+  xOffset: 0,
+};
 
 const defaultFinanceFields = [
-'Accommodation', 'Transport', 'Day 1 Lunch', 'Day 1 Dinner', 
-'Day 1 Activity', 'Day 2 Breakfast', 'Day 2 Lunch', 'Day 2 Activity', 
-'Logistics', 'First Aid', 'Miscellaneous', 'Recce', 'Insurance'
+  "Accommodation",
+  "Transport",
+  "Day 1 Lunch",
+  "Day 1 Dinner",
+  "Day 1 Activity",
+  "Day 2 Breakfast",
+  "Day 2 Lunch",
+  "Day 2 Activity",
+  "Logistics",
+  "First Aid",
+  "Miscellaneous",
+  "Recce",
+  "Insurance",
 ];
 
 function generateFinanceUUID() {
-return 'fin_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  return "fin_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
 }
 
 function getCurrencyOptions(selected) {
-const top = ["SGD", "MYR"];
-const rest = ["USD", "EUR", "GBP", "AUD", "IDR", "THB", "JPY", "KRW", "TWD", "PHP", "VND"];
-let html = '';
-top.forEach(c => html += `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`);
-html += `<option disabled>──────────</option>`;
-rest.forEach(c => html += `<option value="${c}" ${c === selected ? 'selected' : ''}>${c}</option>`);
-return html;
+  const top = ["SGD", "MYR"];
+  const rest = [
+    "USD",
+    "EUR",
+    "GBP",
+    "AUD",
+    "IDR",
+    "THB",
+    "JPY",
+    "KRW",
+    "TWD",
+    "PHP",
+    "VND",
+  ];
+  let html = "";
+  top.forEach(
+    (c) =>
+      (html += `<option value="${c}" ${c === selected ? "selected" : ""}>${c}</option>`),
+  );
+  html += `<option disabled>──────────</option>`;
+  rest.forEach(
+    (c) =>
+      (html += `<option value="${c}" ${c === selected ? "selected" : ""}>${c}</option>`),
+  );
+  return html;
 }
 
 function getActivePax(opt) {
-if (financeConfig.globalPaxMode === 'auto') {
-    return globalLogistics && globalLogistics.participants ? globalLogistics.participants.length : 0;
-} else if (financeConfig.globalPaxMode === 'manual') {
+  if (financeConfig.globalPaxMode === "auto") {
+    return globalLogistics && globalLogistics.participants
+      ? globalLogistics.participants.length
+      : 0;
+  } else if (financeConfig.globalPaxMode === "manual") {
     return parseInt(financeConfig.globalPaxCount) || 0;
-} else {
+  } else {
     return parseInt(opt.pax) || 0;
-}
+  }
 }
 
 function getActualRate(currency) {
-if (currency === 'SGD') return 1;
-if (financeConfig.customRates && financeConfig.customRates[currency]) {
+  if (currency === "SGD") return 1;
+  if (financeConfig.customRates && financeConfig.customRates[currency]) {
     return parseFloat(financeConfig.customRates[currency]);
-}
-return globalFinanceRates[currency] || 1;
+  }
+  return globalFinanceRates[currency] || 1;
 }
 
 async function buildFinanceUI() {
-    await new Promise(resolve => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 10));
 
-const el_tab_finance = document.getElementById('tab-finance');
-if(el_tab_finance) el_tab_finance.innerHTML = `
+  const el_tab_finance = document.getElementById("tab-finance");
+  if (el_tab_finance)
+    el_tab_finance.innerHTML = `
 <div class="sticky top-0 z-40 flex items-center justify-between bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 rounded-t-xl md:rounded-none pr-2">
     <div class="flex overflow-x-auto scrollbar-hide flex-1 px-2 pt-1">
         <button onclick="switchFinanceSubTab('finalized')" id="subTab-fin-finalized" class="px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none">1. Finalized Finances</button>
@@ -92,378 +131,508 @@ if(el_tab_finance) el_tab_finance.innerHTML = `
 <div id="fin-tab-fees" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
 `;
 
-const overlay = document.getElementById('finLoadingOverlay');
-if (overlay) overlay.classList.remove('hidden-force');
+  const overlay = document.getElementById("finLoadingOverlay");
+  if (overlay) overlay.classList.remove("hidden-force");
 
-try {
-    if(!globalLogistics) {
-        try {
-            const resLog = await apiCall('fetchLogistics'); 
-            globalLogistics = resLog;
-            if (typeof processDisplayNames === "function") processDisplayNames(globalLogistics.participants);
-            if (typeof applyGlobalSorting === "function") globalLogistics.participants = applyGlobalSorting(globalLogistics.participants);
-        } catch(e) {}
+  try {
+    if (!globalLogistics) {
+      try {
+        const resLog = await apiCall("fetchLogistics");
+        globalLogistics = resLog;
+        if (typeof processDisplayNames === "function")
+          processDisplayNames(globalLogistics.participants);
+        if (typeof applyGlobalSorting === "function")
+          globalLogistics.participants = applyGlobalSorting(
+            globalLogistics.participants,
+          );
+      } catch (e) {}
     }
 
     if (window.financeConfig && window.financeConfig.ts) {
-        financeConfig = window.financeConfig;
-        financeOptions = window.financeOptions;
-        globalFinanceRates = window.globalFinanceRates;
-        globalReceipts = window.globalReceipts;
-        
-        renderAllFinanceTabs();
-        startFinancePolling();
-        const loader = document.getElementById('finLoadingOverlay');
-        if(loader) loader.classList.add('hidden-force');
-        return;
+      financeConfig = window.financeConfig;
+      financeOptions = window.financeOptions;
+      globalFinanceRates = window.globalFinanceRates;
+      globalReceipts = window.globalReceipts;
+
+      renderAllFinanceTabs();
+      startFinancePolling();
+      const loader = document.getElementById("finLoadingOverlay");
+      if (loader) loader.classList.add("hidden-force");
+      return;
     }
 
     const [finRes, recRes] = await Promise.all([
-        apiCall('fetchFinance').catch(e => { console.warn("fetchFinance failed", e); return { data: { options: [], config: {} }, rates: { "SGD": 1 } }; }),
-        apiCall('fetchReceipts').catch(e => { console.warn("fetchReceipts failed", e); return { receipts: [] }; })
+      apiCall("fetchFinance").catch((e) => {
+        console.warn("fetchFinance failed", e);
+        return { data: { options: [], config: {} }, rates: { SGD: 1 } };
+      }),
+      apiCall("fetchReceipts").catch((e) => {
+        console.warn("fetchReceipts failed", e);
+        return { receipts: [] };
+      }),
     ]);
 
-    globalFinanceRates = finRes.rates || { "SGD": 1, "MYR": 0.28 };
+    globalFinanceRates = finRes.rates || { SGD: 1, MYR: 0.28 };
     globalReceipts = recRes.receipts || [];
-    
-    const rawOptions = finRes.data?.options || (Array.isArray(finRes.data) ? finRes.data : []);
-    financeConfig = finRes.data?.config || { globalPaxMode: 'individual', globalPaxCount: 0, ts: Date.now(), customRates: {}, finalOptionId: null, perPersonFee: 0, feeDeviations: {}, feesReceived: {}, payNowNumber: '', showPaymentSection: false };
-    
-    if(!financeConfig.customRates) financeConfig.customRates = {};
-    if(!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
-    if(!financeConfig.feesReceived) financeConfig.feesReceived = {};
-    
-    financeOptions = rawOptions.map(opt => {
-        if (opt.fields && !Array.isArray(opt.fields)) {
-            const newFields = [];
-            for (let [k, v] of Object.entries(opt.fields)) {
-                newFields.push({ id: generateFinanceUUID(), name: k, costType: 'total', tax: 0, cost: parseFloat(v.cost) || 0, currency: v.currency || 'MYR', remarks: v.remarks || '' });
-            }
-            opt.fields = newFields;
-        } else if (opt.fields) {
-            opt.fields.forEach(f => {
-                if (!f.costType) f.costType = 'total';
-                if (f.tax === undefined || isNaN(f.tax)) f.tax = 0;
-            });
+
+    const rawOptions =
+      finRes.data?.options || (Array.isArray(finRes.data) ? finRes.data : []);
+    financeConfig = finRes.data?.config || {
+      globalPaxMode: "individual",
+      globalPaxCount: 0,
+      ts: Date.now(),
+      customRates: {},
+      finalOptionId: null,
+      perPersonFee: 0,
+      feeDeviations: {},
+      feesReceived: {},
+      payNowNumber: "",
+      showPaymentSection: false,
+    };
+
+    if (!financeConfig.customRates) financeConfig.customRates = {};
+    if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+    if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+
+    financeOptions = rawOptions.map((opt) => {
+      if (opt.fields && !Array.isArray(opt.fields)) {
+        const newFields = [];
+        for (let [k, v] of Object.entries(opt.fields)) {
+          newFields.push({
+            id: generateFinanceUUID(),
+            name: k,
+            costType: "total",
+            tax: 0,
+            cost: parseFloat(v.cost) || 0,
+            currency: v.currency || "MYR",
+            remarks: v.remarks || "",
+          });
         }
-        if(!opt.displayCurrency) opt.displayCurrency = 'SGD';
-        if(!opt.pax) opt.pax = 0;
-        if(opt.widthSpan === undefined) opt.widthSpan = 2;
-        if(!opt.ts) opt.ts = Date.now();
-        if(opt._isCollapsed === undefined) opt._isCollapsed = isFinanceCollapsed;
-        return opt;
+        opt.fields = newFields;
+      } else if (opt.fields) {
+        opt.fields.forEach((f) => {
+          if (!f.costType) f.costType = "total";
+          if (f.tax === undefined || isNaN(f.tax)) f.tax = 0;
+        });
+      }
+      if (!opt.displayCurrency) opt.displayCurrency = "SGD";
+      if (!opt.pax) opt.pax = 0;
+      if (opt.widthSpan === undefined) opt.widthSpan = 2;
+      if (!opt.ts) opt.ts = Date.now();
+      if (opt._isCollapsed === undefined) opt._isCollapsed = isFinanceCollapsed;
+      return opt;
     });
-    
+
     window.financeConfig = financeConfig;
     window.financeOptions = financeOptions;
     window.globalFinanceRates = globalFinanceRates;
     window.globalReceipts = globalReceipts;
 
     if (financeOptions.length === 0) {
-        addFinanceOption("Option 1", false);
+      addFinanceOption("Option 1", false);
     }
-    
+
     renderAllFinanceTabs();
     startFinancePolling();
-} catch (e) {
+  } catch (e) {
     showToast("Failed to load finance data.", true);
-} finally {
-    if (overlay) overlay.classList.add('hidden-force');
-}
+  } finally {
+    if (overlay) overlay.classList.add("hidden-force");
+  }
 }
 
 function switchFinanceSubTab(tabId) {
-['finalized', 'options', 'receipts', 'fees'].forEach(id => { 
+  ["finalized", "options", "receipts", "fees"].forEach((id) => {
     const el = document.getElementById(`fin-tab-${id}`);
-    if(el) el.classList.add('hidden-force'); 
-    const btn = document.getElementById(`subTab-fin-${id}`); 
-    if(btn) { btn.classList.remove('border-primary', 'text-primary'); btn.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400'); } 
-}); 
-const targetEl = document.getElementById(`fin-tab-${tabId}`);
-if(targetEl) targetEl.classList.remove('hidden-force'); 
-const targetBtn = document.getElementById(`subTab-fin-${tabId}`); 
-if(targetBtn) { targetBtn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400'); targetBtn.classList.add('border-primary', 'text-primary'); } 
+    if (el) el.classList.add("hidden-force");
+    const btn = document.getElementById(`subTab-fin-${id}`);
+    if (btn) {
+      btn.classList.remove("border-primary", "text-primary");
+      btn.classList.add(
+        "border-transparent",
+        "text-gray-500",
+        "dark:text-gray-400",
+      );
+    }
+  });
+  const targetEl = document.getElementById(`fin-tab-${tabId}`);
+  if (targetEl) targetEl.classList.remove("hidden-force");
+  const targetBtn = document.getElementById(`subTab-fin-${tabId}`);
+  if (targetBtn) {
+    targetBtn.classList.remove(
+      "border-transparent",
+      "text-gray-500",
+      "dark:text-gray-400",
+    );
+    targetBtn.classList.add("border-primary", "text-primary");
+  }
 
-renderAllFinanceTabs();
+  renderAllFinanceTabs();
 }
 
 function renderAllFinanceTabs() {
-renderFinalizedFinances();
-renderFinanceOptions();
-renderReceiptsBrowser();
-renderFeeTracker();
+  renderFinalizedFinances();
+  renderFinanceOptions();
+  renderReceiptsBrowser();
+  renderFeeTracker();
 }
 
 function updateFinanceConfig(key, value) {
-if (key === 'globalPaxMode' || key === 'finalOptionId' || key === 'perPersonFee' || key === 'payNowNumber' || key === 'showPaymentSection') {
+  if (
+    key === "globalPaxMode" ||
+    key === "finalOptionId" ||
+    key === "perPersonFee" ||
+    key === "payNowNumber" ||
+    key === "showPaymentSection"
+  ) {
     financeConfig[key] = value;
-} else if (key === 'globalPaxCount') {
+  } else if (key === "globalPaxCount") {
     financeConfig[key] = parseInt(value) || 0;
-}
-queueFinanceUpdate();
-renderAllFinanceTabs();
+  }
+  queueFinanceUpdate();
+  renderAllFinanceTabs();
 }
 
 function setFinanceSyncButtonState(state) {
-const btn = document.getElementById('btn-sync-finance');
-if(!btn) return;
+  const btn = document.getElementById("btn-sync-finance");
+  if (!btn) return;
 
-const textSpan = btn.querySelector('.btn-text'); 
-const spinner = btn.querySelector('.btn-spinner');
+  const textSpan = btn.querySelector(".btn-text");
+  const spinner = btn.querySelector(".btn-spinner");
 
-btn.className = "text-xs md:text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
-spinner.className = "btn-spinner ml-1.5 !w-3 !h-3 hidden-force border-2"; 
+  btn.className =
+    "text-xs md:text-xs px-3 py-1.5 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0";
+  spinner.className = "btn-spinner ml-1.5 !w-3 !h-3 hidden-force border-2";
 
-if (state === 'loading') { 
-    btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 
-    textSpan.textContent = "Loading..."; 
-    spinner.classList.remove('hidden-force'); 
-    spinner.classList.add('spinner-primary'); 
-} else if(state === 'saving') { 
-    btn.classList.add('bg-yellow-50', 'text-yellow-700', 'border-yellow-200', 'dark:bg-yellow-900/30', 'dark:text-yellow-300', 'dark:border-yellow-800'); 
-    textSpan.textContent = "Saving..."; 
-    spinner.classList.remove('hidden-force'); 
-    spinner.classList.add('spinner-yellow'); 
-} else if (state === 'saved') { 
-    btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200', 'dark:bg-green-900/30', 'dark:text-green-300', 'dark:border-green-800'); 
-    textSpan.textContent = "Saved"; 
-} else if (state === 'error') { 
-    btn.classList.add('bg-red-50', 'text-red-700', 'border-red-200', 'dark:bg-red-900/30', 'dark:text-red-300', 'dark:border-red-800'); 
-    textSpan.textContent = "Error"; 
-}
+  if (state === "loading") {
+    btn.classList.add(
+      "bg-gray-100",
+      "text-gray-500",
+      "border-gray-200",
+      "dark:bg-gray-800",
+      "dark:text-gray-400",
+      "dark:border-gray-700",
+    );
+    textSpan.textContent = "Loading...";
+    spinner.classList.remove("hidden-force");
+    spinner.classList.add("spinner-primary");
+  } else if (state === "saving") {
+    btn.classList.add(
+      "bg-yellow-50",
+      "text-yellow-700",
+      "border-yellow-200",
+      "dark:bg-yellow-900/30",
+      "dark:text-yellow-300",
+      "dark:border-yellow-800",
+    );
+    textSpan.textContent = "Saving...";
+    spinner.classList.remove("hidden-force");
+    spinner.classList.add("spinner-yellow");
+  } else if (state === "saved") {
+    btn.classList.add(
+      "bg-green-50",
+      "text-green-700",
+      "border-green-200",
+      "dark:bg-green-900/30",
+      "dark:text-green-300",
+      "dark:border-green-800",
+    );
+    textSpan.textContent = "Saved";
+  } else if (state === "error") {
+    btn.classList.add(
+      "bg-red-50",
+      "text-red-700",
+      "border-red-200",
+      "dark:bg-red-900/30",
+      "dark:text-red-300",
+      "dark:border-red-800",
+    );
+    textSpan.textContent = "Error";
+  }
 }
 
 function queueFinanceUpdate(optId = null) {
-if (optId) {
-    const opt = financeOptions.find(o => o.id === optId);
+  if (optId) {
+    const opt = financeOptions.find((o) => o.id === optId);
     if (opt) {
-        opt.ts = Date.now();
-        pendingFinanceUpdates.set(optId, opt);
+      opt.ts = Date.now();
+      pendingFinanceUpdates.set(optId, opt);
     }
-}
-financeConfig.ts = Date.now();
-setFinanceSyncButtonState('saving');
-if (financeSyncTimeout) clearTimeout(financeSyncTimeout);
-financeSyncTimeout = setTimeout(() => { executeFinanceSync(); }, 1500); 
+  }
+  financeConfig.ts = Date.now();
+  setFinanceSyncButtonState("saving");
+  if (financeSyncTimeout) clearTimeout(financeSyncTimeout);
+  financeSyncTimeout = setTimeout(() => {
+    executeFinanceSync();
+  }, 1500);
 }
 
 async function executeFinanceSync() {
-if (pendingFinanceUpdates.size === 0 && !financeConfig.ts) return;
+  if (pendingFinanceUpdates.size === 0 && !financeConfig.ts) return;
 
-isFinanceSyncing = true;
-setFinanceSyncButtonState('saving');
+  isFinanceSyncing = true;
+  setFinanceSyncButtonState("saving");
 
-const updates = Array.from(pendingFinanceUpdates.values());
-pendingFinanceUpdates.clear();
+  const updates = Array.from(pendingFinanceUpdates.values());
+  pendingFinanceUpdates.clear();
 
-const payload = { updates: updates, config: financeConfig };
+  const payload = { updates: updates, config: financeConfig };
 
-try {
-    const res = await apiCall('saveFinance', { payload: payload });
+  try {
+    const res = await apiCall("saveFinance", { payload: payload });
     if (res.data) {
-        if (res.data.config && res.data.config.ts > financeConfig.ts) {
-            financeConfig = res.data.config;
-            if(!financeConfig.customRates) financeConfig.customRates = {};
-            if(!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
-            if(!financeConfig.feesReceived) financeConfig.feesReceived = {};
-        }
-        
-        if (res.data.options && Array.isArray(res.data.options)) {
-            res.data.options.forEach(sOpt => {
-                let lIdx = financeOptions.findIndex(o => o.id === sOpt.id);
-                if (lIdx === -1) {
-                    sOpt._isCollapsed = isFinanceCollapsed;
-                    financeOptions.push(sOpt);
-                } else {
-                    let lOpt = financeOptions[lIdx];
-                    if (sOpt.ts > (lOpt.ts || 0) && !pendingFinanceUpdates.has(sOpt.id)) {
-                        sOpt._isCollapsed = lOpt._isCollapsed; 
-                        financeOptions[lIdx] = sOpt;
-                    }
-                }
-            });
+      if (res.data.config && res.data.config.ts > financeConfig.ts) {
+        financeConfig = res.data.config;
+        if (!financeConfig.customRates) financeConfig.customRates = {};
+        if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+        if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+      }
 
-            const serverIds = res.data.options.map(o => o.id);
-            financeOptions = financeOptions.filter(o => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id));
-        }
+      if (res.data.options && Array.isArray(res.data.options)) {
+        res.data.options.forEach((sOpt) => {
+          let lIdx = financeOptions.findIndex((o) => o.id === sOpt.id);
+          if (lIdx === -1) {
+            sOpt._isCollapsed = isFinanceCollapsed;
+            financeOptions.push(sOpt);
+          } else {
+            let lOpt = financeOptions[lIdx];
+            if (
+              sOpt.ts > (lOpt.ts || 0) &&
+              !pendingFinanceUpdates.has(sOpt.id)
+            ) {
+              sOpt._isCollapsed = lOpt._isCollapsed;
+              financeOptions[lIdx] = sOpt;
+            }
+          }
+        });
+
+        const serverIds = res.data.options.map((o) => o.id);
+        financeOptions = financeOptions.filter(
+          (o) => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id),
+        );
+      }
     }
-    setFinanceSyncButtonState('saved');
-    if (!finDndState.active && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-        renderAllFinanceTabs();
+    setFinanceSyncButtonState("saved");
+    if (
+      !finDndState.active &&
+      document.activeElement.tagName !== "INPUT" &&
+      document.activeElement.tagName !== "TEXTAREA"
+    ) {
+      renderAllFinanceTabs();
     }
-} catch (e) {
-    setFinanceSyncButtonState('error');
-    updates.forEach(u => pendingFinanceUpdates.set(u.id, u));
-} finally {
+  } catch (e) {
+    setFinanceSyncButtonState("error");
+    updates.forEach((u) => pendingFinanceUpdates.set(u.id, u));
+  } finally {
     isFinanceSyncing = false;
-}
+  }
 }
 
 function queueReceiptUpdate(receipt) {
-receipt.ts = Date.now();
-pendingReceiptUpdates.set(receipt.id, receipt);
-setFinanceSyncButtonState('saving');
-if (receiptSyncTimeout) clearTimeout(receiptSyncTimeout);
-receiptSyncTimeout = setTimeout(() => { executeReceiptSync(); }, 1500); 
+  receipt.ts = Date.now();
+  pendingReceiptUpdates.set(receipt.id, receipt);
+  setFinanceSyncButtonState("saving");
+  if (receiptSyncTimeout) clearTimeout(receiptSyncTimeout);
+  receiptSyncTimeout = setTimeout(() => {
+    executeReceiptSync();
+  }, 1500);
 }
 
 async function executeReceiptSync() {
-if (pendingReceiptUpdates.size === 0) return;
-isReceiptSyncing = true;
-setFinanceSyncButtonState('saving');
-const updates = Array.from(pendingReceiptUpdates.values());
-pendingReceiptUpdates.clear();
+  if (pendingReceiptUpdates.size === 0) return;
+  isReceiptSyncing = true;
+  setFinanceSyncButtonState("saving");
+  const updates = Array.from(pendingReceiptUpdates.values());
+  pendingReceiptUpdates.clear();
 
-try {
-    const res = await apiCall('syncReceipts', { updates: updates });
+  try {
+    const res = await apiCall("syncReceipts", { updates: updates });
     if (res.receipts) globalReceipts = res.receipts;
-    setFinanceSyncButtonState('saved');
+    setFinanceSyncButtonState("saved");
     renderReceiptsBrowser();
     renderFinalizedFinances();
-} catch(e) {
-    setFinanceSyncButtonState('error');
-    updates.forEach(u => pendingReceiptUpdates.set(u.id, u));
-} finally {
+  } catch (e) {
+    setFinanceSyncButtonState("error");
+    updates.forEach((u) => pendingReceiptUpdates.set(u.id, u));
+  } finally {
     isReceiptSyncing = false;
-}
+  }
 }
 
 function startFinancePolling() {
-if (financePollInterval) clearInterval(financePollInterval);
+  if (financePollInterval) clearInterval(financePollInterval);
 
-financePollInterval = setInterval(async () => {
-    const tab = document.getElementById('tab-finance');
-    if(!tab || tab.classList.contains('hidden-force') || isFinanceSyncing || isReceiptSyncing || finDndState.active) return;
-    
+  financePollInterval = setInterval(async () => {
+    const tab = document.getElementById("tab-finance");
+    if (
+      !tab ||
+      tab.classList.contains("hidden-force") ||
+      isFinanceSyncing ||
+      isReceiptSyncing ||
+      finDndState.active
+    )
+      return;
+
     const fetchStartTime = Date.now();
 
     try {
-        const [finRes, recRes] = await Promise.all([
-        apiCall('fetchFinance').catch(e => { console.warn("fetchFinance failed", e); return { data: { options: [], config: {} }, rates: { "SGD": 1 } }; }),
-        apiCall('fetchReceipts').catch(e => { console.warn("fetchReceipts failed", e); return { receipts: [] }; })
-    ]);
+      const [finRes, recRes] = await Promise.all([
+        apiCall("fetchFinance").catch((e) => {
+          console.warn("fetchFinance failed", e);
+          return { data: { options: [], config: {} }, rates: { SGD: 1 } };
+        }),
+        apiCall("fetchReceipts").catch((e) => {
+          console.warn("fetchReceipts failed", e);
+          return { receipts: [] };
+        }),
+      ]);
 
-        if (lastLocalChange > fetchStartTime) return; 
+      if (lastLocalChange > fetchStartTime) return;
 
-        let hasChanges = false;
-        
-        if (recRes.receipts) {
-            globalReceipts = recRes.receipts;
-            hasChanges = true;
+      let hasChanges = false;
+
+      if (recRes.receipts) {
+        globalReceipts = recRes.receipts;
+        hasChanges = true;
+      }
+
+      if (finRes.data) {
+        if (
+          finRes.data.config &&
+          finRes.data.config.ts > (financeConfig.ts || 0)
+        ) {
+          financeConfig = finRes.data.config;
+          if (!financeConfig.customRates) financeConfig.customRates = {};
+          if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+          if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+          hasChanges = true;
         }
 
-        if (finRes.data) {
-            if (finRes.data.config && finRes.data.config.ts > (financeConfig.ts || 0)) {
-                financeConfig = finRes.data.config;
-                if(!financeConfig.customRates) financeConfig.customRates = {};
-                if(!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
-                if(!financeConfig.feesReceived) financeConfig.feesReceived = {};
+        if (finRes.data.options && Array.isArray(finRes.data.options)) {
+          finRes.data.options.forEach((sOpt) => {
+            let lIdx = financeOptions.findIndex((o) => o.id === sOpt.id);
+            if (lIdx === -1) {
+              sOpt._isCollapsed = isFinanceCollapsed;
+              financeOptions.push(sOpt);
+              hasChanges = true;
+            } else {
+              let lOpt = financeOptions[lIdx];
+              if (
+                sOpt.ts > (lOpt.ts || 0) &&
+                !pendingFinanceUpdates.has(sOpt.id)
+              ) {
+                sOpt._isCollapsed = lOpt._isCollapsed;
+                financeOptions[lIdx] = sOpt;
                 hasChanges = true;
+              }
             }
-            
-            if (finRes.data.options && Array.isArray(finRes.data.options)) {
-                finRes.data.options.forEach(sOpt => {
-                    let lIdx = financeOptions.findIndex(o => o.id === sOpt.id);
-                    if (lIdx === -1) {
-                        sOpt._isCollapsed = isFinanceCollapsed;
-                        financeOptions.push(sOpt);
-                        hasChanges = true;
-                    } else {
-                        let lOpt = financeOptions[lIdx];
-                        if (sOpt.ts > (lOpt.ts || 0) && !pendingFinanceUpdates.has(sOpt.id)) {
-                            sOpt._isCollapsed = lOpt._isCollapsed;
-                            financeOptions[lIdx] = sOpt;
-                            hasChanges = true;
-                        }
-                    }
-                });
-                const serverIds = finRes.data.options.map(o => o.id);
-                const initialLength = financeOptions.length;
-                financeOptions = financeOptions.filter(o => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id));
-                if (financeOptions.length !== initialLength) hasChanges = true;
-            }
+          });
+          const serverIds = finRes.data.options.map((o) => o.id);
+          const initialLength = financeOptions.length;
+          financeOptions = financeOptions.filter(
+            (o) => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id),
+          );
+          if (financeOptions.length !== initialLength) hasChanges = true;
         }
+      }
 
-        if (hasChanges && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
-            renderAllFinanceTabs();
-            if (pendingFinanceUpdates.size === 0 && pendingReceiptUpdates.size === 0) setFinanceSyncButtonState('saved');
-        }
-    } catch (e) { }
-}, 10000);
+      if (
+        hasChanges &&
+        document.activeElement.tagName !== "INPUT" &&
+        document.activeElement.tagName !== "TEXTAREA"
+      ) {
+        renderAllFinanceTabs();
+        if (
+          pendingFinanceUpdates.size === 0 &&
+          pendingReceiptUpdates.size === 0
+        )
+          setFinanceSyncButtonState("saved");
+      }
+    } catch (e) {}
+  }, 10000);
 }
 
 async function manualFinanceSync(btn) {
-setFinanceSyncButtonState('loading');
-try {
-    if (pendingFinanceUpdates.size > 0 || financeConfig.ts) await executeFinanceSync();
+  setFinanceSyncButtonState("loading");
+  try {
+    if (pendingFinanceUpdates.size > 0 || financeConfig.ts)
+      await executeFinanceSync();
     if (pendingReceiptUpdates.size > 0) await executeReceiptSync();
     showToast("Refreshed from server!");
-} catch(e) {
+  } catch (e) {
     showToast("Sync failed.", true);
-}
+  }
 }
 
 // ==========================================
 // TAB 1: FINALIZED FINANCES
 // ==========================================
 function renderFinalizedFinances() {
-const cont = document.getElementById('fin-tab-finalized');
-if(!cont || cont.classList.contains('hidden-force')) return;
+  const cont = document.getElementById("fin-tab-finalized");
+  if (!cont || cont.classList.contains("hidden-force")) return;
 
-if(!financeConfig.finalOptionId) {
-    if (cont) cont.innerHTML = `
+  if (!financeConfig.finalOptionId) {
+    if (cont)
+      cont.innerHTML = `
     <div class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
     </div>`;
     return;
-}
+  }
 
-const opt = financeOptions.find(o => o.id === financeConfig.finalOptionId && !o.isDeleted);
-if(!opt) {
-    if (cont) cont.innerHTML = `
+  const opt = financeOptions.find(
+    (o) => o.id === financeConfig.finalOptionId && !o.isDeleted,
+  );
+  if (!opt) {
+    if (cont)
+      cont.innerHTML = `
     <div class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
     </div>`;
     return;
-}
+  }
 
-const pax = getActivePax(opt);
-let grandPlannedSgd = 0;
-let grandActualSgd = 0;
+  const pax = getActivePax(opt);
+  let grandPlannedSgd = 0;
+  let grandActualSgd = 0;
 
-let rowsHtml = '';
+  let rowsHtml = "";
 
-opt.fields.forEach(f => {
+  opt.fields.forEach((f) => {
     const rate = getActualRate(f.currency);
     const baseCost = parseFloat(f.cost) || 0;
     const taxPct = parseFloat(f.tax) || 0;
-    const rawCost = f.costType === 'per_pax' ? (baseCost * pax) : baseCost;
-    const plannedSgd = (rawCost * (1 + (taxPct / 100))) * rate;
-    
+    const rawCost = f.costType === "per_pax" ? baseCost * pax : baseCost;
+    const plannedSgd = rawCost * (1 + taxPct / 100) * rate;
+
     const actualSgd = globalReceipts
-        .filter(r => r.categoryId === f.id && !r.isDeleted)
-        .reduce((sum, r) => sum + r.sgdAmount, 0);
+      .filter((r) => r.categoryId === f.id && !r.isDeleted)
+      .reduce((sum, r) => sum + r.sgdAmount, 0);
 
     grandPlannedSgd += plannedSgd;
     grandActualSgd += actualSgd;
 
     const diff = plannedSgd - actualSgd;
-    const diffClass = diff < 0 ? 'text-rose-600 dark:text-rose-500' : 'text-purple-600 dark:text-purple-400';
+    const diffClass =
+      diff < 0
+        ? "text-rose-600 dark:text-rose-500"
+        : "text-purple-600 dark:text-purple-400";
 
     rowsHtml += `
     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
         <td class="py-1.5 px-2 text-sm font-bold text-gray-900 dark:text-gray-100">${f.name}</td>
-        <td class="py-1.5 px-2 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-        <td class="py-1.5 px-2 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
-        <td class="py-1.5 px-2 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? '+' : ''}${diff.toLocaleString('en-US', {minimumFractionDigits:2})}</td>
+        <td class="py-1.5 px-2 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-1.5 px-2 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-1.5 px-2 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
     </tr>`;
-});
+  });
 
-if (cont) cont.innerHTML = `
+  if (cont)
+    cont.innerHTML = `
 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
     <div class="bg-green-50 dark:bg-green-900/20 p-4 border-b-2 border-green-100 dark:border-green-800 flex justify-between items-center">
         <div>
@@ -478,19 +647,19 @@ if (cont) cont.innerHTML = `
     <div class="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700 bg-gray-50/50 dark:bg-gray-950/50 border-b-2 border-gray-200 dark:border-gray-700">
         <div class="p-4 text-center flex flex-col">
             <span class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Planned</span>
-            <span class="text-lg font-black text-gray-800 dark:text-gray-200">SGD ${grandPlannedSgd.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+            <span class="text-lg font-black text-gray-800 dark:text-gray-200">SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
         <div class="p-4 text-center flex flex-col">
             <span class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1">Total Actual</span>
-            <span class="text-lg font-black text-green-700 dark:text-green-400">SGD ${grandActualSgd.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+            <span class="text-lg font-black text-green-700 dark:text-green-400">SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
         <div class="p-4 text-center flex flex-col">
             <span class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Variance</span>
-            <span class="text-lg font-black ${grandPlannedSgd - grandActualSgd < 0 ? 'text-rose-600 dark:text-rose-500' : 'text-purple-600 dark:text-purple-400'}">${grandPlannedSgd - grandActualSgd > 0 ? '+' : ''}${(grandPlannedSgd - grandActualSgd).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+            <span class="text-lg font-black ${grandPlannedSgd - grandActualSgd < 0 ? "text-rose-600 dark:text-rose-500" : "text-purple-600 dark:text-purple-400"}">${grandPlannedSgd - grandActualSgd > 0 ? "+" : ""}${(grandPlannedSgd - grandActualSgd).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
         <div class="p-4 text-center flex flex-col">
             <span class="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">Actual Per Pax</span>
-            <span class="text-lg font-black text-emerald-700 dark:text-emerald-400">SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+            <span class="text-lg font-black text-emerald-700 dark:text-emerald-400">SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
     </div>
 
@@ -517,27 +686,27 @@ if (cont) cont.innerHTML = `
 // TAB 2: TRIP OPTIONS (SANDBOX)
 // ==========================================
 function renderFinanceOptions() {
-const cont = document.getElementById('fin-tab-options');
-if(!cont || cont.classList.contains('hidden-force')) return;
+  const cont = document.getElementById("fin-tab-options");
+  if (!cont || cont.classList.contains("hidden-force")) return;
 
-const autoPax = globalLogistics?.participants?.length || 0;
+  const autoPax = globalLogistics?.participants?.length || 0;
 
-let globalSettingsHtml = `
+  let globalSettingsHtml = `
 <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-wrap justify-between items-center gap-3 mb-4">
     <div class="flex flex-wrap items-center gap-3 flex-1">
         <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded px-2 py-1">
             <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Pax Mode:</label>
             <select onchange="updateFinanceConfig('globalPaxMode', this.value)" class="text-sm font-bold bg-transparent text-gray-900 dark:text-white focus:outline-none cursor-pointer">
-                <option value="individual" ${financeConfig.globalPaxMode === 'individual' ? 'selected' : ''}>Manual Override (Individual Options)</option>
-                <option value="manual" ${financeConfig.globalPaxMode === 'manual' ? 'selected' : ''}>Manual Override (All Options)</option>
-                <option value="auto" ${financeConfig.globalPaxMode === 'auto' ? 'selected' : ''}>Total Pax based on Sign up</option>
+                <option value="individual" ${financeConfig.globalPaxMode === "individual" ? "selected" : ""}>Manual Override (Individual Options)</option>
+                <option value="manual" ${financeConfig.globalPaxMode === "manual" ? "selected" : ""}>Manual Override (All Options)</option>
+                <option value="auto" ${financeConfig.globalPaxMode === "auto" ? "selected" : ""}>Total Pax based on Sign up</option>
             </select>
         </div>
-        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== 'manual' ? 'hidden-force' : ''}">
+        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== "manual" ? "hidden-force" : ""}">
             <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Global Pax:</label>
             <input type="number" min="0" value="${financeConfig.globalPaxCount}" onchange="updateFinanceConfig('globalPaxCount', this.value)" class="hide-spinners w-16 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-center">
         </div>
-        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== 'auto' ? 'hidden-force' : ''}">
+        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== "auto" ? "hidden-force" : ""}">
             <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Active Pax:</label>
             <span class="text-xs font-black text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded border-2 border-green-200 dark:border-green-800 shadow-md">${autoPax}</span>
         </div>
@@ -548,71 +717,89 @@ let globalSettingsHtml = `
             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Rates
         </button>
         <button onclick="toggleFinanceCollapse()" class="text-xs md:text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 px-2.5 py-1.5 rounded shadow-md whitespace-nowrap shrink-0 transition focus:outline-none">
-            ${isFinanceCollapsed ? 'Expand All' : 'Collapse All'}
+            ${isFinanceCollapsed ? "Expand All" : "Collapse All"}
         </button>
     </div>
 </div>`;
 
-let html = '<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 w-full items-start pb-4 max-w-full mx-auto">';
+  let html =
+    '<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 w-full items-start pb-4 max-w-full mx-auto">';
 
-const activeOptions = financeOptions.filter(o => !o.isDeleted);
+  const activeOptions = financeOptions.filter((o) => !o.isDeleted);
 
-if (activeOptions.length === 0) {
+  if (activeOptions.length === 0) {
     html += `<div class="w-full col-span-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 pt-10"><p class="font-bold text-sm">No options created yet.</p></div>`;
-} else {
-    activeOptions.forEach(opt => {
-        const pax = getActivePax(opt);
-        let totalSgd = 0;
-        opt.fields.forEach(f => {
-            const rate = getActualRate(f.currency);
-            const baseCost = parseFloat(f.cost) || 0;
-            const taxPct = parseFloat(f.tax) || 0;
-            const rawCost = f.costType === 'per_pax' ? (baseCost * pax) : baseCost;
-            totalSgd += (rawCost * (1 + (taxPct / 100))) * rate;
-        });
-        
-        const dispRate = getActualRate(opt.displayCurrency);
-        const totalDisp = totalSgd / dispRate;
-        const cppDisp = pax > 0 ? totalDisp / pax : 0;
-        const paxInputDisabled = financeConfig.globalPaxMode !== 'individual';
-        const isLocalCollapsed = opt._isCollapsed !== undefined ? opt._isCollapsed : false;
-        const spanClass = opt.widthSpan === 3 ? 'col-span-1 lg:col-span-2 xl:col-span-3' : (opt.widthSpan === 2 ? 'col-span-1 lg:col-span-2 xl:col-span-2' : 'col-span-1');
-        
-        const isFinal = financeConfig.finalOptionId === opt.id;
-        const finalBadge = isFinal ? `<span class="bg-green-100 text-green-700 border-2 border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800 text-[11px] font-black px-1.5 py-0.5 rounded shadow-md uppercase tracking-widest shrink-0">FINALIZED</span>` : '';
+  } else {
+    activeOptions.forEach((opt) => {
+      const pax = getActivePax(opt);
+      let totalSgd = 0;
+      opt.fields.forEach((f) => {
+        const rate = getActualRate(f.currency);
+        const baseCost = parseFloat(f.cost) || 0;
+        const taxPct = parseFloat(f.tax) || 0;
+        const rawCost = f.costType === "per_pax" ? baseCost * pax : baseCost;
+        totalSgd += rawCost * (1 + taxPct / 100) * rate;
+      });
 
-        html += `
-        <div class="w-full shrink-0 flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-md border ${isFinal ? 'border-2 border-green-400 dark:border-green-600 shadow-[0_0_15px_rgba(74,222,128,0.2)]' : 'border-2 border-gray-200 dark:border-gray-700'} overflow-hidden h-fit transition-all duration-300 ${spanClass}">
-            <div class="p-2 md:p-3 ${isFinal ? 'bg-green-50/50 dark:bg-green-900/20' : 'bg-gray-50/80 dark:bg-gray-900/50'} flex justify-between items-center gap-2 shrink-0 ${isLocalCollapsed ? '' : 'border-b-2 border-gray-200 dark:border-gray-700'}">
+      const dispRate = getActualRate(opt.displayCurrency);
+      const totalDisp = totalSgd / dispRate;
+      const cppDisp = pax > 0 ? totalDisp / pax : 0;
+      const paxInputDisabled = financeConfig.globalPaxMode !== "individual";
+      const isLocalCollapsed =
+        opt._isCollapsed !== undefined ? opt._isCollapsed : false;
+      const spanClass =
+        opt.widthSpan === 3
+          ? "col-span-1 lg:col-span-2 xl:col-span-3"
+          : opt.widthSpan === 2
+            ? "col-span-1 lg:col-span-2 xl:col-span-2"
+            : "col-span-1";
+
+      const isFinal = financeConfig.finalOptionId === opt.id;
+      const finalBadge = isFinal
+        ? `<span class="bg-green-100 text-green-700 border-2 border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800 text-[11px] font-black px-1.5 py-0.5 rounded shadow-md uppercase tracking-widest shrink-0">FINALIZED</span>`
+        : "";
+
+      html += `
+        <div class="w-full shrink-0 flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-md border ${isFinal ? "border-2 border-green-400 dark:border-green-600 shadow-[0_0_15px_rgba(74,222,128,0.2)]" : "border-2 border-gray-200 dark:border-gray-700"} overflow-hidden h-fit transition-all duration-300 ${spanClass}">
+            <div class="p-2 md:p-3 ${isFinal ? "bg-green-50/50 dark:bg-green-900/20" : "bg-gray-50/80 dark:bg-gray-900/50"} flex justify-between items-center gap-2 shrink-0 ${isLocalCollapsed ? "" : "border-b-2 border-gray-200 dark:border-gray-700"}">
                 <div class="flex items-center flex-1 min-w-0 gap-2">
                     <input type="text" value="${opt.title}" onchange="updateFinanceOption('${opt.id}', 'title', this.value)" class="font-black text-base md:text-lg bg-transparent border-b border-transparent focus:border-primary outline-none text-gray-900 dark:text-white flex-1 min-w-0 px-1 transition pb-0.5">
                     ${finalBadge}
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="updateFinanceConfig('finalOptionId', '${isFinal ? '' : opt.id}')" class="${isFinal ? 'text-gray-500 hover:text-red-500 bg-gray-100 hover:bg-red-50' : 'text-green-600 hover:text-white hover:bg-green-500 bg-green-50'} dark:bg-gray-800 px-2 py-1 rounded text-xs font-bold border transition focus:outline-none shadow-md" title="${isFinal ? 'Remove Final Status' : 'Mark as Finalized Budget'}">
-                        ${isFinal ? 'Unfinalize' : 'Make Final'}
+                    <button onclick="updateFinanceConfig('finalOptionId', '${isFinal ? "" : opt.id}')" class="${isFinal ? "text-gray-500 hover:text-red-500 bg-gray-100 hover:bg-red-50" : "text-green-600 hover:text-white hover:bg-green-500 bg-green-50"} dark:bg-gray-800 px-2 py-1 rounded text-xs font-bold border transition focus:outline-none shadow-md" title="${isFinal ? "Remove Final Status" : "Mark as Finalized Budget"}">
+                        ${isFinal ? "Unfinalize" : "Make Final"}
                     </button>
                     <button onclick="cycleFinanceOptionWidth('${opt.id}')" class="hidden lg:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 md:p-1.5 rounded transition bg-gray-100/50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 focus:outline-none shadow-md" title="Toggle Width">
                         <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8L4 12l4 4m8-8l4 4-4 4"></path></svg>
                     </button>
                     <button onclick="toggleIndividualFinanceCollapse('${opt.id}')" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 md:p-1.5 rounded transition bg-gray-100/50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 focus:outline-none shadow-md" title="Collapse/Expand">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 transform transition-transform ${isLocalCollapsed ? '' : 'rotate-180'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
+                        <svg class="w-4 h-4 md:w-5 md:h-5 transform transition-transform ${isLocalCollapsed ? "" : "rotate-180"}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
                     </button>
                     <button onclick="duplicateFinanceOption('${opt.id}')" class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 p-1.5 rounded transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
                     <button onclick="removeFinanceOption('${opt.id}')" class="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 p-1.5 rounded transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
                 </div>
             </div>
             
-            <div class="${isLocalCollapsed ? 'hidden-force' : 'flex flex-col'}">
+            <div class="${isLocalCollapsed ? "hidden-force" : "flex flex-col"}">
                 <div class="px-2 md:px-3 py-2 bg-white dark:bg-gray-800 border-b-2 border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Pax Count ${paxInputDisabled ? '(Global)' : ''}</label>
-                    <input type="number" min="0" value="${pax}" ${paxInputDisabled ? 'disabled' : ''} onchange="updateFinanceOption('${opt.id}', 'pax', this.value)" class="hide-spinners w-20 text-xs font-bold px-2 py-1 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary ${paxInputDisabled ? 'opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-500' : ''}">
+                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Pax Count ${paxInputDisabled ? "(Global)" : ""}</label>
+                    <input type="number" min="0" value="${pax}" ${paxInputDisabled ? "disabled" : ""} onchange="updateFinanceOption('${opt.id}', 'pax', this.value)" class="hide-spinners w-20 text-xs font-bold px-2 py-1 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary ${paxInputDisabled ? "opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-500" : ""}">
                 </div>
                 
                 <div class="fin-cat-container p-2 bg-white dark:bg-gray-800 flex flex-col gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar" data-opt-id="${opt.id}">
-                    ${opt.fields.map(f => {
-                        const costTypeColorClass = f.costType === 'per_pax' ? 'bg-purple-100 text-purple-900 border-purple-400 focus:border-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700' : 'bg-green-100 text-green-900 border-green-400 focus:border-green-500 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700';
-                        const displayCostStr = parseFloat(f.cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    ${opt.fields
+                      .map((f) => {
+                        const costTypeColorClass =
+                          f.costType === "per_pax"
+                            ? "bg-purple-100 text-purple-900 border-purple-400 focus:border-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700"
+                            : "bg-green-100 text-green-900 border-green-400 focus:border-green-500 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700";
+                        const displayCostStr = parseFloat(
+                          f.cost || 0,
+                        ).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        });
                         return `
                         <div class="fin-cat-row flex flex-col w-full bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition shadow-md" data-field-id="${f.id}">
                             <div class="flex items-center gap-2 w-full mb-1">
@@ -622,60 +809,77 @@ if (activeOptions.length === 0) {
                             </div>
                             <div class="flex items-center flex-wrap gap-2 pl-[42px] w-full">
                                 <select onchange="updateFinanceField('${opt.id}', '${f.id}', 'currency', this.value)" class="w-[65px] shrink-0 bg-white dark:bg-gray-950 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded py-1.5 pl-1.5 pr-0 outline-none focus:border-primary shadow-md cursor-pointer">${getCurrencyOptions(f.currency)}</select>
-                                <select onchange="updateFinanceField('${opt.id}', '${f.id}', 'costType', this.value)" class="w-[70px] shrink-0 text-xs font-extrabold border rounded py-1.5 px-1 outline-none shadow-md cursor-pointer transition-colors ${costTypeColorClass}"><option value="total" ${f.costType !== 'per_pax' ? 'selected' : ''}>Total</option><option value="per_pax" ${f.costType === 'per_pax' ? 'selected' : ''}>/Pax</option></select>
+                                <select onchange="updateFinanceField('${opt.id}', '${f.id}', 'costType', this.value)" class="w-[70px] shrink-0 text-xs font-extrabold border rounded py-1.5 px-1 outline-none shadow-md cursor-pointer transition-colors ${costTypeColorClass}"><option value="total" ${f.costType !== "per_pax" ? "selected" : ""}>Total</option><option value="per_pax" ${f.costType === "per_pax" ? "selected" : ""}>/Pax</option></select>
                                 <input type="text" value="${displayCostStr}" oninput="formatMoneyInput(this, false); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)" onblur="formatMoneyInput(this, true); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)" class="w-[100px] shrink-0 bg-white dark:bg-gray-950 text-sm font-bold border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:border-primary shadow-md text-right" placeholder="0.00">
-                                <div class="flex items-center gap-1 w-[70px] shrink-0 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 outline-none focus-within:border-primary shadow-md"><span class="text-xs font-bold text-gray-400">+</span><input type="number" step="0.1" min="0" value="${f.tax || ''}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'tax', this.value)" class="hide-spinners w-full bg-transparent text-sm font-bold outline-none text-right" placeholder="Tax"><span class="text-xs font-bold text-gray-500">%</span></div>
+                                <div class="flex items-center gap-1 w-[70px] shrink-0 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 outline-none focus-within:border-primary shadow-md"><span class="text-xs font-bold text-gray-400">+</span><input type="number" step="0.1" min="0" value="${f.tax || ""}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'tax', this.value)" class="hide-spinners w-full bg-transparent text-sm font-bold outline-none text-right" placeholder="Tax"><span class="text-xs font-bold text-gray-500">%</span></div>
                                 <input type="text" value="${f.remarks}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'remarks', this.value)" class="flex-1 min-w-[120px] bg-transparent text-xs font-medium text-gray-500 dark:text-gray-400 outline-none px-1 border-b border-transparent focus:border-primary transition" placeholder="Remarks...">
                             </div>
                         </div>`;
-                    }).join('')}
+                      })
+                      .join("")}
                     <div class="pt-2 px-1">
                         <button onclick="addFinanceCategory('${opt.id}')" class="w-full py-2 border border-dashed border-green-300 dark:border-green-800 rounded-lg text-green-600 dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-green-900/20 transition">+ Add Custom Category</button>
                     </div>
                 </div>
             </div>
             
-            <div class="p-2 md:p-3 bg-green-50/80 dark:bg-green-900/20 shrink-0 flex flex-col gap-1.5 ${isLocalCollapsed ? 'border-t-2 border-gray-200 dark:border-gray-700' : 'border-t-2 border-green-100 dark:border-green-900/50'}">
-                <div class="${isLocalCollapsed ? 'hidden-force' : 'flex'} justify-between items-center pb-2 border-b-2 border-green-200/50 dark:border-green-800/50 mb-1">
+            <div class="p-2 md:p-3 bg-green-50/80 dark:bg-green-900/20 shrink-0 flex flex-col gap-1.5 ${isLocalCollapsed ? "border-t-2 border-gray-200 dark:border-gray-700" : "border-t-2 border-green-100 dark:border-green-900/50"}">
+                <div class="${isLocalCollapsed ? "hidden-force" : "flex"} justify-between items-center pb-2 border-b-2 border-green-200/50 dark:border-green-800/50 mb-1">
                     <span class="font-bold text-xs md:text-sm text-green-800 dark:text-green-300 uppercase tracking-widest">Currency for Totals</span>
                     <select onchange="updateFinanceOption('${opt.id}', 'displayCurrency', this.value)" class="w-[90px] text-xs font-bold px-2 py-1 bg-white dark:bg-gray-950 border-2 border-green-300 dark:border-green-700 rounded focus:outline-none cursor-pointer shadow-md text-green-900 dark:text-green-100">${getCurrencyOptions(opt.displayCurrency)}</select>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="font-black text-xs md:text-sm text-green-800 dark:text-green-300 uppercase tracking-widest">Total Estimated</span>
-                    <span id="total_${opt.id}" class="font-black text-base md:text-lg text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-green-200 dark:border-green-800 shadow-md leading-none">${opt.displayCurrency} ${totalDisp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span id="total_${opt.id}" class="font-black text-base md:text-lg text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-green-200 dark:border-green-800 shadow-md leading-none">${opt.displayCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="font-black text-xs md:text-sm text-emerald-800 dark:text-emerald-400 uppercase tracking-widest">Cost Per Pax</span>
-                    <span id="cpp_${opt.id}" class="font-black text-base md:text-lg text-emerald-700 dark:text-emerald-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-emerald-200 dark:border-emerald-800 shadow-md leading-none">${opt.displayCurrency} ${cppDisp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                    <span id="cpp_${opt.id}" class="font-black text-base md:text-lg text-emerald-700 dark:text-emerald-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-emerald-200 dark:border-emerald-800 shadow-md leading-none">${opt.displayCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
             </div>
         </div>`;
     });
-}
-html += '</div>';
-if (cont) cont.innerHTML = globalSettingsHtml + html;
+  }
+  html += "</div>";
+  if (cont) cont.innerHTML = globalSettingsHtml + html;
 }
 
 function openFinanceRatesModal() {
-const list = document.getElementById('financeRatesList');
-let html = '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. You can input the rate in either direction.</p>';
-const predefined = ["MYR", "USD", "EUR", "GBP", "AUD", "IDR", "THB", "JPY", "KRW", "TWD", "PHP", "VND"];
-const extra = Object.keys(globalFinanceRates).filter(c => c !== 'SGD' && !predefined.includes(c));
-const allCurrencies = [...predefined, ...extra];
+  const list = document.getElementById("financeRatesList");
+  let html =
+    '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. You can input the rate in either direction.</p>';
+  const predefined = [
+    "MYR",
+    "USD",
+    "EUR",
+    "GBP",
+    "AUD",
+    "IDR",
+    "THB",
+    "JPY",
+    "KRW",
+    "TWD",
+    "PHP",
+    "VND",
+  ];
+  const extra = Object.keys(globalFinanceRates).filter(
+    (c) => c !== "SGD" && !predefined.includes(c),
+  );
+  const allCurrencies = [...predefined, ...extra];
 
-allCurrencies.forEach(c => {
+  allCurrencies.forEach((c) => {
     const live = globalFinanceRates[c] || 0;
-    let customToSgd = '';
-    let customFromSgd = '';
-    
+    let customToSgd = "";
+    let customFromSgd = "";
+
     if (financeConfig.customRates && financeConfig.customRates[c]) {
-        const val = financeConfig.customRates[c];
-        customToSgd = val;
-        customFromSgd = parseFloat((1 / val).toFixed(2));
+      const val = financeConfig.customRates[c];
+      customToSgd = val;
+      customFromSgd = parseFloat((1 / val).toFixed(2));
     }
-    
-    let liveToSgdText = live > 0 ? live.toFixed(2) : 'N/A';
-    let liveFromSgdText = live > 0 ? (1 / live).toFixed(2) : 'N/A';
+
+    let liveToSgdText = live > 0 ? live.toFixed(2) : "N/A";
+    let liveFromSgdText = live > 0 ? (1 / live).toFixed(2) : "N/A";
 
     html += `
     <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-2 mb-2">
@@ -705,296 +909,380 @@ allCurrencies.forEach(c => {
             <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">${c}</div>
         </div>
     </div>`;
-});
-if (list) list.innerHTML = html;
-document.getElementById('financeRatesModal').classList.remove('hidden-force');
+  });
+  if (list) list.innerHTML = html;
+  document.getElementById("financeRatesModal").classList.remove("hidden-force");
 }
 
 function closeFinanceRatesModal() {
-document.getElementById('financeRatesModal').classList.add('hidden-force');
+  document.getElementById("financeRatesModal").classList.add("hidden-force");
 }
 
 function handleRateInputSync(currency, mode, value) {
-const val = parseFloat(value);
-const inputToSgd = document.getElementById(`rate_${currency}_to_sgd`);
-const inputFromSgd = document.getElementById(`rate_sgd_to_${currency}`);
+  const val = parseFloat(value);
+  const inputToSgd = document.getElementById(`rate_${currency}_to_sgd`);
+  const inputFromSgd = document.getElementById(`rate_sgd_to_${currency}`);
 
-if (isNaN(val) || val <= 0 || value.trim() === '') {
-    if (value.trim() === '') {
-        if (mode === 'to_sgd' && inputFromSgd) inputFromSgd.value = '';
-        if (mode === 'from_sgd' && inputToSgd) inputToSgd.value = '';
+  if (isNaN(val) || val <= 0 || value.trim() === "") {
+    if (value.trim() === "") {
+      if (mode === "to_sgd" && inputFromSgd) inputFromSgd.value = "";
+      if (mode === "from_sgd" && inputToSgd) inputToSgd.value = "";
     }
-} else {
+  } else {
     const inverse = 1 / val;
-    if (mode === 'to_sgd' && inputFromSgd) {
-        inputFromSgd.value = parseFloat(inverse.toFixed(2));
-    } else if (mode === 'from_sgd' && inputToSgd) {
-        inputToSgd.value = parseFloat(inverse.toFixed(2));
+    if (mode === "to_sgd" && inputFromSgd) {
+      inputFromSgd.value = parseFloat(inverse.toFixed(2));
+    } else if (mode === "from_sgd" && inputToSgd) {
+      inputToSgd.value = parseFloat(inverse.toFixed(2));
     }
-}
+  }
 }
 
 function handleRateChange(currency, mode, value) {
-const val = parseFloat(value);
-handleRateInputSync(currency, mode, value);
+  const val = parseFloat(value);
+  handleRateInputSync(currency, mode, value);
 
-if (isNaN(val) || val <= 0 || value.trim() === '') {
+  if (isNaN(val) || val <= 0 || value.trim() === "") {
     if (financeConfig.customRates) delete financeConfig.customRates[currency];
-} else {
-    const finalToSgdVal = mode === 'to_sgd' ? val : (1 / val);
+  } else {
+    const finalToSgdVal = mode === "to_sgd" ? val : 1 / val;
     if (!financeConfig.customRates) financeConfig.customRates = {};
     financeConfig.customRates[currency] = finalToSgdVal;
-}
+  }
 
-financeOptions.forEach(o => updateTotals(o.id));
-renderFinanceOptions();
-queueFinanceUpdate();
+  financeOptions.forEach((o) => updateTotals(o.id));
+  renderFinanceOptions();
+  queueFinanceUpdate();
 }
 
 function toggleFinanceCollapse() {
-isFinanceCollapsed = !isFinanceCollapsed;
-financeOptions.forEach(o => o._isCollapsed = isFinanceCollapsed);
-renderFinanceOptions();
+  isFinanceCollapsed = !isFinanceCollapsed;
+  financeOptions.forEach((o) => (o._isCollapsed = isFinanceCollapsed));
+  renderFinanceOptions();
 }
 
 function toggleIndividualFinanceCollapse(id) {
-const opt = financeOptions.find(o => o.id === id);
-if (opt) {
+  const opt = financeOptions.find((o) => o.id === id);
+  if (opt) {
     opt._isCollapsed = !opt._isCollapsed;
     renderFinanceOptions();
-}
+  }
 }
 
 function cycleFinanceOptionWidth(optId) {
-const opt = financeOptions.find(o => o.id === optId);
-if (opt) {
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (opt) {
     opt.widthSpan = (opt.widthSpan || 2) + 1;
     if (opt.widthSpan > 3) opt.widthSpan = 1;
     queueFinanceUpdate(optId);
     renderFinanceOptions();
-}
+  }
 }
 
 function updateFinanceOption(optId, key, value) {
-const opt = financeOptions.find(o => o.id === optId);
-if (!opt) return;
-if (key === 'title') opt.title = value;
-else if (key === 'pax') { opt.pax = parseInt(value) || 0; updateTotals(optId); }
-else if (key === 'displayCurrency') { opt.displayCurrency = value; updateTotals(optId); }
-queueFinanceUpdate(optId);
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  if (key === "title") opt.title = value;
+  else if (key === "pax") {
+    opt.pax = parseInt(value) || 0;
+    updateTotals(optId);
+  } else if (key === "displayCurrency") {
+    opt.displayCurrency = value;
+    updateTotals(optId);
+  }
+  queueFinanceUpdate(optId);
 }
 
 function updateFinanceField(optId, fieldId, key, value) {
-const opt = financeOptions.find(o => o.id === optId);
-if (!opt) return;
-const field = opt.fields.find(f => f.id === fieldId);
-if (!field) return;
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  const field = opt.fields.find((f) => f.id === fieldId);
+  if (!field) return;
 
-if (key === 'cost') { field.cost = parseFloat(String(value).replace(/,/g, '')) || 0; updateTotals(optId); }
-else if (key === 'tax') { field.tax = parseFloat(value) || 0; updateTotals(optId); }
-else if (key === 'costType') { field.costType = value; updateTotals(optId); }
-else if (key === 'currency') { field.currency = value; updateTotals(optId); }
-else if (key === 'name') field.name = value;
-else if (key === 'remarks') field.remarks = value;
+  if (key === "cost") {
+    field.cost = parseFloat(String(value).replace(/,/g, "")) || 0;
+    updateTotals(optId);
+  } else if (key === "tax") {
+    field.tax = parseFloat(value) || 0;
+    updateTotals(optId);
+  } else if (key === "costType") {
+    field.costType = value;
+    updateTotals(optId);
+  } else if (key === "currency") {
+    field.currency = value;
+    updateTotals(optId);
+  } else if (key === "name") field.name = value;
+  else if (key === "remarks") field.remarks = value;
 
-queueFinanceUpdate(optId);
-if (key === 'costType') renderFinanceOptions(); 
+  queueFinanceUpdate(optId);
+  if (key === "costType") renderFinanceOptions();
 }
 
 function updateTotals(optId) {
-const opt = financeOptions.find(o => o.id === optId);
-if (!opt) return;
-const pax = getActivePax(opt);
-let totalSgd = 0;
-opt.fields.forEach(f => {
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  const pax = getActivePax(opt);
+  let totalSgd = 0;
+  opt.fields.forEach((f) => {
     const rate = getActualRate(f.currency);
-    const rawCost = f.costType === 'per_pax' ? ((parseFloat(f.cost)||0) * pax) : (parseFloat(f.cost)||0);
-    totalSgd += (rawCost * (1 + ((parseFloat(f.tax)||0) / 100))) * rate;
-});
-const dispRate = getActualRate(opt.displayCurrency);
-const totalDisp = totalSgd / dispRate;
-const cppDisp = pax > 0 ? totalDisp / pax : 0;
+    const rawCost =
+      f.costType === "per_pax"
+        ? (parseFloat(f.cost) || 0) * pax
+        : parseFloat(f.cost) || 0;
+    totalSgd += rawCost * (1 + (parseFloat(f.tax) || 0) / 100) * rate;
+  });
+  const dispRate = getActualRate(opt.displayCurrency);
+  const totalDisp = totalSgd / dispRate;
+  const cppDisp = pax > 0 ? totalDisp / pax : 0;
 
-const totEl = document.getElementById(`total_${opt.id}`);
-const cppEl = document.getElementById(`cpp_${opt.id}`);
-if (totEl) totEl.textContent = `${opt.displayCurrency} ${totalDisp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-if (cppEl) cppEl.textContent = `${opt.displayCurrency} ${cppDisp.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const totEl = document.getElementById(`total_${opt.id}`);
+  const cppEl = document.getElementById(`cpp_${opt.id}`);
+  if (totEl)
+    totEl.textContent = `${opt.displayCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (cppEl)
+    cppEl.textContent = `${opt.displayCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function addFinanceOption(title = "New Option", reRender = true) {
-const newOpt = {
-    id: generateFinanceUUID(), title: title, pax: 0, displayCurrency: 'SGD', widthSpan: 2, ts: Date.now(), _isCollapsed: false, isDeleted: false, fields: []
-};
-defaultFinanceFields.forEach(f => {
-    newOpt.fields.push({ id: generateFinanceUUID(), name: f, costType: 'total', tax: 0, cost: 0, currency: 'MYR', remarks: '' });
-});
-financeOptions.unshift(newOpt);
-queueFinanceUpdate(newOpt.id);
-if (reRender) renderFinanceOptions();
+  const newOpt = {
+    id: generateFinanceUUID(),
+    title: title,
+    pax: 0,
+    displayCurrency: "SGD",
+    widthSpan: 2,
+    ts: Date.now(),
+    _isCollapsed: false,
+    isDeleted: false,
+    fields: [],
+  };
+  defaultFinanceFields.forEach((f) => {
+    newOpt.fields.push({
+      id: generateFinanceUUID(),
+      name: f,
+      costType: "total",
+      tax: 0,
+      cost: 0,
+      currency: "MYR",
+      remarks: "",
+    });
+  });
+  financeOptions.unshift(newOpt);
+  queueFinanceUpdate(newOpt.id);
+  if (reRender) renderFinanceOptions();
 }
 
 function duplicateFinanceOption(id) {
-const opt = financeOptions.find(o => o.id === id);
-if (!opt) return;
-const copy = JSON.parse(JSON.stringify(opt));
-copy.id = generateFinanceUUID();
-copy.title = opt.title + " (Copy)";
-copy.ts = Date.now();
-copy._isCollapsed = false;
-copy.isDeleted = false;
-copy.fields.forEach(f => f.id = generateFinanceUUID()); 
-financeOptions.unshift(copy);
-queueFinanceUpdate(copy.id);
-renderFinanceOptions();
+  const opt = financeOptions.find((o) => o.id === id);
+  if (!opt) return;
+  const copy = JSON.parse(JSON.stringify(opt));
+  copy.id = generateFinanceUUID();
+  copy.title = opt.title + " (Copy)";
+  copy.ts = Date.now();
+  copy._isCollapsed = false;
+  copy.isDeleted = false;
+  copy.fields.forEach((f) => (f.id = generateFinanceUUID()));
+  financeOptions.unshift(copy);
+  queueFinanceUpdate(copy.id);
+  renderFinanceOptions();
 }
 
 function removeFinanceOption(id) {
-if (!confirm("Are you sure you want to remove this option?")) return;
-const opt = financeOptions.find(o => o.id === id);
-if (opt) {
+  if (!confirm("Are you sure you want to remove this option?")) return;
+  const opt = financeOptions.find((o) => o.id === id);
+  if (opt) {
     opt.isDeleted = true;
     opt.ts = Date.now();
-    if(financeConfig.finalOptionId === id) financeConfig.finalOptionId = null;
+    if (financeConfig.finalOptionId === id) financeConfig.finalOptionId = null;
     queueFinanceUpdate(id);
     renderAllFinanceTabs();
-}
+  }
 }
 
 function addFinanceCategory(optId) {
-const opt = financeOptions.find(o => o.id === optId);
-if(!opt) return;
-opt.fields.push({ id: generateFinanceUUID(), name: 'New Category', costType: 'total', tax: 0, cost: 0, currency: 'MYR', remarks: '' });
-queueFinanceUpdate(optId);
-renderFinanceOptions();
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  opt.fields.push({
+    id: generateFinanceUUID(),
+    name: "New Category",
+    costType: "total",
+    tax: 0,
+    cost: 0,
+    currency: "MYR",
+    remarks: "",
+  });
+  queueFinanceUpdate(optId);
+  renderFinanceOptions();
 }
 
 function removeFinanceCategory(optId, fieldId) {
-const opt = financeOptions.find(o => o.id === optId);
-if(!opt) return;
-opt.fields = opt.fields.filter(f => f.id !== fieldId);
-queueFinanceUpdate(optId);
-renderFinanceOptions();
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  opt.fields = opt.fields.filter((f) => f.id !== fieldId);
+  queueFinanceUpdate(optId);
+  renderFinanceOptions();
 }
 
 function startFinDrag(e) {
-if(e.type === 'mousedown' && e.button !== 0) return; 
-e.preventDefault(); 
-const handle = e.currentTarget;
-const row = handle.closest('.fin-cat-row');
-const container = row.closest('.fin-cat-container');
-const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-const rect = row.getBoundingClientRect();
+  if (e.type === "mousedown" && e.button !== 0) return;
+  e.preventDefault();
+  const handle = e.currentTarget;
+  const row = handle.closest(".fin-cat-row");
+  const container = row.closest(".fin-cat-container");
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const rect = row.getBoundingClientRect();
 
-finDndState = {
-    active: true, row: row, container: container, optId: container.dataset.optId,
-    yOffset: clientY - rect.top, xOffset: clientX - rect.left,
-    placeholder: document.createElement('div')
-};
-finDndState.placeholder.className = 'fin-cat-placeholder bg-green-50/50 dark:bg-green-900/20 border-2 border-dashed border-primary/50 rounded-lg my-1 transition-all';
-finDndState.placeholder.style.height = rect.height + 'px';
-row.parentNode.insertBefore(finDndState.placeholder, row);
-row.style.position = 'fixed'; row.style.zIndex = '9999'; row.style.width = rect.width + 'px';
-row.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)'; row.classList.add('opacity-95');
-updateFinDragPosition(clientY, clientX);
-document.addEventListener('mousemove', moveFinDrag, {passive: false});
-document.addEventListener('touchmove', moveFinDrag, {passive: false});
-document.addEventListener('mouseup', endFinDrag);
-document.addEventListener('touchend', endFinDrag);
+  finDndState = {
+    active: true,
+    row: row,
+    container: container,
+    optId: container.dataset.optId,
+    yOffset: clientY - rect.top,
+    xOffset: clientX - rect.left,
+    placeholder: document.createElement("div"),
+  };
+  finDndState.placeholder.className =
+    "fin-cat-placeholder bg-green-50/50 dark:bg-green-900/20 border-2 border-dashed border-primary/50 rounded-lg my-1 transition-all";
+  finDndState.placeholder.style.height = rect.height + "px";
+  row.parentNode.insertBefore(finDndState.placeholder, row);
+  row.style.position = "fixed";
+  row.style.zIndex = "9999";
+  row.style.width = rect.width + "px";
+  row.style.boxShadow = "0 10px 25px rgba(0,0,0,0.2)";
+  row.classList.add("opacity-95");
+  updateFinDragPosition(clientY, clientX);
+  document.addEventListener("mousemove", moveFinDrag, { passive: false });
+  document.addEventListener("touchmove", moveFinDrag, { passive: false });
+  document.addEventListener("mouseup", endFinDrag);
+  document.addEventListener("touchend", endFinDrag);
 }
 
 function moveFinDrag(e) {
-if(!finDndState.active) return;
-e.preventDefault(); 
-const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-updateFinDragPosition(clientY, clientX);
-const siblings = Array.from(finDndState.container.querySelectorAll('.fin-cat-row:not(.fin-cat-placeholder):not([style*="position: fixed"])'));
-let nextElement = null;
-for(let sib of siblings) {
+  if (!finDndState.active) return;
+  e.preventDefault();
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  updateFinDragPosition(clientY, clientX);
+  const siblings = Array.from(
+    finDndState.container.querySelectorAll(
+      '.fin-cat-row:not(.fin-cat-placeholder):not([style*="position: fixed"])',
+    ),
+  );
+  let nextElement = null;
+  for (let sib of siblings) {
     const rect = sib.getBoundingClientRect();
-    if(clientY < rect.top + rect.height / 2) { nextElement = sib; break; }
-}
-if(nextElement) finDndState.container.insertBefore(finDndState.placeholder, nextElement);
-else finDndState.container.appendChild(finDndState.placeholder);
+    if (clientY < rect.top + rect.height / 2) {
+      nextElement = sib;
+      break;
+    }
+  }
+  if (nextElement)
+    finDndState.container.insertBefore(finDndState.placeholder, nextElement);
+  else finDndState.container.appendChild(finDndState.placeholder);
 }
 
 function updateFinDragPosition(y, x) {
-finDndState.row.style.top = (y - finDndState.yOffset) + 'px';
-finDndState.row.style.left = (x - finDndState.xOffset) + 'px';
+  finDndState.row.style.top = y - finDndState.yOffset + "px";
+  finDndState.row.style.left = x - finDndState.xOffset + "px";
 }
 
 function endFinDrag(e) {
-if(!finDndState.active) return;
-finDndState.active = false;
-document.removeEventListener('mousemove', moveFinDrag); document.removeEventListener('touchmove', moveFinDrag);
-document.removeEventListener('mouseup', endFinDrag); document.removeEventListener('touchend', endFinDrag);
-finDndState.placeholder.parentNode.insertBefore(finDndState.row, finDndState.placeholder);
-finDndState.placeholder.remove();
-finDndState.row.style = ''; finDndState.row.classList.remove('opacity-95');
-reorderFieldsInModel(finDndState.optId);
-renderFinanceOptions(); 
+  if (!finDndState.active) return;
+  finDndState.active = false;
+  document.removeEventListener("mousemove", moveFinDrag);
+  document.removeEventListener("touchmove", moveFinDrag);
+  document.removeEventListener("mouseup", endFinDrag);
+  document.removeEventListener("touchend", endFinDrag);
+  finDndState.placeholder.parentNode.insertBefore(
+    finDndState.row,
+    finDndState.placeholder,
+  );
+  finDndState.placeholder.remove();
+  finDndState.row.style = "";
+  finDndState.row.classList.remove("opacity-95");
+  reorderFieldsInModel(finDndState.optId);
+  renderFinanceOptions();
 }
 
 function reorderFieldsInModel(optId) {
-const opt = financeOptions.find(o => o.id === optId);
-if(!opt) return;
-const container = document.querySelector(`.fin-cat-container[data-opt-id="${optId}"]`);
-if(!container) return;
-const newFields = [];
-container.querySelectorAll('.fin-cat-row').forEach(row => {
-    const fId = row.dataset.fieldId; const field = opt.fields.find(f => f.id === fId);
-    if(field) newFields.push(field);
-});
-opt.fields = newFields;
-queueFinanceUpdate(optId);
+  const opt = financeOptions.find((o) => o.id === optId);
+  if (!opt) return;
+  const container = document.querySelector(
+    `.fin-cat-container[data-opt-id="${optId}"]`,
+  );
+  if (!container) return;
+  const newFields = [];
+  container.querySelectorAll(".fin-cat-row").forEach((row) => {
+    const fId = row.dataset.fieldId;
+    const field = opt.fields.find((f) => f.id === fId);
+    if (field) newFields.push(field);
+  });
+  opt.fields = newFields;
+  queueFinanceUpdate(optId);
 }
 
 // ==========================================
 // TAB 3: RECEIPTS BROWSER
 // ==========================================
 function renderReceiptsBrowser() {
-const cont = document.getElementById('fin-tab-receipts');
-if(!cont || cont.classList.contains('hidden-force')) return;
+  const cont = document.getElementById("fin-tab-receipts");
+  if (!cont || cont.classList.contains("hidden-force")) return;
 
-const activeReceipts = globalReceipts.filter(r => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot").sort((a,b) => b.ts - a.ts);
+  const activeReceipts = globalReceipts
+    .filter((r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot")
+    .sort((a, b) => b.ts - a.ts);
 
-if(activeReceipts.length === 0) {
-    if (cont) cont.innerHTML = `<div class="w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><svg class="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p class="text-xs font-bold uppercase tracking-widest">No receipts uploaded.</p></div>`;
+  if (activeReceipts.length === 0) {
+    if (cont)
+      cont.innerHTML = `<div class="w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><svg class="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p class="text-xs font-bold uppercase tracking-widest">No receipts uploaded.</p></div>`;
     return;
-}
+  }
 
-let optMap = {};
-if (financeConfig.finalOptionId) {
-    const opt = financeOptions.find(o => o.id === financeConfig.finalOptionId);
-    if (opt) opt.fields.forEach(f => optMap[f.id] = f.name);
-}
+  let optMap = {};
+  if (financeConfig.finalOptionId) {
+    const opt = financeOptions.find(
+      (o) => o.id === financeConfig.finalOptionId,
+    );
+    if (opt) opt.fields.forEach((f) => (optMap[f.id] = f.name));
+  }
 
-let rowsHtml = '';
-activeReceipts.forEach(r => {
-    const dateStr = typeof formatDDMmmYYYY === 'function' ? formatDDMmmYYYY(r.ts) : new Date(r.ts).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const catName = optMap[r.categoryId] || 'Unknown Category';
-    
+  let rowsHtml = "";
+  activeReceipts.forEach((r) => {
+    const dateStr =
+      typeof formatDDMmmYYYY === "function"
+        ? formatDDMmmYYYY(r.ts)
+        : new Date(r.ts).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          });
+    const catName = optMap[r.categoryId] || "Unknown Category";
+
     let uploaderName = r.uploaderNric;
     let payerName = r.paidByNric || r.uploaderNric;
-    
-    if(globalLogistics && globalLogistics.participants) {
-        const up = globalLogistics.participants.find(x => x.nric === r.uploaderNric);
-        if(up) uploaderName = up.shortName || up.name;
-        else if (r.uploaderName) uploaderName = r.uploaderName;
-        
-        const pp = globalLogistics.participants.find(x => x.nric === payerName);
-       if(pp) payerName = pp.shortName || pp.name;
-       else if (r.uploaderName && payerName === r.uploaderNric) payerName = r.uploaderName;
+
+    if (globalLogistics && globalLogistics.participants) {
+      const up = globalLogistics.participants.find(
+        (x) => x.nric === r.uploaderNric,
+      );
+      if (up) uploaderName = up.shortName || up.name;
+      else if (r.uploaderName) uploaderName = r.uploaderName;
+
+      const pp = globalLogistics.participants.find((x) => x.nric === payerName);
+      if (pp) payerName = pp.shortName || pp.name;
+      else if (r.uploaderName && payerName === r.uploaderNric)
+        payerName = r.uploaderName;
     }
 
-    const isReimClass = r.isReimbursed ? 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-800 shadow-md' : 'text-gray-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700';
+    const isReimClass = r.isReimbursed
+      ? "text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-800 shadow-md"
+      : "text-gray-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700";
 
-    let rateHtml = '';
-    if (r.currency !== 'SGD' && r.amount > 0 && r.sgdAmount > 0) {
-        const toSgd = (r.sgdAmount / r.amount).toFixed(2);
-        const fromSgd = (r.amount / r.sgdAmount).toFixed(2);
-        rateHtml = `
+    let rateHtml = "";
+    if (r.currency !== "SGD" && r.amount > 0 && r.sgdAmount > 0) {
+      const toSgd = (r.sgdAmount / r.amount).toFixed(2);
+      const fromSgd = (r.amount / r.sgdAmount).toFixed(2);
+      rateHtml = `
             <div class="mt-1 flex flex-col gap-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-lg border-2 border-gray-100 dark:border-gray-700/50">
                 <div class="flex justify-between"><span>1 ${r.currency}</span><span>= ${toSgd} SGD</span></div>
                 <div class="flex justify-between"><span>1 SGD</span><span>= ${fromSgd} ${r.currency}</span></div>
@@ -1015,8 +1303,8 @@ activeReceipts.forEach(r => {
                 </div>
             </div>
             <div class="flex flex-col items-end md:hidden">
-                <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
-                <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5 mb-1">SGD ${r.sgdAmount.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5 mb-1">SGD ${r.sgdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 ${rateHtml}
             </div>
         </div>
@@ -1029,9 +1317,9 @@ activeReceipts.forEach(r => {
         
         <!-- Amounts on desktop -->
         <div class="hidden md:flex flex-col items-end text-right md:w-[120px] shrink-0 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
-            <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
-            <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5">SGD ${r.sgdAmount.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
-            ${rateHtml ? `<div class="w-full mt-1.5">${rateHtml}</div>` : ''}
+            <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+            <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5">SGD ${r.sgdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+            ${rateHtml ? `<div class="w-full mt-1.5">${rateHtml}</div>` : ""}
         </div>
 
         <!-- Remarks -->
@@ -1040,124 +1328,149 @@ activeReceipts.forEach(r => {
         <!-- Actions -->
         <div class="flex items-center justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-700 w-full md:w-auto md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4 shrink-0">
             <button onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
-                ${r.isReimbursed ? 'Reimbursed' : 'Pending'}
+                ${r.isReimbursed ? "Reimbursed" : "Pending"}
             </button>
             <div class="flex items-center gap-2">
-                ${r.fileUrl ? `<a href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ''}
+                ${r.fileUrl ? `<a href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
                 <button onclick="deleteReceipt('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center" title="Delete"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
             </div>
         </div>
     </div>`;
-});
+  });
 
-if (cont) cont.innerHTML = `
+  if (cont)
+    cont.innerHTML = `
 <div class="flex flex-col gap-3 pb-4">
     ${rowsHtml}
 </div>`;
 }
 
 function toggleReceiptReimbursed(id, status) {
-const rec = globalReceipts.find(r => r.id === id);
-if(rec) {
+  const rec = globalReceipts.find((r) => r.id === id);
+  if (rec) {
     rec.isReimbursed = status;
     queueReceiptUpdate(rec);
     renderReceiptsBrowser();
-}
+  }
 }
 
 function deleteReceipt(id) {
-// Iframe blocks window.confirm, so we bypass it.
-const rec = globalReceipts.find(r => r.id === id);
-if(rec) {
+  // Iframe blocks window.confirm, so we bypass it.
+  const rec = globalReceipts.find((r) => r.id === id);
+  if (rec) {
     rec.isDeleted = true;
     queueReceiptUpdate(rec);
     renderReceiptsBrowser();
     renderFinalizedFinances();
-    if(typeof showToast === 'function') showToast('Receipt deleted.');
-}
+    if (typeof showToast === "function") showToast("Receipt deleted.");
+  }
 }
 
 // ==========================================
 // TAB 4: TRIP FEES TRACKER
 // ==========================================
 function handleFeeSearch() {
-    const input = document.getElementById('feeSearchInput');
-    finSearchQuery = input.value;
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    
-    renderFeeTracker();
-    
-    const newInput = document.getElementById('feeSearchInput');
-    if (newInput) {
-        newInput.focus();
-        try { newInput.setSelectionRange(start, end); } catch(e) {}
-    }
+  const input = document.getElementById("feeSearchInput");
+  finSearchQuery = input.value;
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+
+  renderFeeTracker();
+
+  const newInput = document.getElementById("feeSearchInput");
+  if (newInput) {
+    newInput.focus();
+    try {
+      newInput.setSelectionRange(start, end);
+    } catch (e) {}
+  }
 }
 
 function renderFeeTracker() {
-const cont = document.getElementById('fin-tab-fees');
-if(!cont || cont.classList.contains('hidden-force')) return;
-if(!globalLogistics || !globalLogistics.participants) return;
+  const cont = document.getElementById("fin-tab-fees");
+  if (!cont || cont.classList.contains("hidden-force")) return;
+  if (!globalLogistics || !globalLogistics.participants) return;
 
-const groups = {};
-globalLogistics.participants.forEach(p => {
+  const groups = {};
+  globalLogistics.participants.forEach((p) => {
     let targetPoc = p.pocNric;
 
-    if(!groups[targetPoc]) groups[targetPoc] = [];
+    if (!groups[targetPoc]) groups[targetPoc] = [];
     groups[targetPoc].push(p);
-});
+  });
 
-const baseFee = financeConfig.perPersonFee || 0;
-let totalExpected = 0;
-let totalCollected = 0;
-let cardsData = [];
+  const baseFee = financeConfig.perPersonFee || 0;
+  let totalExpected = 0;
+  let totalCollected = 0;
+  let cardsData = [];
 
-Object.keys(groups).forEach(poc => {
+  Object.keys(groups).forEach((poc) => {
     processFeeCard(poc, groups[poc]);
-});
+  });
 
-function processFeeCard(poc, members) {
+  function processFeeCard(poc, members) {
     const size = members.length;
     const dev = financeConfig.feeDeviations?.[poc]?.amount || 0;
-    const rem = financeConfig.feeDeviations?.[poc]?.remarks || '';
+    const rem = financeConfig.feeDeviations?.[poc]?.remarks || "";
     const isPaid = financeConfig.feesReceived?.[poc] === true;
-    
-    const finalExpected = (size * baseFee) + dev;
-    
+
+    const finalExpected = size * baseFee + dev;
+
     totalExpected += finalExpected;
     if (isPaid) totalCollected += finalExpected;
 
     let match = true;
     const searchLower = finSearchQuery.toLowerCase().trim();
     if (searchLower) {
-        const _hash = poc.split('').reduce((a,b)=>(((a<<5)-a)+b.charCodeAt(0))|0,0);
-        const orderNo = poc.substring(0, 4).toUpperCase() + "-" + Math.abs(_hash).toString(10).slice(-4).padStart(4, '0');
-        const orderNoLower = orderNo.toLowerCase();
-        match = members.some(m => {
-            const dName = String(m.shortName || '').toLowerCase();
-            const fullName = String(m.fullName || m.name || '').toLowerCase();
-            return dName.includes(searchLower) || fullName.includes(searchLower) || m.nric.toLowerCase().includes(searchLower);
+      const _hash = poc
+        .split("")
+        .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+      const orderNo =
+        poc.substring(0, 4).toUpperCase() +
+        "-" +
+        Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
+      const orderNoLower = orderNo.toLowerCase();
+      match =
+        members.some((m) => {
+          const dName = String(m.shortName || "").toLowerCase();
+          const fullName = String(m.fullName || m.name || "").toLowerCase();
+          return (
+            dName.includes(searchLower) ||
+            fullName.includes(searchLower) ||
+            m.nric.toLowerCase().includes(searchLower)
+          );
         }) || orderNoLower.includes(searchLower);
     }
 
-    if (match) cardsData.push({ poc, members, size, dev, rem, isPaid, finalExpected });
-}
+    if (match)
+      cardsData.push({ poc, members, size, dev, rem, isPaid, finalExpected });
+  }
 
-cardsData.sort((a,b) => {
-    if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1; 
+  cardsData.sort((a, b) => {
+    if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1;
     return b.size - a.size;
-});
+  });
 
-let cardsHtml = '';
-cardsData.forEach(c => {
-    let membersHtml = c.members.map(m => {
-        const roleColor = m.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (m.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
-        return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-[11px] mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0,3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.name}</span></span>`;
-    }).join('');
+  let cardsHtml = "";
+  cardsData.forEach((c) => {
+    let membersHtml = c.members
+      .map((m) => {
+        const roleColor =
+          m.role === "TRAINEE"
+            ? "text-green-600 dark:text-green-400"
+            : m.role === "CAREGIVER"
+              ? "text-purple-600 dark:text-purple-400"
+              : "text-orange-600 dark:text-orange-400";
+        return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-[11px] mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0, 3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.name}</span></span>`;
+      })
+      .join("");
 
-    const paidClass = c.isPaid ? 'bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-800' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700';
-    const checkColor = c.isPaid ? 'text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-900' : 'text-transparent bg-gray-100 dark:bg-gray-700';
+    const paidClass = c.isPaid
+      ? "bg-green-50 dark:bg-green-900/10 border-green-300 dark:border-green-800"
+      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700";
+    const checkColor = c.isPaid
+      ? "text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-900"
+      : "text-transparent bg-gray-100 dark:bg-gray-700";
 
     cardsHtml += `
     <div class="flex flex-col p-3 rounded-xl border ${paidClass} shadow-md transition relative overflow-hidden h-full">
@@ -1165,7 +1478,7 @@ cardsData.forEach(c => {
             <div class="flex flex-col flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span class="text-[11px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700">Size: ${c.size}</span>
-                    ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-green-700 bg-green-200 dark:bg-green-900 px-1.5 py-0.5 rounded border-2 border-green-300 dark:border-green-700">Paid</span>` : ''}
+                    ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-green-700 bg-green-200 dark:bg-green-900 px-1.5 py-0.5 rounded border-2 border-green-300 dark:border-green-700">Paid</span>` : ""}
                 </div>
                 <div class="leading-tight">${membersHtml}</div>
             </div>
@@ -1176,7 +1489,7 @@ cardsData.forEach(c => {
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                 </button>
-                <button onclick="toggleFeeReceived('${c.poc}', ${!c.isPaid})" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0 transition shadow-md hover:scale-110 focus:outline-none ${c.isPaid ? 'border-green-500 ring-2 ring-green-400 ring-offset-1 dark:ring-offset-gray-900' : ''}">
+                <button onclick="toggleFeeReceived('${c.poc}', ${!c.isPaid})" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0 transition shadow-md hover:scale-110 focus:outline-none ${c.isPaid ? "border-green-500 ring-2 ring-green-400 ring-offset-1 dark:ring-offset-gray-900" : ""}">
                     <div class="w-6 h-6 rounded-full flex items-center justify-center transition-colors ${checkColor}">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </div>
@@ -1185,9 +1498,16 @@ cardsData.forEach(c => {
         </div>
         
         ${(() => {
-            const feeReceipts = globalReceipts.filter(r => !r.isDeleted && r.categoryId === "Fees Payment Screenshot" && (r.uploaderNric === c.poc || r.paidByNric === c.poc)).sort((a,b) => b.ts - a.ts);
-            if (feeReceipts.length > 0 && feeReceipts[0].fileUrl) {
-                return `
+          const feeReceipts = globalReceipts
+            .filter(
+              (r) =>
+                !r.isDeleted &&
+                r.categoryId === "Fees Payment Screenshot" &&
+                (r.uploaderNric === c.poc || r.paidByNric === c.poc),
+            )
+            .sort((a, b) => b.ts - a.ts);
+          if (feeReceipts.length > 0 && feeReceipts[0].fileUrl) {
+            return `
                 <div class="mt-2 pt-2 border-t-2 border-gray-100 dark:border-gray-800">
                     <a href="${feeReceipts[0].fileUrl}" target="_blank" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 w-max">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
@@ -1195,8 +1515,8 @@ cardsData.forEach(c => {
                     </a>
                 </div>
                 `;
-            }
-            return '';
+          }
+          return "";
         })()}
 
         <div class="grid grid-cols-2 gap-2 p-2 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border-2 border-gray-100 dark:border-gray-800 mt-auto">
@@ -1204,23 +1524,24 @@ cardsData.forEach(c => {
                 <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Deviation (+/- SGD)</label>
                 <div class="relative flex items-center">
                     <span class="absolute left-2 text-xs font-bold text-gray-400">$</span>
-                    <input type="text" id="dev-input-${c.poc}" value="${c.dev ? parseFloat(c.dev).toLocaleString('en-US', {minimumFractionDigits:2}) : '0.00'}" oninput="formatMoneyInput(this, false); updateDeviationLocal('${c.poc}', ${c.size}); if(!financeConfig.feeDeviations['${c.poc}']) financeConfig.feeDeviations['${c.poc}'] = {}; financeConfig.feeDeviations['${c.poc}'].amount = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFeeDeviation('${c.poc}', 'amount', this.value)" class="w-full pl-5 pr-2 py-1 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary shadow-md text-right h-[28px]" ${c.isPaid ? 'disabled opacity-70' : ''}>
+                    <input type="text" id="dev-input-${c.poc}" value="${c.dev ? parseFloat(c.dev).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "0.00"}" oninput="formatMoneyInput(this, false); updateDeviationLocal('${c.poc}', ${c.size}); if(!financeConfig.feeDeviations['${c.poc}']) financeConfig.feeDeviations['${c.poc}'] = {}; financeConfig.feeDeviations['${c.poc}'].amount = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFeeDeviation('${c.poc}', 'amount', this.value)" class="w-full pl-5 pr-2 py-1 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary shadow-md text-right h-[28px]" ${c.isPaid ? "disabled opacity-70" : ""}>
                 </div>
             </div>
             <div>
                 <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Expected (SGD)</label>
                 <div id="expected-display-${c.poc}" class="w-full px-2 py-1 text-sm font-black text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded border-2 border-green-200 dark:border-green-800 shadow-md text-right flex items-center justify-between h-[28px]">
-                    <span class="text-xs opacity-50 font-bold mr-1">$</span><span>${c.finalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+                    <span class="text-xs opacity-50 font-bold mr-1">$</span><span>${c.finalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 </div>
             </div>
             <div class="col-span-2">
-                <input type="text" value="${c.rem.replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" onchange="updateFeeDeviation('${c.poc}', 'remarks', this.value)" placeholder="Remarks for deviation (e.g. Subsidy applied)" class="w-full px-2 py-1 text-xs font-medium border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary shadow-md h-[28px]" ${c.isPaid ? 'disabled opacity-70' : ''}>
+                <input type="text" value="${c.rem.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}" onchange="updateFeeDeviation('${c.poc}', 'remarks', this.value)" placeholder="Remarks for deviation (e.g. Subsidy applied)" class="w-full px-2 py-1 text-xs font-medium border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary shadow-md h-[28px]" ${c.isPaid ? "disabled opacity-70" : ""}>
             </div>
         </div>
     </div>`;
-});
+  });
 
-if (cont) cont.innerHTML = `
+  if (cont)
+    cont.innerHTML = `
 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 p-2 mb-3 flex flex-col gap-2">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -1228,34 +1549,34 @@ if (cont) cont.innerHTML = `
                 <label class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">Per-Pax (SGD):</label>
                 <div class="relative flex items-center">
                     <span class="absolute left-1.5 text-xs font-bold text-gray-400">$</span>
-                    <input type="text" value="${baseFee ? parseFloat(baseFee).toLocaleString('en-US', {minimumFractionDigits:2}) : '0.00'}" oninput="formatMoneyInput(this, false); financeConfig.perPersonFee = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFinanceConfig('perPersonFee', parseFloat(this.value.replace(/,/g, ''))||0)" class="w-[72px] text-xs font-black border-2 border-gray-300 dark:border-gray-600 rounded pl-4 pr-1.5 py-1 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-right">
+                    <input type="text" value="${baseFee ? parseFloat(baseFee).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "0.00"}" oninput="formatMoneyInput(this, false); financeConfig.perPersonFee = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFinanceConfig('perPersonFee', parseFloat(this.value.replace(/,/g, ''))||0)" class="w-[72px] text-xs font-black border-2 border-gray-300 dark:border-gray-600 rounded pl-4 pr-1.5 py-1 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-right">
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
                 <label class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider">PayNow:</label>
-                <input type="text" maxlength="8" value="${financeConfig.payNowNumber || ''}" onchange="updateFinanceConfig('payNowNumber', this.value.trim())" class="w-20 text-xs font-black border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-center">
+                <input type="text" maxlength="8" value="${financeConfig.payNowNumber || ""}" onchange="updateFinanceConfig('payNowNumber', this.value.trim())" class="w-20 text-xs font-black border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-center">
             </div>
-            <label class="flex items-center gap-1.5 cursor-pointer bg-purple-50 dark:bg-purple-900/20 border ${financeConfig.showPaymentSection ? 'border-purple-500' : 'border-purple-200 dark:border-purple-800'} px-2.5 py-1 rounded-md transition-colors hover:bg-purple-100 dark:hover:bg-purple-900/40">
-                <input type="checkbox" ${financeConfig.showPaymentSection ? 'checked' : ''} onchange="updateFinanceConfig('showPaymentSection', this.checked)" class="w-3.5 h-3.5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                <span class="text-[11px] md:text-xs uppercase font-black ${financeConfig.showPaymentSection ? 'text-purple-700 dark:text-purple-400' : 'text-gray-500 dark:text-gray-400'} tracking-wider">SHOW PAYMENT QR CODE</span>
+            <label class="flex items-center gap-1.5 cursor-pointer bg-purple-50 dark:bg-purple-900/20 border ${financeConfig.showPaymentSection ? "border-purple-500" : "border-purple-200 dark:border-purple-800"} px-2.5 py-1 rounded-md transition-colors hover:bg-purple-100 dark:hover:bg-purple-900/40">
+                <input type="checkbox" ${financeConfig.showPaymentSection ? "checked" : ""} onchange="updateFinanceConfig('showPaymentSection', this.checked)" class="w-3.5 h-3.5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+                <span class="text-[11px] md:text-xs uppercase font-black ${financeConfig.showPaymentSection ? "text-purple-700 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"} tracking-wider">SHOW PAYMENT QR CODE</span>
             </label>
         </div>
         
         <div class="flex items-center gap-3 bg-gray-50 dark:bg-gray-950 px-3 py-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 w-full md:w-auto justify-between md:justify-start">
             <div class="text-left">
                 <span class="block text-[10px] uppercase font-bold text-gray-400 tracking-widest leading-none mb-0.5">Collected</span>
-                <span class="text-xs font-black text-green-600 dark:text-green-400 leading-none">$ ${totalCollected.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+                <span class="text-xs font-black text-green-600 dark:text-green-400 leading-none">$ ${totalCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
             <div class="w-px h-5 bg-gray-300 dark:bg-gray-700 hidden md:block"></div>
             <div class="text-right md:text-left">
                 <span class="block text-[10px] uppercase font-bold text-gray-400 tracking-widest leading-none mb-0.5">Expected Collection</span>
-                <span class="text-xs font-black text-green-700 dark:text-green-400 leading-none">$ ${totalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+                <span class="text-xs font-black text-green-700 dark:text-green-400 leading-none">$ ${totalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
             </div>
         </div>
     </div>
     
     <div class="relative">
-        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, '&quot;')}" placeholder="Fuzzy search families..." class="w-full py-1.5 pl-7 pr-7 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md transition">
+        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, "&quot;")}" placeholder="Fuzzy search families..." class="w-full py-1.5 pl-7 pr-7 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md transition">
         <svg class="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         <button onclick="clearSearch('feeSearchInput', 'handleFeeSearch')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
@@ -1267,100 +1588,151 @@ if (cont) cont.innerHTML = `
 `;
 }
 
-window.updateDeviationLocal = function(poc, size) {
-    const devInput = document.getElementById('dev-input-' + poc);
-    const expectedDisplay = document.getElementById('expected-display-' + poc);
-    if (!devInput || !expectedDisplay) return;
-    const baseFee = financeConfig.perPersonFee || 0;
-    const dev = parseFloat(devInput.value.replace(/,/g, '')) || 0;
-    const finalExpected = (size * baseFee) + dev;
-    if (expectedDisplay) expectedDisplay.innerHTML = `<span class="text-xs opacity-50 font-bold mr-1">$</span><span>${finalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</span>`;
-}
+window.updateDeviationLocal = function (poc, size) {
+  const devInput = document.getElementById("dev-input-" + poc);
+  const expectedDisplay = document.getElementById("expected-display-" + poc);
+  if (!devInput || !expectedDisplay) return;
+  const baseFee = financeConfig.perPersonFee || 0;
+  const dev = parseFloat(devInput.value.replace(/,/g, "")) || 0;
+  const finalExpected = size * baseFee + dev;
+  if (expectedDisplay)
+    expectedDisplay.innerHTML = `<span class="text-xs opacity-50 font-bold mr-1">$</span><span>${finalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>`;
+};
 
 function updateFeeDeviation(poc, field, value) {
-if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
-if (!financeConfig.feeDeviations[poc]) financeConfig.feeDeviations[poc] = { amount: 0, remarks: '' };
+  if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+  if (!financeConfig.feeDeviations[poc])
+    financeConfig.feeDeviations[poc] = { amount: 0, remarks: "" };
 
-if (field === 'amount') {
-    financeConfig.feeDeviations[poc].amount = parseFloat(String(value).replace(/,/g, '')) || 0;
-} else {
+  if (field === "amount") {
+    financeConfig.feeDeviations[poc].amount =
+      parseFloat(String(value).replace(/,/g, "")) || 0;
+  } else {
     financeConfig.feeDeviations[poc].remarks = value;
-}
+  }
 
-queueFinanceUpdate();
-
-
+  queueFinanceUpdate();
 }
 
 function toggleFeeReceived(poc, status) {
-if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
-financeConfig.feesReceived[poc] = status;
-queueFinanceUpdate();
-renderFeeTracker();
+  if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+  financeConfig.feesReceived[poc] = status;
+  queueFinanceUpdate();
+  renderFeeTracker();
 }
 
 function generateAdminPayNowStr(proxyType, proxyValue, amount, ref) {
-    const formatTlv = (id, value) => { const len = value.length.toString().padStart(2, '0'); return `${id}${len}${value}`; };
-    const crc16 = (str) => { let crc = 0xFFFF; for (let c = 0; c < str.length; c++) { crc ^= str.charCodeAt(c) << 8; for (let i = 0; i < 8; i++) { if (crc & 0x8000) crc = (crc << 1) ^ 0x1021; else crc = crc << 1; } } return (crc & 0xFFFF).toString(16).toUpperCase().padStart(4, '0'); };
-    const pFormat = formatTlv('00', '01'); const init = formatTlv('01', '12'); const guid = formatTlv('00', 'SG.PAYNOW');
-    const type = formatTlv('01', proxyType); const val = formatTlv('02', proxyValue); const edit = formatTlv('03', '1'); 
-    const accountInfo = formatTlv('26', guid + type + val + edit); const mcc = formatTlv('52', '0000'); const cur = formatTlv('53', '702');
-    const amt = formatTlv('54', parseFloat(amount).toFixed(2)); const country = formatTlv('58', 'SG'); const merchant = formatTlv('59', 'MYG Trip');
-    const city = formatTlv('60', 'Singapore'); const additional = ref ? formatTlv('62', formatTlv('01', ref)) : '';
-    let str = pFormat + init + accountInfo + mcc + cur + amt + country + merchant + city + additional + '6304';
-    str += crc16(str);
-    return str;
+  const formatTlv = (id, value) => {
+    const len = value.length.toString().padStart(2, "0");
+    return `${id}${len}${value}`;
+  };
+  const crc16 = (str) => {
+    let crc = 0xffff;
+    for (let c = 0; c < str.length; c++) {
+      crc ^= str.charCodeAt(c) << 8;
+      for (let i = 0; i < 8; i++) {
+        if (crc & 0x8000) crc = (crc << 1) ^ 0x1021;
+        else crc = crc << 1;
+      }
+    }
+    return (crc & 0xffff).toString(16).toUpperCase().padStart(4, "0");
+  };
+  const pFormat = formatTlv("00", "01");
+  const init = formatTlv("01", "12");
+  const guid = formatTlv("00", "SG.PAYNOW");
+  const type = formatTlv("01", proxyType);
+  const val = formatTlv("02", proxyValue);
+  const edit = formatTlv("03", "1");
+  const accountInfo = formatTlv("26", guid + type + val + edit);
+  const mcc = formatTlv("52", "0000");
+  const cur = formatTlv("53", "702");
+  const amt = formatTlv("54", parseFloat(amount).toFixed(2));
+  const country = formatTlv("58", "SG");
+  const merchant = formatTlv("59", "MYG Trip");
+  const city = formatTlv("60", "Singapore");
+  const additional = ref ? formatTlv("62", formatTlv("01", ref)) : "";
+  let str =
+    pFormat +
+    init +
+    accountInfo +
+    mcc +
+    cur +
+    amt +
+    country +
+    merchant +
+    city +
+    additional +
+    "6304";
+  str += crc16(str);
+  return str;
 }
 
-window.showContactPaymentPopup = function(pocNric) {
-    let modal = document.getElementById('adminPaymentContactModal');
-    if(!modal) {
-        modal = document.createElement('div');
-        modal.id = 'adminPaymentContactModal';
-        modal.className = 'fixed inset-0 bg-black/60 z-[120] flex justify-center items-center p-4 backdrop-blur-sm hidden-force overflow-y-auto';
-        modal.innerHTML = `
+window.showContactPaymentPopup = function (pocNric) {
+  let modal = document.getElementById("adminPaymentContactModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "adminPaymentContactModal";
+    modal.className =
+      "fixed inset-0 bg-black/60 z-[120] flex justify-center items-center p-4 backdrop-blur-sm hidden-force overflow-y-auto";
+    modal.innerHTML = `
         <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm shadow-2xl border-2 border-gray-200 dark:border-gray-700 animate-slide-up flex flex-col overflow-hidden my-auto relative">
             <button type="button" onclick="document.getElementById('adminPaymentContactModal').classList.add('hidden-force')" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 focus:outline-none">&times;</button>
             <div id="apcm-content" class="p-5 flex flex-col gap-4 max-h-[85vh] overflow-y-auto custom-scrollbar"></div>
         </div>`;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', (e) => { if(e.target === modal) modal.classList.add('hidden-force'); });
-    }
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.add("hidden-force");
+    });
+  }
 
-    if (!globalLogistics || !globalLogistics.participants) return;
-    const members = globalLogistics.participants.filter(p => p.pocNric === pocNric);
-    if (!members.length) return;
+  if (!globalLogistics || !globalLogistics.participants) return;
+  const members = globalLogistics.participants.filter(
+    (p) => p.pocNric === pocNric,
+  );
+  if (!members.length) return;
 
-    const baseFee = financeConfig.perPersonFee || 0;
-    const size = members.length;
-    const dev = financeConfig.feeDeviations?.[pocNric]?.amount || 0;
-    const finalExpected = (size * baseFee) + dev;
-    const isPaid = financeConfig.feesReceived?.[pocNric] === true;
-    const pocMember = members.find(m => m.nric === pocNric) || members[0];
-    
-    let linksHtml = '';
-    if (pocMember.contact) {
-        const cleanPhone = pocMember.contact.replace(/\D/g, '');
-        linksHtml = `
+  const baseFee = financeConfig.perPersonFee || 0;
+  const size = members.length;
+  const dev = financeConfig.feeDeviations?.[pocNric]?.amount || 0;
+  const finalExpected = size * baseFee + dev;
+  const isPaid = financeConfig.feesReceived?.[pocNric] === true;
+  const pocMember = members.find((m) => m.nric === pocNric) || members[0];
+
+  let linksHtml = "";
+  if (pocMember.contact) {
+    const cleanPhone = pocMember.contact.replace(/\D/g, "");
+    linksHtml = `
             <div class="grid grid-cols-2 gap-3 mb-2">
                 <a href="tel:${cleanPhone}" class="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-2.5 rounded-lg font-bold text-xs transition">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> Call
                 </a>
-                <a href="https://wa.me/${cleanPhone.startsWith('65') ? cleanPhone : ('65' + cleanPhone)}" target="_blank" class="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs transition shadow-md">
+                <a href="https://wa.me/${cleanPhone.startsWith("65") ? cleanPhone : "65" + cleanPhone}" target="_blank" class="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg font-bold text-xs transition shadow-md">
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg> WhatsApp
                 </a>
             </div>
         `;
-    }
+  }
 
-    let qrHtml = '';
-    const payNowNum = financeConfig.payNowNumber ? "+65" + financeConfig.payNowNumber : "";
-    if (payNowNum && finalExpected > 0) {
-        const _hash = pocNric.split('').reduce((a,b)=>(((a<<5)-a)+b.charCodeAt(0))|0,0);
-        const orderNo = pocNric.substring(0, 4).toUpperCase() + "-" + Math.abs(_hash).toString(10).slice(-4).padStart(4, '0');
-        const qrStr = generateAdminPayNowStr('0', payNowNum, finalExpected, orderNo);
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}`;
-        qrHtml = `
+  let qrHtml = "";
+  const payNowNum = financeConfig.payNowNumber
+    ? "+65" + financeConfig.payNowNumber
+    : "";
+  if (payNowNum && finalExpected > 0) {
+    const _hash = pocNric
+      .split("")
+      .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+    const orderNo =
+      pocNric.substring(0, 4).toUpperCase() +
+      "-" +
+      Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
+    const qrStr = generateAdminPayNowStr(
+      "0",
+      payNowNum,
+      finalExpected,
+      orderNo,
+    );
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}`;
+    qrHtml = `
             <div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2">
                 <p class="text-[11px] font-bold uppercase tracking-widest text-center text-gray-500 dark:text-gray-400 mb-3">Family Payment QR</p>
                 <div class="flex justify-center bg-white p-3 rounded-xl border-2 border-gray-200 w-max mx-auto shadow-md">
@@ -1371,14 +1743,14 @@ window.showContactPaymentPopup = function(pocNric) {
                 </div>
             </div>
         `;
-    } else if (finalExpected <= 0) {
-        qrHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2 text-center text-xs font-bold text-gray-400">No pending fees.</div>`;
-    } else {
-        qrHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2 text-center text-xs font-bold text-gray-400">PayNow number not configured.</div>`;
-    }
+  } else if (finalExpected <= 0) {
+    qrHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2 text-center text-xs font-bold text-gray-400">No pending fees.</div>`;
+  } else {
+    qrHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2 text-center text-xs font-bold text-gray-400">PayNow number not configured.</div>`;
+  }
 
-    const modalCont = document.getElementById('apcm-content');
-    modalCont.innerHTML = `
+  const modalCont = document.getElementById("apcm-content");
+  modalCont.innerHTML = `
         <div>
             <h3 class="text-base font-black text-gray-900 dark:text-white mb-1">Contact & Payment</h3>
             <p class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">POC: ${pocMember.shortName || pocMember.fullName}</p>
@@ -1386,9 +1758,9 @@ window.showContactPaymentPopup = function(pocNric) {
         ${linksHtml}
         <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 mb-2">
             <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Expected</span>
-            <span class="text-base font-black text-green-700 dark:text-green-400">$${finalExpected.toLocaleString('en-US', {minimumFractionDigits:2})}</span>
+            <span class="text-base font-black text-green-700 dark:text-green-400">$${finalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
         ${qrHtml}
     `;
-    modal.classList.remove('hidden-force');
-}
+  modal.classList.remove("hidden-force");
+};
