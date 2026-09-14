@@ -454,6 +454,15 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
 
 // Enrich loadedGroupMembers with data from globalLogistics to ensure accurate sorting
 if (globalLogistics && globalLogistics.participants) {
+    const roomsMap = {};
+    if (globalLogistics.rooms) {
+        globalLogistics.rooms.forEach(r => {
+            if (!r.isDeleted && r.occupants) {
+                r.occupants.forEach(n => roomsMap[n] = r.name.toUpperCase());
+            }
+        });
+    }
+
     loadedGroupMembers.forEach(member => {
         const fullProfile = globalLogistics.participants.find(p => p.nric === member.nric);
         if (fullProfile) {
@@ -461,6 +470,7 @@ if (globalLogistics && globalLogistics.participants) {
             if (!member.group && fullProfile.group) member.group = fullProfile.group;
             if (fullProfile.caregiverFor) member.caregiverFor = fullProfile.caregiverFor;
         }
+        member.roomAllocated = roomsMap[member.nric] || 'None';
     });
 }
 
