@@ -20,7 +20,7 @@ try {
         apiCall('getProfile', { nric: currentUser.nric }).catch(e => { console.warn("Failed to load profile:", e); return { family: [] }; }),
         apiCall('fetchFinance').catch(e => { console.warn("Failed to load finance:", e); return { data: { config: {}, options: [] }, rates: { "SGD": 1 } }; }),
         apiCall('fetchReceipts').catch(e => { console.warn("Failed to load receipts:", e); return { receipts: [] }; }),
-        apiCall('fetchLogistics').catch(e => { console.warn("Failed to load logistics:", e); return null; })
+        apiCall('fetchLogistics').catch(e => { console.warn("Failed to load logistics:", e); alert("Profile Log error: " + (e.message || e)); return null; })
     ]);
 
  loadedFamily = profRes.family || [];

@@ -1559,7 +1559,7 @@ try {
     startPairingPolling();
     startRoomPolling();
 } catch(e) { 
-    showToast("Failed to load logistics.", true); 
+    console.error(e); showToast("Logistics error: " + (e.message || e), true); 
     setSyncButtonState('error');
     setRoomSyncButtonState('error');
 } finally {
@@ -1773,7 +1773,7 @@ roomsToRender.forEach(room => {
             occHtml += `
             <div class="dnd-room-draggable relative flex w-full cursor-grab active:cursor-grabbing hover:scale-[1.02] transition-transform pointer-events-auto" data-nric="${p.nric}">
                 <div class="main-name-pill ${dynColor} ${matchClass} text-xs md:text-sm px-2 py-1.5 rounded shadow-md border font-bold opacity-90 leading-tight flex items-start justify-between w-full pr-5 gap-1">
-                    <span class="break-words whitespace-normal text-left flex-1">${item.isGroupIC ? "<i class=\x27fa-solid fa-crown text-amber-500 mr-1\x27></i>" : ""}${dName}</span>
+                    <span class="break-words whitespace-normal text-left flex-1">${p.isGroupIC ? "<i class=\x27fa-solid fa-crown text-amber-500 mr-1\x27></i>" : ""}${dName}</span>
                     ${sleepingIndicator}
                 </div>
                 <div class="remove-x" onclick="unassignFromRoom('${p.nric}', '${room.id}')">×</div>
