@@ -419,11 +419,16 @@ let myAttendanceHtml = "";
 if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
     myAttendanceHtml = `<div id="section-my-attendance" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-md mb-4 pb-24 relative">
         <div class="sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4 pb-3 mb-3 border-b-2 border-blue-200 dark:border-blue-800 flex flex-col gap-3">
-            <div class="flex justify-between items-center">
-                <h3 class="text-sm font-black text-blue-900 dark:text-blue-100 tracking-tight">
+            <div class="flex justify-between items-center gap-2">
+                <h3 class="text-sm font-black text-blue-900 dark:text-blue-100 tracking-tight shrink-0">
                     <i class="fa-regular fa-calendar-check text-blue-500 mr-2"></i> Attendance
                 </h3>
-                <button onclick="promptAddIcJuncture()" class="text-[11px] bg-blue-50 text-blue-600 border-2 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 font-bold px-2 py-0.5 rounded hover:bg-blue-100 transition focus:outline-none">+ New</button>
+                <div class="flex gap-1.5 ml-auto shrink-0 items-center">
+                    <button id="icSyncBtn" onclick="manualSyncIcAttendance()" class="text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+                        <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
+                    </button>
+                    <button onclick="promptAddIcJuncture()" class="text-[11px] bg-blue-50 text-blue-600 border-2 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 font-bold px-2 py-1 rounded-md shadow-sm hover:bg-blue-100 transition flex items-center justify-center focus:outline-none">+ New</button>
+                </div>
             </div>
             <div class="flex flex-col gap-2">
                 <select id="icJunctureSelect" onchange="renderGroupAttendance()" class="w-full p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-bold">
@@ -441,12 +446,8 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
             Select a juncture to take attendance
         </div>
         
-        <div class="flex justify-between items-center border-t-2 border-gray-100 dark:border-gray-800 mt-4 pt-3">
+        <div class="flex items-center border-t-2 border-gray-100 dark:border-gray-800 mt-4 pt-3">
             <button onclick="promptDeleteIcJuncture()" class="text-xs text-red-500 hover:text-red-700 transition font-bold"><i class="fa-solid fa-trash mr-1"></i> Delete Juncture</button>
-            <button id="icSyncBtn" onclick="syncIcAttendance()" class="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-blue-700 transition shadow flex items-center gap-2">
-                <span>Save</span>
-                <div id="icSyncSpinner" class="hidden-force spinner-white w-3 h-3 border-2"></div>
-            </button>
         </div>
     </div>`;
 }
@@ -1011,6 +1012,8 @@ window.switchProfileTab = function(tab) {
 let currentIcAttendanceData = {};
 let pendingIcAttendanceUpdates = new Map();
 let lastFetchedJuncture = "";
+let icSyncTimeout = null;
+let isIcAttendanceSyncing = false;
 
 window.renderGroupAttendance = async function(forceRebuild = false) {
     const select = document.getElementById('icJunctureSelect');
@@ -1042,13 +1045,16 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
     if (forceRebuild || juncture !== lastFetchedJuncture) {
         container.innerHTML = '<div class="loader w-6 h-6 border-blue-500 mx-auto"></div>';
         
+        setIcSyncButtonState('loading');
         try {
             const res = await apiCall('fetchAttendanceData', { juncture: juncture, forceRebuild });
             currentIcAttendanceData = res.data || {};
             lastFetchedJuncture = juncture;
+            setIcSyncButtonState('saved');
         } catch(e) {
             console.error("Failed to load attendance", e);
             container.innerHTML = '<div class="text-red-500">Failed to load attendance data.</div>';
+            setIcSyncButtonState('error');
             return;
         }
     }
@@ -1132,6 +1138,17 @@ window.toggleIcAttendance = function(nric) {
     
     pendingIcAttendanceUpdates.set(nric, { nric: nric, status: newStatus });
     
+    if (!currentIcAttendanceData[nric]) {
+        currentIcAttendanceData[nric] = {};
+    }
+    currentIcAttendanceData[nric].status = newStatus;
+    currentIcAttendanceData[nric].timestamp = Date.now();
+    currentIcAttendanceData[nric].takenBy = currentUser.displayName || currentUser.name || currentUser.nric;
+    
+    if (icSyncTimeout) clearTimeout(icSyncTimeout);
+    icSyncTimeout = setTimeout(() => { executeIcAttendanceSync(); }, 800);
+    triggerIcPulseFeedback(nric, newStatus);
+    
     const card = document.getElementById('att-card-' + nric);
     const check = document.getElementById('att-check-' + nric);
     const tsEl = document.getElementById('att-ts-' + nric);
@@ -1152,47 +1169,97 @@ window.toggleIcAttendance = function(nric) {
             tsEl.classList.add('hidden-force');
         }
     }
-    
-    document.getElementById('icSyncBtn').classList.remove('bg-gray-400');
-    document.getElementById('icSyncBtn').classList.add('bg-blue-600');
 };
 
-window.syncIcAttendance = async function() {
+window.executeIcAttendanceSync = async function() {
     if (pendingIcAttendanceUpdates.size === 0) return;
     const juncture = document.getElementById('icJunctureSelect').value;
     if (!juncture) return;
 
-    const btn = document.getElementById('icSyncBtn');
-    const spinner = document.getElementById('icSyncSpinner');
-    btn.disabled = true;
-    spinner.classList.remove('hidden-force');
+    isIcAttendanceSyncing = true;
+    setIcSyncButtonState('saving');
     
-    const updates = Array.from(pendingIcAttendanceUpdates.values());
+    const batch = Array.from(pendingIcAttendanceUpdates.values());
+    pendingIcAttendanceUpdates.clear();
     
     try {
-        await apiCall('syncAttendanceUpdate', { juncture: juncture, updates: updates, takenBy: currentUser.displayName || currentUser.name || currentUser.nric });
-        pendingIcAttendanceUpdates.clear();
-        btn.classList.remove('bg-blue-600');
-        btn.classList.add('bg-green-500');
-        btn.querySelector('span').innerText = 'Saved';
-        setTimeout(() => {
-            btn.classList.remove('bg-green-500');
-            btn.classList.add('bg-blue-600');
-            btn.querySelector('span').innerText = 'Save';
-            renderGroupAttendance(true);
-        }, 1500);
+        await apiCall('syncAttendanceUpdate', { juncture: juncture, updates: batch, takenBy: currentUser.displayName || currentUser.name || currentUser.nric });
+        setIcSyncButtonState('saved');
     } catch(e) {
-        showToast("Failed to save attendance: " + e.message, true);
-        btn.classList.remove('bg-blue-600');
-        btn.classList.add('bg-red-500');
-        setTimeout(() => {
-            btn.classList.remove('bg-red-500');
-            btn.classList.add('bg-blue-600');
-        }, 1500);
+        showToast("Sync failed. Retrying...", true);
+        setIcSyncButtonState('error');
+        batch.forEach(u => pendingIcAttendanceUpdates.set(u.nric, u));
     } finally {
-        btn.disabled = false;
-        spinner.classList.add('hidden-force');
+        isIcAttendanceSyncing = false;
     }
+};
+
+window.manualSyncIcAttendance = async function() {
+    if(pendingIcAttendanceUpdates.size > 0) {
+        await window.executeIcAttendanceSync();
+    }
+    setIcSyncButtonState('loading');
+    try {
+        const juncture = document.getElementById('icJunctureSelect').value;
+        if(juncture) {
+            const res = await apiCall('fetchAttendanceData', { juncture, forceRebuild: false });
+            currentIcAttendanceData = res.data || {};
+            
+            // Only re-render if we successfully fetched and updated currentIcAttendanceData
+            renderGroupAttendance(false);
+        }
+        setIcSyncButtonState('saved');
+        showToast("Refreshed from server!");
+    } catch(e) {
+        setIcSyncButtonState('error');
+        showToast("Sync failed.", true);
+    }
+};
+
+window.setIcSyncButtonState = function(state) {
+    const btn = document.getElementById('icSyncBtn');
+    if(!btn) return;
+    
+    const textSpan = btn.querySelector('.btn-text'); 
+    const spinner = btn.querySelector('.btn-spinner');
+    if (!textSpan || !spinner) return;
+    
+    btn.className = "text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md focus:outline-none shrink-0"; 
+    spinner.className = "btn-spinner ml-1 !w-3 !h-3 hidden-force"; 
+    
+    if (state === 'loading') { 
+        btn.classList.add('bg-gray-100', 'text-gray-500', 'border-gray-200', 'dark:bg-gray-800', 'dark:text-gray-400', 'dark:border-gray-700'); 
+        textSpan.textContent = "Loading..."; 
+        spinner.classList.remove('hidden-force'); 
+        spinner.classList.add('spinner-primary'); 
+    } else if(state === 'saving') { 
+        btn.classList.add('bg-yellow-50', 'text-yellow-700', 'border-yellow-200', 'dark:bg-yellow-900/30', 'dark:text-yellow-300', 'dark:border-yellow-800'); 
+        textSpan.textContent = "Saving..."; 
+        spinner.classList.remove('hidden-force'); 
+        spinner.classList.add('spinner-yellow'); 
+    } else if (state === 'saved') { 
+        btn.classList.add('bg-green-50', 'text-green-700', 'border-green-200', 'dark:bg-green-900/30', 'dark:text-green-300', 'dark:border-green-800'); 
+        textSpan.textContent = "Saved"; 
+    } else if (state === 'error') { 
+        btn.classList.add('bg-red-50', 'text-red-700', 'border-red-200', 'dark:bg-red-900/30', 'dark:text-red-300', 'dark:border-red-800'); 
+        textSpan.textContent = "Error"; 
+    }
+};
+
+window.triggerIcPulseFeedback = function(nric, isChecked) {
+    setTimeout(() => {
+        const card = document.getElementById(`att-card-${nric}`);
+        if(card) {
+            const ringColor = isChecked ? 'ring-green-400' : 'ring-red-400';
+            const bgColor = isChecked ? 'bg-green-50' : 'bg-red-50';
+            const darkBgColor = isChecked ? 'dark:bg-green-900/50' : 'dark:bg-red-900/50';
+            
+            card.classList.add('ring-2', ringColor, 'scale-[1.02]', bgColor, darkBgColor, 'z-10');
+            setTimeout(() => {
+                card.classList.remove('ring-2', ringColor, 'scale-[1.02]', bgColor, darkBgColor, 'z-10');
+            }, 800);
+        }
+    }, 50);
 };
 
 window.promptAddIcJuncture = async function() {
