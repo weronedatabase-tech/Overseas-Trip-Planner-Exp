@@ -200,6 +200,7 @@ case 'removeHelpline': result = modifyHelplineContacts(data.id, false); break;
 case 'addProjectGroup': result = modifyProjectGroups(data.groupName, true, data.callerNric, data.colorClass); break;
 case 'removeProjectGroup': result = modifyProjectGroups(data.groupName, false, data.callerNric); break;
 case 'modifyJunctures': result = modifyJunctures(data.actionType, data.oldName, data.newName); break;
+case 'modifyICJunctures': result = modifyICJunctures(data.actionType, data.oldName, data.newName, data.groupName); break;
 case 'saveSortingRules': result = saveSortingRules(data.rules, data.callerNric); break;
 case 'saveCustomViewsOrder': result = saveCustomViewsOrder(data.order, data.callerNric); break;
 case 'saveTripSettings': result = saveTripSettings(data.title, data.year, data.start, data.end); break;
@@ -398,7 +399,9 @@ family.sort((a, b) => {
  return 0;
 });
 
-let groupMembers = []; if (currentUserRecord.isGroupIC && currentUserRecord.logisticsGroup) { const myGrp = String(currentUserRecord.logisticsGroup).trim(); groupMembers = data.filter(r => String(r.logisticsGroup).trim() === myGrp).map(row => { let expRaw = row.passportExpiry; let dobRaw = row.dob; if (expRaw && typeof expRaw === 'string' && expRaw.includes('T')) { const d = new Date(expRaw); if(!isNaN(d.getTime())) expRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } if (dobRaw && typeof dobRaw === 'string' && dobRaw.includes('T')) { const d = new Date(dobRaw); if(!isNaN(d.getTime())) dobRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } return { role: row.role, fullName: row.fullName, shortName: row.shortName, nric: row.nric, contact: row.contact, emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, diet: row.diet, medical: row.medical, otherPoints: row.otherPoints, logisticsGroup: row.logisticsGroup, bus: row.bus, isGroupIC: row.isGroupIC }; }); } return { status: 'success', family: family, groupMembers: groupMembers, logisticsGroup: currentUserRecord.logisticsGroup, isGroupIC: currentUserRecord.isGroupIC };
+let groupMembers = []; let icJunctures = []; if (currentUserRecord.isGroupIC && currentUserRecord.logisticsGroup) { const myGrp = String(currentUserRecord.logisticsGroup).trim();
+ const props = PropertiesService.getScriptProperties();
+ icJunctures = JSON.parse(props.getProperty('IC_JUNCTURES_' + myGrp.replace(/\s+/g, '_').toUpperCase()) || '[]'); groupMembers = data.filter(r => String(r.logisticsGroup).trim() === myGrp).map(row => { let expRaw = row.passportExpiry; let dobRaw = row.dob; if (expRaw && typeof expRaw === 'string' && expRaw.includes('T')) { const d = new Date(expRaw); if(!isNaN(d.getTime())) expRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } if (dobRaw && typeof dobRaw === 'string' && dobRaw.includes('T')) { const d = new Date(dobRaw); if(!isNaN(d.getTime())) dobRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } return { role: row.role, fullName: row.fullName, shortName: row.shortName, nric: row.nric, contact: row.contact, emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, diet: row.diet, medical: row.medical, otherPoints: row.otherPoints, logisticsGroup: row.logisticsGroup, bus: row.bus, isGroupIC: row.isGroupIC }; }); } return { status: 'success', family: family, groupMembers: groupMembers, logisticsGroup: currentUserRecord.logisticsGroup, isGroupIC: currentUserRecord.isGroupIC, icJunctures: icJunctures };
 }
 
 function updateProfile(member, isAdmin = false) {
@@ -1383,6 +1386,18 @@ if (actionType === 'add' && newName && !list.includes(newName)) list.push(newNam
 else if (actionType === 'remove' && oldName) list = list.filter(j => j !== oldName);
 else if (actionType === 'edit' && oldName && newName) { const idx = list.indexOf(oldName); if (idx > -1) list[idx] = newName; }
 props.setProperty('ATTENDANCE_JUNCTURES', JSON.stringify(list)); return { status: 'success', junctures: list };
+}
+
+
+function modifyICJunctures(actionType, oldName, newName, groupName) {
+    const props = PropertiesService.getScriptProperties(); 
+    const key = 'IC_JUNCTURES_' + groupName.replace(/\s+/g, '_').toUpperCase();
+    let list = JSON.parse(props.getProperty(key) || '[]');
+    if (actionType === 'add' && newName && !list.includes(newName)) list.push(newName);
+    else if (actionType === 'remove' && oldName) list = list.filter(j => j !== oldName);
+    else if (actionType === 'edit' && oldName && newName) { const idx = list.indexOf(oldName); if (idx > -1) list[idx] = newName; }
+    props.setProperty(key, JSON.stringify(list)); 
+    return { status: 'success', icJunctures: list };
 }
 
 function saveSortingRules(rules, callerNric) { PropertiesService.getScriptProperties().setProperty('SORTING_RULES', JSON.stringify(rules)); return { status: 'success', sortingRules: rules }; }
