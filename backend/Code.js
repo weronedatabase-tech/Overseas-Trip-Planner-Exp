@@ -386,7 +386,8 @@ data.forEach(row => {
          group: row.group, gender: row.gender, contact: row.contact, address: row.address, nationality: row.nationality,
          nric: row.nric, passportNo: row.passportNo, passportExpiry: expRaw || row.passportExpiry, dob: dobRaw || row.dob, diet: row.diet,
          emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, sleeping: row.sleeping, otherPoints: row.otherPoints,
-         pocNric: row.pocNric, shortName: row.shortName, medical: row.medical
+         pocNric: row.pocNric, shortName: row.shortName, medical: row.medical,
+         logisticsGroup: row.logisticsGroup, bus: row.bus, isGroupIC: row.isGroupIC
      });
  }
 });
@@ -397,7 +398,7 @@ family.sort((a, b) => {
  return 0;
 });
 
-return { status: 'success', family: family };
+let groupMembers = []; if (currentUserRecord.isGroupIC && currentUserRecord.logisticsGroup) { const myGrp = String(currentUserRecord.logisticsGroup).trim(); groupMembers = data.filter(r => String(r.logisticsGroup).trim() === myGrp).map(row => { let expRaw = row.passportExpiry; let dobRaw = row.dob; if (expRaw && typeof expRaw === 'string' && expRaw.includes('T')) { const d = new Date(expRaw); if(!isNaN(d.getTime())) expRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } if (dobRaw && typeof dobRaw === 'string' && dobRaw.includes('T')) { const d = new Date(dobRaw); if(!isNaN(d.getTime())) dobRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } return { role: row.role, fullName: row.fullName, shortName: row.shortName, nric: row.nric, contact: row.contact, emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, diet: row.diet, medical: row.medical, otherPoints: row.otherPoints, logisticsGroup: row.logisticsGroup, bus: row.bus, isGroupIC: row.isGroupIC }; }); } return { status: 'success', family: family, groupMembers: groupMembers, logisticsGroup: currentUserRecord.logisticsGroup, isGroupIC: currentUserRecord.isGroupIC };
 }
 
 function updateProfile(member, isAdmin = false) {
@@ -597,7 +598,8 @@ results.push({
   shortName: String(data[i][22]||'').trim().toUpperCase(),
   medical: String(data[i][23]||'').trim(),
   bus: String(data[i][24]||'').trim(),
-  logisticsGroup: String(data[i][25]||'').trim()
+  logisticsGroup: String(data[i][25]||'').trim(),
+  isGroupIC: String(data[i][26]||'').trim().toLowerCase() === 'true'
 });
 }
 }
@@ -692,7 +694,8 @@ const participants = rosterData.map(p => ({
   emergencyRelation: p.emergencyRelation,
   diet: p.diet,
   medical: p.medical,
-  otherPoints: p.otherPoints
+  otherPoints: p.otherPoints,
+  isGroupIC: p.isGroupIC
 }));
 
 const pairRes = fetchPairingsOnly(forceRebuild);
@@ -1514,6 +1517,7 @@ let colIndex = 25;
 if (column === 'group') colIndex = 6;
 else if (column === 'bus') colIndex = 24;
 else if (column === 'logisticsGroup') colIndex = 25;
+else if (column === 'isGroupIC') colIndex = 26;
 let dataChanged = false;
 
 const targetLength = Math.max(data[0].length, colIndex + 1);

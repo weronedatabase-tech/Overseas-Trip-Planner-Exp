@@ -5,6 +5,9 @@ var globalFinanceRates = { "SGD": 1 };
 let myReceipts = [];
 
 let additionalProfiles = {};
+let loadedGroupMembers = [];
+let loadedLogisticsGroup = '';
+let isCurrentUserGroupIC = false;
 
 async function loadProfileData() {
 const tabProfile = document.getElementById('tab-profile');
@@ -21,6 +24,9 @@ try {
     ]);
 
  loadedFamily = profRes.family || [];
+ loadedGroupMembers = profRes.groupMembers || [];
+ loadedLogisticsGroup = profRes.logisticsGroup || '';
+ isCurrentUserGroupIC = profRes.isGroupIC === true;
  finConfig = finRes.data?.config || {};
  finOptions = finRes.data?.options || [];
  globalFinanceRates = finRes.rates || { "SGD": 1 };
@@ -393,7 +399,7 @@ let paymentHtml = `
 
 let personalDetailsHeader = '';
 
-tabProfile.innerHTML = topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
+let myGroupHtml = ""; if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) { myGroupHtml = `<div class="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4"><h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight border-b-2 border-amber-200 dark:border-amber-800 pb-2 mb-3"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3><p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Click on a group member to view their details.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-3">${loadedGroupMembers.map(member => { return `<div class="p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="openPairingDetailsModal('${member.nric}')"><div class="flex justify-between items-start mb-1"><span class="font-bold text-gray-900 dark:text-white text-sm">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</span><span class="text-[10px] uppercase font-black ${member.role === "TRAINEE" ? "text-green-600 dark:text-green-400" : (member.role === "CAREGIVER" ? "text-purple-600 dark:text-purple-400" : "text-orange-600 dark:text-orange-400")} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm">${member.role}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Diet: <span class="font-bold text-gray-700 dark:text-gray-300">${member.diet || "None"}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Bus: <span class="font-bold text-gray-700 dark:text-gray-300">${member.bus || "None"}</span></div></div>`; }).join("")}</div></div>`; } tabProfile.innerHTML = topBannersHtml + myGroupHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml;
 }
 
 function generatePaymentPortalHtml() {
