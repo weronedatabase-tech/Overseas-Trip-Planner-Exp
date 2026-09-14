@@ -1644,6 +1644,51 @@ function extractData(extractType, excludedNrics, customConfig) {
     const tripYear = props.getProperty('TRIP_YEAR') || new Date().getFullYear();
     const rosterData = fetchAdminRoster(false).roster;
     
+    // Enrich with logistics data (rooms & pairings)
+    try {
+      const logRes = fetchLogistics();
+      const roomsMap = {};
+      const pairingsMap = {};
+      
+      if (logRes && logRes.rooms) {
+        logRes.rooms.forEach(r => {
+          if (!r.isDeleted && r.occupants) {
+            r.occupants.forEach(n => roomsMap[n] = String(r.name).toUpperCase());
+          }
+        });
+      }
+      
+      if (logRes && logRes.pairings) {
+        logRes.pairings.filter(p => p.status === 'ACTIVE').forEach(pair => {
+          if(!pairingsMap[pair.traineeNric]) pairingsMap[pair.traineeNric] = [];
+          if(!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+          
+          const v = rosterData.find(x => x.nric === pair.volNric);
+          const t = rosterData.find(x => x.nric === pair.traineeNric);
+          
+          if(v) pairingsMap[pair.traineeNric].push(((v.shortName || v.fullName) || '').toUpperCase());
+          if(t) pairingsMap[pair.volNric].push(((t.shortName || t.fullName) || '').toUpperCase());
+        });
+      }
+      
+      rosterData.forEach(p => {
+        p.room = roomsMap[p.nric] || 'UNASSIGNED';
+        let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
+        if (p.role === 'CAREGIVER' && p.relatedTrainee) {
+            const rNames = p.relatedTrainee.split('|').map(n => n.trim().toLowerCase());
+            const relatedList = rosterData.filter(x => rNames.includes((x.fullName||'').toLowerCase()) && x.role === 'TRAINEE');
+            relatedList.forEach(related => {
+                if (related && pairingsMap[related.nric]) {
+                    myPairings.push(...pairingsMap[related.nric]);
+                }
+            });
+        }
+        p.pairings = myPairings.length > 0 ? Array.from(new Set(myPairings)).join(', ') : 'NONE';
+      });
+    } catch(e) {
+       // Silently fail enrichment if error
+    }
+    
     // Sort array so that it's consistent.
     rosterData.sort((a,b) => String(a.fullName).localeCompare(String(b.fullName)));
     
