@@ -454,6 +454,9 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
 
 // Enrich loadedGroupMembers with data from globalLogistics to ensure accurate sorting
 if (globalLogistics && globalLogistics.participants) {
+    if (typeof applyCaregiverLabels === 'function') {
+        applyCaregiverLabels(globalLogistics.participants);
+    }
     const roomsMap = {};
     if (globalLogistics.rooms) {
         globalLogistics.rooms.forEach(r => {
@@ -1103,7 +1106,7 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
     }
 
     sortedMembers.forEach(member => {
-        const dName = member.fullName || member.name;
+        const dName = member.shortName || member.fullName || member.name;
         const shortRole = member.role.substring(0,3);
         const roleColor = member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400');
         
@@ -1119,16 +1122,17 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
         const bgClass = isPresent ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700';
 
         html += `
-        <div class="my-att-card flex items-center justify-between p-2 rounded-lg border-2 ${bgClass} cursor-pointer select-none transition-colors" onclick="toggleIcAttendance('${member.nric}')" id="att-card-${member.nric}" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()}">
+        <div class="my-att-card flex items-center justify-between p-2 rounded-lg border-2 ${bgClass} cursor-pointer select-none transition-colors" onclick="toggleIcAttendance('${member.nric}')" id="att-card-${member.nric}" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()} ${(member.caregiverFor||'').toLowerCase()}">
             <div class="flex items-center gap-2 overflow-hidden flex-1">
                 <div class="shrink-0 w-5 h-5 rounded border-2 ${isPresent ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'} flex items-center justify-center transition-colors" id="att-check-${member.nric}">
                     ${isPresent ? '<svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
                 </div>
                 <div class="flex flex-col min-w-0">
-                    <div class="flex items-center gap-1.5">
+                    <div class="flex items-center gap-1.5 flex-wrap">
                         <span class="text-[9px] font-black uppercase ${roleColor} bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded">${shortRole}</span>
                         <span class="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">${dName}</span>
                     </div>
+                    ${member.caregiverFor ? `<div class="mt-0.5 font-bold text-purple-600 dark:text-purple-400 text-[10px]">[${member.caregiverFor.toUpperCase()}]</div>` : ''}
                     ${tsStr ? `<span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono mt-0.5" id="att-ts-${member.nric}">${tsStr}</span>` : `<span class="text-[10px] text-gray-400 dark:text-gray-500 font-mono mt-0.5 hidden-force" id="att-ts-${member.nric}"></span>`}
                 </div>
             </div>
