@@ -150,7 +150,7 @@ function applyGlobalSorting(participants) {
  const rules = appSettings.sortingRules || ['project', 'family', 'role', 'name'];
  const familyCounts = {};
  participants.forEach(p => { 
-    const poc = p.pocNric;
+    const poc = p.pocNric || p.nric || '';
     familyCounts[poc] = (familyCounts[poc] || 0) + 1; 
  });
 
@@ -392,20 +392,21 @@ window.sortParticipantsSpecial = function(arr, allParticipants) {
     if (!arr || !allParticipants) return;
     const famMap = {};
     allParticipants.forEach(x => {
-        const poc = x.pocNric;
+        const poc = x.pocNric || x.nric || '';
         if(!famMap[poc]) famMap[poc] = { count: 0, hasCaregiver: false };
         famMap[poc].count++;
             });
 
     const specialSortMap = new Map();
     arr.forEach(p => {
-        const poc = p.pocNric;
+        const poc = p.pocNric || p.nric || '';
         const info = famMap[poc];
         const isFamily = info ? (info.count > 1) : false;
-        let catScore = 4;
+        let catScore = 5;
         if (isFamily) catScore = 1;
         else if (p.role === 'TRAINEE') catScore = 2;
-        else if (p.role === 'VOLUNTEER') catScore = 3;
+        else if (p.role === 'CAREGIVER') catScore = 3;
+        else if (p.role === 'VOLUNTEER') catScore = 4;
         let roleScore = p.role === 'TRAINEE' ? 1 : (p.role === 'CAREGIVER' ? 2 : 3);
         specialSortMap.set(p.nric, {
             group: (p.group || '').toLowerCase(),

@@ -1252,9 +1252,25 @@ function generateBusCardHtml(item, isAssigned = false) {
     `;
 }
 
-function handleGroupDrop(nric, groupName) {
+window.handleGroupDrop = async function(nric, groupName) {
     const p = globalLogistics.participants.find(x => x.nric === nric);
     if (!p) return;
+    
+    // Check if moving a Group IC
+    if (p.isGroupIC && p.logisticsGroup !== groupName) {
+        const confirmMsg = "This participant is currently the Group IC of Group " + (p.logisticsGroup || 'Unknown') + ".\n\nMoving them to a different group will unassign them as Group IC.\n\nDo you want to proceed and unassign them?";
+        if (!confirm(confirmMsg)) {
+            return; // Cancel
+        }
+        
+        p.isGroupIC = false;
+        try {
+            await apiCall('syncAssignments', { updates: [{ nric: nric, value: false }], column: 'isGroupIC' });
+        } catch (e) {
+            console.error("Failed to unassign Group IC", e);
+        }
+    }
+
     p.logisticsGroup = groupName;
     pendingGroupUpdates.set(nric, { nric: nric, value: groupName });
 
@@ -2060,9 +2076,28 @@ function renderGroupBusOptions() {
         
         if (query && !nameStr.toLowerCase().includes(query)) return;
         
+        let icHtml = '';
+        if (activeAssignType === 'group') {
+            const currentIC = globalLogistics.participants.find(p => p.logisticsGroup === nameStr && p.isGroupIC);
+            let icName = currentIC ? (currentIC.displayName || currentIC.name || 'Unknown') : 'None';
+            if (!activeAssignNric) { // Manage Mode
+                icHtml = `<div class="mt-1 flex items-center gap-2">
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>IC: ${icName}</span>
+                    <button onclick="window.openGroupICSheet('${nameStr.replace(/'/g, "\\'")}')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition">Change IC</button>
+                </div>`;
+            } else { // Assign Mode
+                icHtml = `<div class="mt-1">
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>IC: ${icName}</span>
+                </div>`;
+            }
+        }
+        
         html += `
         <div class="sheet-list-item p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between transition hover:bg-gray-50 dark:hover:bg-gray-750" data-name="${nameStr.toLowerCase()}">
-            <div class="cursor-pointer flex-1 font-bold text-gray-900 dark:text-white text-sm" onclick="selectGroupBusOption('${idVal}')">${activeAssignType === 'group' ? 'Group ' : (activeAssignType === 'bus' ? 'Bus ' : 'Room ')}${nameStr}</div>
+            <div class="${activeAssignNric ? 'cursor-pointer ' : ''}flex-1" ${activeAssignNric ? `onclick="selectGroupBusOption('${idVal}')"` : ''}>
+                <div class="font-bold text-gray-900 dark:text-white text-sm">${activeAssignType === 'group' ? 'Group ' : (activeAssignType === 'bus' ? 'Bus ' : 'Room ')}${nameStr}</div>
+                ${icHtml}
+            </div>
             <button onclick="${activeAssignType === 'room' ? `deleteRoom('${idVal}')` : `removeGroupBusFromPopup('${idVal}')`}" class="text-red-500 hover:text-red-600 p-2 -mr-2"><i class="fa-solid fa-trash text-sm"></i></button>
         </div>`;
     });
@@ -2368,7 +2403,7 @@ window.openGroupICSheet = function(gName) {
     if(searchInput) searchInput.value = '';
     document.getElementById('selectionBottomSheet').classList.remove('hidden-force');
 
-    const assignedArr = globalLogistics.participants.filter(p => p.logisticsGroup === gName);
+    const assignedArr = globalLogistics.participants.filter(p => p.logisticsGroup === gName && p.role === 'VOLUNTEER');
     let html = '';
     assignedArr.forEach(t => {
         const roleColor = t.role === 'TRAINEE' ? 'text-green-700 bg-green-100 dark:bg-green-900/50 border-green-200 dark:border-green-800' : (t.role === 'CAREGIVER' ? 'text-purple-700 bg-purple-100 dark:bg-purple-900/50 border-purple-200 dark:border-purple-800' : 'text-orange-700 bg-orange-100 dark:bg-orange-900/50 border-orange-200 dark:border-orange-800');
@@ -2385,7 +2420,7 @@ window.openGroupICSheet = function(gName) {
     });
     
     const el_sheetListContainer = document.getElementById('sheetListContainer'); 
-    if(el_sheetListContainer) el_sheetListContainer.innerHTML = html || '<p class="text-sm font-medium text-gray-400 p-2 text-center">No participants in this group.</p>';
+    if(el_sheetListContainer) el_sheetListContainer.innerHTML = html || '<p class="text-sm font-medium text-gray-400 p-2 text-center">No volunteers assigned to this group.</p>';
 };
 
 window.assignICToGroupFromSheet = async function(nric, gName) {

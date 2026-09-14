@@ -279,3 +279,275 @@ function performExtraction() {
         showToast("Error extracting data.", 'error');
     });
 }
+let customSelectedColumns = ['fullName', 'nric'];
+const customAvailableColumns = [
+    { id: 'fullName', label: 'Full Name' },
+    { id: 'shortName', label: 'Short Name' },
+    { id: 'nric', label: 'NRIC / FIN' },
+    { id: 'email', label: 'Email Address' },
+    { id: 'role', label: 'Role' },
+    { id: 'gender', label: 'Gender' },
+    { id: 'contact', label: 'Contact Number' },
+    { id: 'address', label: 'Home Address' },
+    { id: 'nationality', label: 'Nationality' },
+    { id: 'passportNo', label: 'Passport No.' },
+    { id: 'passportExpiry', label: 'Passport Expiry Date' },
+    { id: 'dob', label: 'Date of Birth' },
+    { id: 'diet', label: 'Dietary Restrictions' },
+    { id: 'emergencyName', label: 'Emergency Contact Name' },
+    { id: 'emergencyContact', label: 'Emergency Contact Number' },
+    { id: 'emergencyRelation', label: 'Emergency Contact Relationship' },
+    { id: 'sleeping', label: 'Sleeping Arrangement' },
+    { id: 'otherPoints', label: 'Other Points to Note' },
+    { id: 'medical', label: 'Medical Conditions' },
+    { id: 'bus', label: 'Bus' },
+    { id: 'logisticsGroup', label: 'Logistics Group' },
+    { id: 'group', label: 'Project Group' },
+    { id: 'relatedTrainee', label: 'Related Trainee(s)' },
+    { id: 'relationship', label: 'Relationship to Trainee' },
+    { id: 'room', label: 'Room Assignment' },
+    { id: 'pairings', label: 'Pairings' }
+];
+
+async function showCustomExtractionPopup() {
+    if (typeof showOverlay === 'function') showOverlay("Loading participants...");
+    
+    if (!extractGlobalRoster || extractGlobalRoster.length === 0) {
+        try {
+            const [rostRes, logRes] = await Promise.all([
+                apiCall('fetchAdminRoster', {}),
+                (typeof globalLogistics !== 'undefined' && globalLogistics) ? Promise.resolve(globalLogistics) : apiCall('fetchLogistics').catch(e => null)
+            ]);
+            
+            if (rostRes && rostRes.status === 'success') {
+                let tempRoster = rostRes.roster || [];
+                if (typeof applyCaregiverLabels === 'function') applyCaregiverLabels(tempRoster);
+                
+                const logisticsData = logRes || { rooms: [], pairings: [] };
+                const pairingsMap = {};
+                if (logisticsData.pairings) {
+                    logisticsData.pairings.filter(p => p.status === 'ACTIVE').forEach(pair => {
+                        if(!pairingsMap[pair.traineeNric]) pairingsMap[pair.traineeNric] = [];
+                        if(!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+                        
+                        const v = tempRoster.find(x => x.nric === pair.volNric);
+                        const t = tempRoster.find(x => x.nric === pair.traineeNric);
+                        
+                        if(v) pairingsMap[pair.traineeNric].push(((v.shortName || v.fullName) || '').toUpperCase());
+                        if(t) pairingsMap[pair.volNric].push(((t.shortName || t.fullName) || '').toUpperCase());
+                    });
+                }
+                
+                const roomsMap = {};
+                if (logisticsData.rooms) {
+                    logisticsData.rooms.filter(r => !r.isDeleted).forEach(r => {
+                        r.occupants.forEach(n => roomsMap[n] = r.name.toUpperCase());
+                    });
+                }
+                
+                tempRoster.forEach(p => {
+                    p.room = roomsMap[p.nric] || 'UNASSIGNED';
+                    let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
+                    if (p.role === 'CAREGIVER' && p.relatedTrainee) {
+                        const rNames = p.relatedTrainee.split('|').map(n => n.trim().toLowerCase());
+                        const relatedList = tempRoster.filter(x => rNames.includes((x.fullName||'').toLowerCase()) && x.role === 'TRAINEE');
+                        relatedList.forEach(related => {
+                            if (related && pairingsMap[related.nric]) {
+                                myPairings.push(...pairingsMap[related.nric]);
+                            }
+                        });
+                    }
+                    p.pairings = myPairings.length > 0 ? Array.from(new Set(myPairings)).join(', ') : 'NONE';
+                });
+                extractGlobalRoster = tempRoster;
+            }
+        } catch (e) {
+            console.error("Error fetching roster for custom extraction", e);
+        }
+    }
+    
+    if (typeof hideOverlay === 'function') hideOverlay();
+    
+    let modal = document.getElementById('customExtractionModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'customExtractionModal';
+        modal.className = 'fixed inset-0 bg-black/60 z-[120] flex justify-center items-center p-4 backdrop-blur-sm hidden-force';
+        modal.innerHTML = `
+        <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl shadow-2xl border-2 border-gray-200 dark:border-gray-800 flex flex-col h-[85vh] md:h-[90vh] overflow-hidden my-auto animate-slide-up relative">
+            <button type="button" onclick="document.getElementById('customExtractionModal').classList.add('hidden-force')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div class="p-5 md:p-6 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
+                <h2 class="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight">Custom Extraction</h2>
+                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Configure your Google Sheet</p>
+            </div>
+            <div class="p-5 md:p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Sheet Name</label>
+                    <input type="text" id="customSheetName" placeholder="e.g. Flight Details" class="w-full py-2.5 px-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition">
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-4 flex-1 min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0">
+                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Available Columns</label>
+                        <div class="relative mb-2 shrink-0">
+                            <input type="text" id="customAvailSearch" oninput="renderCustomColumns()" placeholder="Search..." class="w-full py-1.5 pl-8 pr-2 border-2 border-gray-300 dark:border-gray-700 rounded-md text-xs font-semibold bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary transition">
+                            <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <div id="customAvailList" class="flex-1 overflow-y-auto custom-scrollbar border-2 border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-gray-50 dark:bg-gray-950/50 flex flex-col gap-1 min-h-[150px]"></div>
+                    </div>
+                    <div class="flex flex-col shrink-0 justify-center items-center md:px-2 hidden md:flex">
+                        <svg class="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </div>
+                    <div class="flex-1 flex flex-col min-h-0">
+                        <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Selected Columns (Order)</label>
+                        <div id="customSelectedList" class="flex-1 overflow-y-auto custom-scrollbar border-2 border-primary/30 rounded-lg p-2 bg-green-50/30 dark:bg-green-900/10 flex flex-col gap-1 min-h-[150px]"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 md:p-5 border-t-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0 flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('customExtractionModal').classList.add('hidden-force')" class="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition">Cancel</button>
+                <button type="button" onclick="performCustomExtraction()" class="px-5 py-2.5 rounded-xl font-black text-sm text-white shadow-md transition flex items-center gap-2 bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                    Extract to Drive
+                </button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.classList.add('hidden-force');
+        });
+    }
+    
+    document.getElementById('customSheetName').value = 'Custom Extraction';
+    document.getElementById('customAvailSearch').value = '';
+    
+    // Reset selection defaults
+    customSelectedColumns = ['fullName', 'nric'];
+    renderCustomColumns();
+    
+    modal.classList.remove('hidden-force');
+}
+
+function renderCustomColumns() {
+    const query = (document.getElementById('customAvailSearch').value || '').toLowerCase().trim();
+    const availList = document.getElementById('customAvailList');
+    const selectedList = document.getElementById('customSelectedList');
+    
+    // Available
+    let availHtml = '';
+    customAvailableColumns.forEach(col => {
+        if (customSelectedColumns.includes(col.id)) return;
+        if (query && !col.label.toLowerCase().includes(query)) return;
+        
+        availHtml += `
+        <div class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary transition group cursor-pointer shadow-sm" onclick="addCustomColumn('${col.id}')">
+            <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors truncate pr-2">${col.label}</span>
+            <button class="shrink-0 text-gray-400 group-hover:text-primary transition focus:outline-none">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+            </button>
+        </div>`;
+    });
+    if(!availHtml) availHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No matching columns</div>`;
+    availList.innerHTML = availHtml;
+    
+    // Selected
+    let selHtml = '';
+    customSelectedColumns.forEach((colId, index) => {
+        const col = customAvailableColumns.find(c => c.id === colId);
+        if(!col) return;
+        selHtml += `
+        <div class="flex items-center justify-between p-2 rounded border-2 border-primary/50 bg-white dark:bg-gray-800 shadow-sm">
+            <span class="text-xs font-bold text-gray-900 dark:text-gray-100 truncate pr-2">${index + 1}. ${col.label}</span>
+            <div class="flex items-center gap-1 shrink-0">
+                <div class="flex flex-col gap-0.5 mr-1">
+                    <button onclick="moveCustomColumn(${index}, -1)" class="text-gray-400 hover:text-primary focus:outline-none p-0.5 bg-gray-100 dark:bg-gray-700 rounded hover:bg-green-50" ${index === 0 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>
+                    </button>
+                    <button onclick="moveCustomColumn(${index}, 1)" class="text-gray-400 hover:text-primary focus:outline-none p-0.5 bg-gray-100 dark:bg-gray-700 rounded hover:bg-green-50" ${index === customSelectedColumns.length - 1 ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : ''}>
+                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                    </button>
+                </div>
+                <button onclick="removeCustomColumn('${col.id}')" class="p-1 rounded text-gray-400 hover:bg-red-50 hover:text-red-500 transition focus:outline-none">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+        </div>`;
+    });
+    if(!selHtml) selHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No columns selected</div>`;
+    selectedList.innerHTML = selHtml;
+}
+
+function addCustomColumn(id) {
+    if (!customSelectedColumns.includes(id)) {
+        customSelectedColumns.push(id);
+        renderCustomColumns();
+    }
+}
+
+function removeCustomColumn(id) {
+    customSelectedColumns = customSelectedColumns.filter(c => c !== id);
+    renderCustomColumns();
+}
+
+function moveCustomColumn(index, dir) {
+    const newIdx = index + dir;
+    if(newIdx < 0 || newIdx >= customSelectedColumns.length) return;
+    const temp = customSelectedColumns[index];
+    customSelectedColumns[index] = customSelectedColumns[newIdx];
+    customSelectedColumns[newIdx] = temp;
+    renderCustomColumns();
+}
+
+function performCustomExtraction() {
+    if (!extractGlobalRoster) {
+        showToast("Roster data not loaded yet.");
+        return;
+    }
+    
+    if (customSelectedColumns.length === 0) {
+        showToast("Please select at least one column.", "error");
+        return;
+    }
+    
+    const sheetName = document.getElementById('customSheetName').value.trim() || 'Custom Extraction';
+    
+    document.getElementById('customExtractionModal').classList.add('hidden-force');
+    
+    let overlay = document.getElementById('extractOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'extractOverlay';
+        overlay.className = 'fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col justify-center items-center backdrop-blur-sm hidden-force text-gray-800 dark:text-white';
+        overlay.innerHTML = '<div class="loader !w-10 !h-10 border-primary mb-4"></div><div class="font-bold tracking-widest uppercase text-sm">Extracting to Drive...</div>';
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.remove('hidden-force');
+    
+    const config = {
+        sheetName: sheetName,
+        columns: customSelectedColumns
+    };
+    
+    apiCall('extractData', {
+        extractType: 'custom',
+        excludedNrics: [],
+        customConfig: config
+    }).then(res => {
+        overlay.classList.add('hidden-force');
+        if (res.status === 'success') {
+            showToast("Extraction successful!");
+            if (typeof refreshCurrentDriveFolder === 'function') {
+                if (typeof currentDrivePath !== 'undefined' && currentDrivePath.length <= 1) {
+                    refreshCurrentDriveFolder(null);
+                }
+            }
+        } else {
+            showToast("Extraction failed: " + res.message, 'error');
+        }
+    }).catch(err => {
+        overlay.classList.add('hidden-force');
+        showToast("Error extracting data.", 'error');
+    });
+}

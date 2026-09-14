@@ -74,7 +74,7 @@ try {
  renderProfileFullView();
 
 } catch (e) { 
- tabProfile.innerHTML = '<p class="text-red-500 font-bold text-xs p-2 text-center">Error loading dashboard.</p>'; 
+ tabProfile.innerHTML = '<p class="text-red-500 font-bold text-xs p-2 text-center">Error loading dashboard: ' + (e.message || e) + '</p>'; 
 }
 }
 
@@ -401,15 +401,15 @@ let paymentHtml = `
 
 let personalDetailsHeader = '<div id="section-my-profile">';
 
-let myGroupHtml = ""; if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) { myGroupHtml = `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4"><h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight border-b-2 border-amber-200 dark:border-amber-800 pb-2 mb-3"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3><p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Click on a group member to view their details.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-3">${loadedGroupMembers.map(member => { return `<div class="p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="openPairingDetailsModal('${member.nric}')"><div class="flex justify-between items-start mb-1"><span class="font-bold text-gray-900 dark:text-white text-sm">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</span><span class="text-[10px] uppercase font-black ${member.role === "TRAINEE" ? "text-green-600 dark:text-green-400" : (member.role === "CAREGIVER" ? "text-purple-600 dark:text-purple-400" : "text-orange-600 dark:text-orange-400")} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm">${member.role}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Diet: <span class="font-bold text-gray-700 dark:text-gray-300">${member.diet || "None"}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Bus: <span class="font-bold text-gray-700 dark:text-gray-300">${member.bus || "None"}</span></div></div>`; }).join("")}</div></div>`; } 
+let myGroupHtml = ""; if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) { myGroupHtml = `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4"><h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight border-b-2 border-amber-200 dark:border-amber-800 pb-2 mb-3"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3><p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Click on a group member to view their details.</p><div class="grid grid-cols-1 md:grid-cols-2 gap-3">${loadedGroupMembers.map(member => { return `<div class="p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="showPairingDetails('${member.nric}')"><div class="flex justify-between items-start mb-1"><span class="font-bold text-gray-900 dark:text-white text-sm">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</span><span class="text-[10px] uppercase font-black ${member.role === "TRAINEE" ? "text-green-600 dark:text-green-400" : (member.role === "CAREGIVER" ? "text-purple-600 dark:text-purple-400" : "text-orange-600 dark:text-orange-400")} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm">${member.role}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Diet: <span class="font-bold text-gray-700 dark:text-gray-300">${member.diet || "None"}</span></div><div class="text-xs text-gray-500 dark:text-gray-400">Bus: <span class="font-bold text-gray-700 dark:text-gray-300">${member.bus || "None"}</span></div></div>`; }).join("")}</div></div>`; } 
 
 let navHtml = '';
 if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
     navHtml = `
-    <div class="flex gap-2 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg shadow-inner sticky top-[60px] z-[30] backdrop-blur-md bg-opacity-90">
-        <button id="nav-btn-profile" onclick="switchProfileTab('profile')" class="flex-1 text-xs font-bold py-2 rounded shadow bg-white dark:bg-gray-700 text-primary transition-all">My Profile</button>
-        <button id="nav-btn-group" onclick="switchProfileTab('group')" class="flex-1 text-xs font-bold py-2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-all"><i class="fa-solid fa-crown mr-1"></i> My Group</button>
-<button id="nav-btn-attendance" onclick="switchProfileTab('attendance')" class="flex-1 text-xs font-bold py-2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-all"><i class="fa-regular fa-calendar-check mr-1"></i> Attendance</button>
+    <div class="flex gap-2 bg-gray-100 dark:bg-gray-800 p-2 rounded-2xl shadow-[0_-15px_50px_rgba(0,0,0,0.3)] fixed bottom-4 left-1/2 -translate-x-1/2 z-[50] backdrop-blur-md bg-opacity-95 border-2 border-gray-300 dark:border-gray-600 w-[calc(100%-2rem)] max-w-lg mb-0 transition-transform duration-300">
+        <button id="nav-btn-profile" onclick="switchProfileTab('profile')" class="flex-1 text-sm font-black py-3 rounded-xl shadow-md bg-white dark:bg-gray-700 text-primary transition-all border border-gray-200 dark:border-gray-600 scale-[1.02]">My Profile</button>
+        <button id="nav-btn-group" onclick="switchProfileTab('group')" class="flex-1 text-sm font-bold py-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all border border-transparent"><i class="fa-solid fa-crown mr-1"></i> My Group</button>
+        <button id="nav-btn-attendance" onclick="switchProfileTab('attendance')" class="flex-1 text-sm font-bold py-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all border border-transparent"><i class="fa-regular fa-calendar-check mr-1"></i> Attendance</button>
     </div>
     `;
 }
@@ -417,19 +417,25 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
 
 let myAttendanceHtml = "";
 if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
-    myAttendanceHtml = `<div id="section-my-attendance" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-md mb-4">
-        <div class="flex justify-between items-center border-b-2 border-blue-200 dark:border-blue-800 pb-2 mb-3">
-            <h3 class="text-sm font-black text-blue-900 dark:text-blue-100 tracking-tight">
-                <i class="fa-regular fa-calendar-check text-blue-500 mr-2"></i> Attendance
-            </h3>
-            <button onclick="promptAddIcJuncture()" class="text-[11px] bg-blue-50 text-blue-600 border-2 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 font-bold px-2 py-0.5 rounded hover:bg-blue-100 transition focus:outline-none">+ New</button>
-        </div>
-        <div class="mb-3">
-            <select id="icJunctureSelect" onchange="renderGroupAttendance()" class="w-full p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-bold">
-                <option value="">Select a juncture...</option>
-                <optgroup label="Admin Junctures" id="optgroup-admin-junctures"></optgroup>
-                <optgroup label="My Custom Junctures" id="optgroup-ic-junctures"></optgroup>
-            </select>
+    myAttendanceHtml = `<div id="section-my-attendance" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-md mb-4 pb-24 relative">
+        <div class="sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4 pb-3 mb-3 border-b-2 border-blue-200 dark:border-blue-800 flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-black text-blue-900 dark:text-blue-100 tracking-tight">
+                    <i class="fa-regular fa-calendar-check text-blue-500 mr-2"></i> Attendance
+                </h3>
+                <button onclick="promptAddIcJuncture()" class="text-[11px] bg-blue-50 text-blue-600 border-2 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 font-bold px-2 py-0.5 rounded hover:bg-blue-100 transition focus:outline-none">+ New</button>
+            </div>
+            <div class="flex flex-col gap-2">
+                <select id="icJunctureSelect" onchange="renderGroupAttendance()" class="w-full p-2 rounded-lg text-sm bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none font-bold">
+                    <option value="">Select a juncture...</option>
+                    <optgroup label="Admin Junctures" id="optgroup-admin-junctures"></optgroup>
+                    <optgroup label="My Custom Junctures" id="optgroup-ic-junctures"></optgroup>
+                </select>
+                <div class="relative w-full hidden-force" id="icAttendanceSearchWrapper">
+                    <input type="text" id="myAttSearchInput" oninput="filterMyAtt()" placeholder="Search members..." class="w-full p-2 pl-8 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 font-bold text-xs focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white shadow-sm transition">
+                    <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
         </div>
         <div id="icAttendanceContainer" class="min-h-[100px] flex items-center justify-center text-sm font-bold text-gray-400">
             Select a juncture to take attendance
@@ -444,7 +450,76 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
         </div>
     </div>`;
 }
-tabProfile.innerHTML = navHtml + topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml + '</div>' + myGroupHtml + myAttendanceHtml;
+
+// Enrich loadedGroupMembers with data from globalLogistics to ensure accurate sorting
+if (globalLogistics && globalLogistics.participants) {
+    loadedGroupMembers.forEach(member => {
+        const fullProfile = globalLogistics.participants.find(p => p.nric === member.nric);
+        if (fullProfile) {
+            if (!member.pocNric && fullProfile.pocNric) member.pocNric = fullProfile.pocNric;
+            if (!member.group && fullProfile.group) member.group = fullProfile.group;
+        }
+    });
+}
+
+// Sort loadedGroupMembers using special sort logic if available
+if (window.sortParticipantsSpecial) {
+    window.sortParticipantsSpecial(loadedGroupMembers, globalLogistics && globalLogistics.participants ? globalLogistics.participants : loadedGroupMembers);
+}
+
+// Regenerate myGroupHtml after sorting
+let myGroupSortedHtml = ""; 
+if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) { 
+    myGroupSortedHtml = `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4 pb-24 relative">
+        <div class="flex flex-col gap-2 border-b-2 border-amber-200 dark:border-amber-800 pb-3 mb-3 sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4">
+            <h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3>
+            <div class="relative w-full">
+                <input type="text" id="myGroupSearchInput" oninput="filterMyGroup()" placeholder="Search members..." class="w-full p-2 pl-8 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 font-bold text-xs focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 dark:text-white shadow-sm transition">
+                <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </div>
+        <p class="text-[11px] text-gray-500 dark:text-gray-400 mb-3 font-semibold">Click on a member to view their full details.</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="myGroupMembersGrid">` + 
+        loadedGroupMembers.map(member => {
+            let medicalHtml = '';
+            if (member.role === 'TRAINEE') {
+                medicalHtml = `<div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-notes-medical w-4 text-center mt-0.5 text-red-400"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.medical || "None"}</span></div>`;
+            }
+
+            let pairedVolunteersStr = '';
+            if (member.role === 'TRAINEE' && globalLogistics && globalLogistics.pairings && globalLogistics.participants) {
+                const pairs = globalLogistics.pairings.filter(p => p.traineeNric === member.nric && p.status === 'ACTIVE');
+                if (pairs.length > 0) {
+                    let vols = pairs.map(pair => {
+                        const vp = globalLogistics.participants.find(x => x.nric === pair.volNric);
+                        if (!vp) return null;
+                        const fullVp = typeof additionalProfiles !== 'undefined' ? (additionalProfiles[vp.nric] || vp) : vp;
+                        return fullVp.shortName || fullVp.name || fullVp.fullName;
+                    }).filter(Boolean).join(', ');
+                    if (vols) {
+                        pairedVolunteersStr = `<div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-hands-holding-child w-4 text-center mt-0.5 text-blue-400"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${vols}</span></div>`;
+                    }
+                }
+            }
+            
+            return `<div class="my-group-card p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="showPairingDetails('${member.nric}')" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()}">
+                <div class="flex justify-between items-start mb-1">
+                    <span class="font-bold text-gray-900 dark:text-white text-sm">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</span>
+                    <span class="text-[10px] uppercase font-black ${member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400')} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm">${member.role}</span>
+                </div>
+                <div class="flex flex-col gap-1 mt-2">
+                    <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-utensils w-4 text-center mt-0.5 text-amber-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.diet || "None"}</span></div>
+                    <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-bus w-4 text-center mt-0.5 text-teal-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.bus || "None"}</span></div>
+                    ${medicalHtml}
+                    ${pairedVolunteersStr}
+                </div>
+            </div>`; 
+        }).join("") + 
+        `</div></div>`; 
+}
+
+tabProfile.innerHTML = topBannersHtml + personalDetailsHeader + profilesHtml + receiptsHtml + paymentHtml + '</div>' + myGroupSortedHtml + myAttendanceHtml + navHtml;
+
 
 
 }
@@ -808,6 +883,28 @@ window.showPairingDetails = async function(nric) {
         const medical = member.medical || 'None';
         const other = member.otherPoints || 'None';
         
+        let volunteersHtml = '';
+        if (member.role === 'TRAINEE' && globalLogistics && globalLogistics.pairings && globalLogistics.participants) {
+            const pairs = globalLogistics.pairings.filter(p => p.traineeNric === member.nric && p.status === 'ACTIVE');
+            if (pairs.length > 0) {
+                let volsList = pairs.map(pair => {
+                    const vp = globalLogistics.participants.find(x => x.nric === pair.volNric);
+                    if (!vp) return '';
+                    const fullVp = typeof additionalProfiles !== 'undefined' ? (additionalProfiles[vp.nric] || vp) : vp;
+                    const vpName = fullVp.shortName || fullVp.name || fullVp.fullName || 'Unknown Volunteer';
+                    const vpContact = (fullVp.contact && typeof window.renderPhoneLink === 'function') ? window.renderPhoneLink(fullVp.contact) : (fullVp.contact || 'No contact');
+                    return `<div class="mb-1"><span class="font-bold text-gray-800 dark:text-gray-200">${vpName}</span><div class="mt-0.5 text-xs font-mono">${vpContact}</div></div>`;
+                }).join('');
+                
+                if (volsList) {
+                    volunteersHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
+                        <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Paired Volunteer(s)</p>
+                        ${volsList}
+                    </div>`;
+                }
+            }
+        }
+        
         const isMain = index === 0;
         const headerLabel = isMain ? '' : `<div class="mb-2"><span class="text-[10px] font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest inline-block shadow-sm">Family Member</span></div>`;
 
@@ -840,7 +937,8 @@ window.showPairingDetails = async function(nric) {
                 
                 ${member.role === 'TRAINEE' ? `<div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3"><p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Medical Conditions</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${medical}</p></div>` : ''}
                 
-                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
+                ${volunteersHtml}
+                                <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-3 mt-3">
                     <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Other Points</p>
                     <p class="font-semibold text-sm text-gray-800 dark:text-gray-200">${other}</p>
                 </div>
@@ -866,7 +964,7 @@ window.showPairingDetails = async function(nric) {
     <div class="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" id="pairing-details-modal">
         <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full border-2 border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b-2 border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
-                <h3 class="font-black text-lg text-gray-900 dark:text-white">Pairing Details</h3>
+                <h3 class="font-black text-lg text-gray-900 dark:text-white">Participant Details</h3>
                 <button onclick="document.getElementById('pairing-details-modal').remove()" class="text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 p-1 rounded-lg focus:outline-none transition-colors">
                     <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
@@ -894,22 +992,22 @@ window.switchProfileTab = function(tab) {
     
     if(!btnProfile || !btnGroup || !secProfile || !secGroup || !btnAttendance || !secAttendance) return;
 
-    btnProfile.className = "flex-1 text-xs font-bold py-2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-all";
-    btnGroup.className = "flex-1 text-xs font-bold py-2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-all";
-    btnAttendance.className = "flex-1 text-xs font-bold py-2 rounded text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-all";
+    btnProfile.className = "flex-1 text-sm font-bold py-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all border border-transparent";
+    btnGroup.className = "flex-1 text-sm font-bold py-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all border border-transparent";
+    btnAttendance.className = "flex-1 text-sm font-bold py-3 rounded-xl text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-all border border-transparent";
     
     secProfile.classList.add('hidden-force');
     secGroup.classList.add('hidden-force');
     secAttendance.classList.add('hidden-force');
 
     if(tab === 'profile') {
-        btnProfile.className = "flex-1 text-xs font-bold py-2 rounded shadow bg-white dark:bg-gray-700 text-primary transition-all";
+        btnProfile.className = "flex-1 text-sm font-black py-3 rounded-xl shadow-md bg-white dark:bg-gray-700 text-primary transition-all border border-gray-200 dark:border-gray-600 scale-[1.02]";
         secProfile.classList.remove('hidden-force');
     } else if(tab === 'group') {
-        btnGroup.className = "flex-1 text-xs font-bold py-2 rounded shadow bg-white dark:bg-gray-700 text-amber-500 transition-all";
+        btnGroup.className = "flex-1 text-sm font-black py-3 rounded-xl shadow-md bg-white dark:bg-gray-700 text-amber-500 transition-all border border-amber-200 dark:border-amber-700 scale-[1.02]";
         secGroup.classList.remove('hidden-force');
     } else if(tab === 'attendance') {
-        btnAttendance.className = "flex-1 text-xs font-bold py-2 rounded shadow bg-white dark:bg-gray-700 text-blue-500 transition-all";
+        btnAttendance.className = "flex-1 text-sm font-black py-3 rounded-xl shadow-md bg-white dark:bg-gray-700 text-blue-500 transition-all border border-blue-200 dark:border-blue-700 scale-[1.02]";
         secAttendance.classList.remove('hidden-force');
         if (typeof renderGroupAttendance === 'function') renderGroupAttendance();
     }
@@ -939,8 +1037,10 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
 
     const juncture = select.value;
     const container = document.getElementById('icAttendanceContainer');
+    const searchWrapper = document.getElementById('icAttendanceSearchWrapper');
     if (!juncture) {
         container.innerHTML = 'Select a juncture to take attendance';
+        if (searchWrapper) searchWrapper.classList.add('hidden-force');
         return;
     }
 
@@ -957,11 +1057,31 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
 
     pendingIcAttendanceUpdates.clear();
 
-    let html = '<div class="flex flex-col gap-2">';
+    
+    if (searchWrapper) searchWrapper.classList.remove('hidden-force');
+    const searchInput = document.getElementById('myAttSearchInput');
+    if (searchInput) searchInput.value = '';
+
+    let html = `
+    <div class="flex flex-col gap-2" id="myAttMembersGrid">`;
+
     
     // Sort logic
     let sortedMembers = [...loadedGroupMembers];
-    sortedMembers.sort((a,b) => String(a.fullName).localeCompare(String(b.fullName)));
+    if (globalLogistics && globalLogistics.participants) {
+        sortedMembers.forEach(member => {
+            const fullProfile = globalLogistics.participants.find(p => p.nric === member.nric);
+            if (fullProfile) {
+                if (!member.pocNric && fullProfile.pocNric) member.pocNric = fullProfile.pocNric;
+                if (!member.group && fullProfile.group) member.group = fullProfile.group;
+            }
+        });
+    }
+    if (window.sortParticipantsSpecial) {
+        window.sortParticipantsSpecial(sortedMembers, globalLogistics && globalLogistics.participants ? globalLogistics.participants : sortedMembers);
+    } else {
+        sortedMembers.sort((a,b) => String(a.fullName).localeCompare(String(b.fullName)));
+    }
 
     sortedMembers.forEach(member => {
         const dName = member.fullName || member.name;
@@ -980,7 +1100,7 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
         const bgClass = isPresent ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700';
 
         html += `
-        <div class="flex items-center justify-between p-2 rounded-lg border-2 ${bgClass} cursor-pointer select-none transition-colors" onclick="toggleIcAttendance('${member.nric}')" id="att-card-${member.nric}">
+        <div class="my-att-card flex items-center justify-between p-2 rounded-lg border-2 ${bgClass} cursor-pointer select-none transition-colors" onclick="toggleIcAttendance('${member.nric}')" id="att-card-${member.nric}" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()}">
             <div class="flex items-center gap-2 overflow-hidden flex-1">
                 <div class="shrink-0 w-5 h-5 rounded border-2 ${isPresent ? 'bg-green-500 border-green-500' : 'border-gray-300 dark:border-gray-600'} flex items-center justify-center transition-colors" id="att-check-${member.nric}">
                     ${isPresent ? '<svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : ''}
@@ -1128,4 +1248,25 @@ window.promptDeleteIcJuncture = async function() {
     } catch (e) {
         showToast("Error deleting juncture", true);
     }
+};
+
+
+window.filterMyGroup = function() {
+    const query = (document.getElementById('myGroupSearchInput').value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.my-group-card');
+    cards.forEach(card => {
+        const nameData = card.getAttribute('data-name');
+        if (nameData.includes(query)) card.style.display = '';
+        else card.style.display = 'none';
+    });
+};
+
+window.filterMyAtt = function() {
+    const query = (document.getElementById('myAttSearchInput').value || '').toLowerCase().trim();
+    const cards = document.querySelectorAll('.my-att-card');
+    cards.forEach(card => {
+        const nameData = card.getAttribute('data-name');
+        if (nameData.includes(query)) card.style.display = '';
+        else card.style.display = 'none';
+    });
 };
