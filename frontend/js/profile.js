@@ -458,6 +458,7 @@ if (globalLogistics && globalLogistics.participants) {
         if (fullProfile) {
             if (!member.pocNric && fullProfile.pocNric) member.pocNric = fullProfile.pocNric;
             if (!member.group && fullProfile.group) member.group = fullProfile.group;
+            if (fullProfile.caregiverFor) member.caregiverFor = fullProfile.caregiverFor;
         }
     });
 }
@@ -502,10 +503,13 @@ if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
                 }
             }
             
-            return `<div class="my-group-card p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="showPairingDetails('${member.nric}')" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()}">
+            return `<div class="my-group-card p-3 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 rounded-lg cursor-pointer hover:border-amber-400 dark:hover:border-amber-500 transition shadow-sm" onclick="showPairingDetails('${member.nric}')" data-name="${(member.fullName||'').toLowerCase()} ${(member.shortName||'').toLowerCase()} ${(member.role||'').toLowerCase()} ${(member.caregiverFor||'').toLowerCase()}">
                 <div class="flex justify-between items-start mb-1">
-                    <span class="font-bold text-gray-900 dark:text-white text-sm">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</span>
-                    <span class="text-[10px] uppercase font-black ${member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400')} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm">${member.role}</span>
+                    <div>
+                        <div class="font-bold text-gray-900 dark:text-white text-sm leading-tight">${member.fullName} ${member.shortName ? "(" + member.shortName + ")" : ""}</div>
+                        ${member.caregiverFor ? `<div class="mt-0.5 font-bold text-purple-600 dark:text-purple-400 text-xs">[${member.caregiverFor.toUpperCase()}]</div>` : ''}
+                    </div>
+                    <span class="text-[10px] uppercase font-black ${member.role === 'TRAINEE' ? 'text-green-600 dark:text-green-400' : (member.role === 'CAREGIVER' ? 'text-purple-600 dark:text-purple-400' : 'text-orange-600 dark:text-orange-400')} bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded shadow-sm ml-2 shrink-0">${member.role}</span>
                 </div>
                 <div class="flex flex-col gap-1 mt-2">
                     <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-utensils w-4 text-center mt-0.5 text-amber-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.diet || "None"}</span></div>
@@ -1016,6 +1020,7 @@ window.switchProfileTab = function(tab) {
 
 let currentIcAttendanceData = {};
 let pendingIcAttendanceUpdates = new Map();
+let lastFetchedJuncture = "";
 
 window.renderGroupAttendance = async function(forceRebuild = false) {
     const select = document.getElementById('icJunctureSelect');
@@ -1044,15 +1049,18 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
         return;
     }
 
-    container.innerHTML = '<div class="loader w-6 h-6 border-blue-500 mx-auto"></div>';
-    
-    try {
-        const res = await apiCall('fetchAttendanceData', { juncture: juncture, forceRebuild });
-        currentIcAttendanceData = res.data || {};
-    } catch(e) {
-        console.error("Failed to load attendance", e);
-        container.innerHTML = '<div class="text-red-500">Failed to load attendance data.</div>';
-        return;
+    if (forceRebuild || juncture !== lastFetchedJuncture) {
+        container.innerHTML = '<div class="loader w-6 h-6 border-blue-500 mx-auto"></div>';
+        
+        try {
+            const res = await apiCall('fetchAttendanceData', { juncture: juncture, forceRebuild });
+            currentIcAttendanceData = res.data || {};
+            lastFetchedJuncture = juncture;
+        } catch(e) {
+            console.error("Failed to load attendance", e);
+            container.innerHTML = '<div class="text-red-500">Failed to load attendance data.</div>';
+            return;
+        }
     }
 
     pendingIcAttendanceUpdates.clear();
@@ -1074,6 +1082,7 @@ window.renderGroupAttendance = async function(forceRebuild = false) {
             if (fullProfile) {
                 if (!member.pocNric && fullProfile.pocNric) member.pocNric = fullProfile.pocNric;
                 if (!member.group && fullProfile.group) member.group = fullProfile.group;
+                if (fullProfile.caregiverFor) member.caregiverFor = fullProfile.caregiverFor;
             }
         });
     }
