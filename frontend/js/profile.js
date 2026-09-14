@@ -487,7 +487,10 @@ let myGroupSortedHtml = "";
 if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) { 
     myGroupSortedHtml = `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4 pb-24 relative">
         <div class="flex flex-col gap-2 border-b-2 border-amber-200 dark:border-amber-800 pb-3 mb-3 sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4">
-            <h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3>
+            <div class="flex justify-between items-center gap-2">
+                <h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight shrink-0"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3>
+                <button onclick="openIcExportModal()" class="shrink-0 text-[11px] bg-amber-50 text-amber-700 border-2 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800 font-bold px-2 py-1 rounded-md shadow-sm hover:bg-amber-100 transition flex items-center justify-center focus:outline-none"><i class="fa-solid fa-download mr-1"></i> Export</button>
+            </div>
             <div class="relative w-full">
                 <input type="text" id="myGroupSearchInput" oninput="filterMyGroup()" placeholder="Search members..." class="w-full p-2 pl-8 border-2 border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 font-bold text-xs focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-900 dark:text-white shadow-sm transition">
                 <svg class="w-4 h-4 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -1355,4 +1358,88 @@ window.filterMyAtt = function() {
         if (nameData.includes(query)) card.style.display = '';
         else card.style.display = 'none';
     });
+};
+
+window.openIcExportModal = function() {
+    let modalHtml = `
+    <div id="icExportModal" class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm transition-opacity">
+        <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl flex flex-col border-2 border-gray-200 dark:border-gray-700">
+            <div class="flex items-center justify-between p-4 border-b-2 border-gray-200 dark:border-gray-800 shrink-0">
+                <h3 class="font-black text-gray-900 dark:text-white text-lg"><i class="fa-solid fa-address-book text-amber-500 mr-2"></i>Export Contacts</h3>
+                <button onclick="document.getElementById('icExportModal').remove()" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-4 flex-grow space-y-4">
+                <div class="space-y-2">
+                    <label class="font-bold text-sm text-gray-700 dark:text-gray-300 uppercase tracking-widest block">Roles</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="icExpVol" checked class="w-4 h-4 accent-amber-500"> Volunteers</label>
+                        <label class="flex items-center gap-2 font-bold text-sm cursor-pointer"><input type="checkbox" id="icExpCgv" checked class="w-4 h-4 accent-amber-500"> Caregivers</label>
+                    </div>
+                </div>
+                
+                <button onclick="generateIcExportList()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md transition text-sm flex justify-center items-center gap-2 mt-2"><i class="fa-solid fa-download"></i> Download CSV</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.generateIcExportList = function() {
+    const includeVol = document.getElementById('icExpVol').checked;
+    const includeCgv = document.getElementById('icExpCgv').checked;
+
+    if (!includeVol && !includeCgv) {
+        if (typeof showToast === 'function') showToast("Please select at least one role.", true);
+        else alert("Please select at least one role.");
+        return;
+    }
+
+    let rows = [["Given Name", "Phone 1 - Value"]];
+
+    if (loadedGroupMembers && loadedGroupMembers.length > 0) {
+        loadedGroupMembers.forEach(p => {
+            const isVol = p.role === 'VOLUNTEER';
+            const isCgv = p.role === 'CAREGIVER';
+            
+            if (!((isVol && includeVol) || (isCgv && includeCgv))) return;
+
+            if (p.contact && p.contact.trim() !== '') {
+                let cleaned = p.contact.replace(/[^\d+]/g, '');
+                if(cleaned.length > 0) {
+                    const shortName = (p.shortName || p.fullName || '').trim();
+                    const groupName = (p.logisticsGroup || p.group || 'NOGROUP').trim();
+                    
+                    let firstName = '';
+                    if (isVol) firstName = `TOT2026_VOL_${groupName}_${shortName}`;
+                    else if (isCgv) firstName = `TOT2026_CAR_${groupName}_${shortName}`;
+                    else firstName = `TOT2026_OTH_${groupName}_${shortName}`;
+                    
+                    const safeName = `"${firstName.replace(/"/g, '""')}"`;
+                    const safePhone = `"${cleaned}"`;
+                    
+                    rows.push([safeName, safePhone]);
+                }
+            }
+        });
+    }
+
+    if(rows.length === 1) {
+        if (typeof showToast === 'function') showToast("No matching contacts found.", true);
+        else alert("No matching contacts found.");
+        return;
+    }
+
+    const csvContent = rows.map(r => r.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${loadedLogisticsGroup || 'Group'}_Contacts.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    const modal = document.getElementById('icExportModal');
+    if (modal) modal.remove();
 };
