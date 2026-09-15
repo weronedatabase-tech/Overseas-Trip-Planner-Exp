@@ -538,7 +538,7 @@ function renderProfileFullView() {
 </div>
 `;
 
-  let personalDetailsHeader = '<div id="section-my-profile">';
+  let personalDetailsHeader = '<div id="section-my-profile" class="pb-28">';
 
   let myGroupHtml = "";
   if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
@@ -562,7 +562,7 @@ function renderProfileFullView() {
 
   let myAttendanceHtml = "";
   if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
-    myAttendanceHtml = `<div id="section-my-attendance" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-md mb-4 pb-24 relative">
+    myAttendanceHtml = `<div id="section-my-attendance" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-blue-200 dark:border-blue-800 shadow-md mb-4 pb-28 relative">
         <div class="sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4 pb-3 mb-3 border-b-2 border-blue-200 dark:border-blue-800 flex flex-col gap-3">
             <div class="flex justify-between items-center gap-2">
                 <h3 class="text-sm font-black text-blue-900 dark:text-blue-100 tracking-tight shrink-0">
@@ -641,7 +641,7 @@ function renderProfileFullView() {
   let myGroupSortedHtml = "";
   if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
     myGroupSortedHtml =
-      `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4 pb-24 relative">
+      `<div id="section-my-group" class="hidden-force bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-amber-200 dark:border-amber-800 shadow-md mb-4 pb-28 relative">
         <div class="flex flex-col gap-2 border-b-2 border-amber-200 dark:border-amber-800 pb-3 mb-3 sticky top-0 bg-white dark:bg-gray-900 z-10 pt-4 -mt-4">
             <div class="flex justify-between items-center gap-2">
                 <h3 class="text-sm font-black text-amber-900 dark:text-amber-100 tracking-tight shrink-0"><i class="fa-solid fa-crown text-amber-500 mr-2"></i> My Group (${loadedLogisticsGroup})</h3>
