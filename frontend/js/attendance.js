@@ -150,7 +150,7 @@ async function renderAttendanceChecklist() {
     appSettings.activeProjects.forEach((g) => {
       projGroup.innerHTML += `<option value="PROJ::${g}">${g}</option>`;
     });
-    asgnSel.appendChild(projGroup);
+    if(asgnSel) asgnSel.appendChild(projGroup);
   }
 
   // Populate Logistics Groups and Buses
@@ -171,7 +171,7 @@ async function renderAttendanceChecklist() {
         .forEach((g) => {
           grpGroup.innerHTML += `<option value="GRP::${g}">${g}</option>`;
         });
-      asgnSel.appendChild(grpGroup);
+      if(asgnSel) asgnSel.appendChild(grpGroup);
     }
 
     if (buses.size > 0) {
@@ -182,7 +182,7 @@ async function renderAttendanceChecklist() {
         .forEach((b) => {
           busGroup.innerHTML += `<option value="BUS::${b}">${b}</option>`;
         });
-      asgnSel.appendChild(busGroup);
+      if(asgnSel) asgnSel.appendChild(busGroup);
     }
   }
 
@@ -194,7 +194,7 @@ async function renderAttendanceChecklist() {
     }
 
     // Check if the option exists
-    if (asgnSel.querySelector(`option[value="${finalValue}"]`)) {
+    if (asgnSel && asgnSel.querySelector(`option[value="${finalValue}"]`)) {
       asgnSel.value = finalValue;
     }
   }

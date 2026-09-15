@@ -114,7 +114,7 @@ function buildParticipantsUI() {
        </div>
        <div class="flex items-center gap-2">
            <select id="customViewSelect" onchange="handleCustomViewChange(this.value)"  class="bg-primary text-white border-2 border-transparent text-xs md:text-sm font-black px-3 py-1.5 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 dark:focus:ring-offset-gray-900 shadow-md cursor-pointer shrink-0 transition max-w-full">
-               <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Custom Views</option>
+               <option value="" disabled selected class="bg-white dark:bg-gray-800 text-gray-400">Views</option>
                ${(() => {
                  const viewLabels = {
                    reset_filter: "All Participants",
