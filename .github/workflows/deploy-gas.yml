@@ -30,7 +30,7 @@ jobs:
           }
           const parsed = JSON.parse(process.env.CLASPRC_JSON_SECRET);
           require('fs').writeFileSync(require('os').homedir() + '/.clasprc.json', JSON.stringify(parsed));
-        shell: node
+        shell: node {0}
         env:
           CLASPRC_JSON_SECRET: ${{ secrets.CLASPRC_JSON_SECRET }}
 
