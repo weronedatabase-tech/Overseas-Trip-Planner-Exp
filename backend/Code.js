@@ -1,7 +1,7 @@
 /* OVERSEAS TRIP APP BACKEND - Code.gs (MPA Architecture with Atomic Write-Through Caching) */
 
 // ==========================================
-// SYSTEM & CRON SETUP
+// SYSTEM & CRON SETUP 
 // ==========================================
 function setupProject() {
 const props = PropertiesService.getScriptProperties();
