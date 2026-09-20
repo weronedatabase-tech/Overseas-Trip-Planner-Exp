@@ -105,12 +105,12 @@ async function buildFinanceUI() {
   const el_tab_finance = document.getElementById("tab-finance");
   if (el_tab_finance)
     el_tab_finance.innerHTML = `
-<div class="sticky top-0 z-40 flex items-center justify-between bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 rounded-t-xl md:rounded-none pr-2">
-    <div class="flex overflow-x-auto scrollbar-hide flex-1 px-2 pt-1">
-        <button onclick="switchFinanceSubTab('finalized')" id="subTab-fin-finalized" class="px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none">1. Finalized Finances</button>
-        <button onclick="switchFinanceSubTab('options')" id="subTab-fin-options" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">2. Trip Options</button>
-        <button onclick="switchFinanceSubTab('receipts')" id="subTab-fin-receipts" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">3. Receipts</button>
-        <button onclick="switchFinanceSubTab('fees')" id="subTab-fin-fees" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">4. Fee Tracker</button>
+<div class="sticky top-0 z-40 flex items-center justify-between bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 shrink-0 rounded-t-xl md:rounded-none pr-2 select-none">
+    <div class="flex overflow-x-auto scrollbar-hide flex-1 px-2 pt-1 select-none">
+        <button type="button" onclick="switchFinanceSubTab('finalized')" id="subTab-fin-finalized" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">1. Finalized Finances</span></button>
+        <button type="button" onclick="switchFinanceSubTab('options')" id="subTab-fin-options" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">2. Trip Options</span></button>
+        <button type="button" onclick="switchFinanceSubTab('receipts')" id="subTab-fin-receipts" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">3. Receipts</span></button>
+        <button type="button" onclick="switchFinanceSubTab('fees')" id="subTab-fin-fees" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">4. Fee Tracker</span></button>
     </div>
     <div class="flex items-center shrink-0 pl-2 border-l-2 border-gray-200 dark:border-gray-800 ml-1">
         <button id="btn-sync-finance" onclick="manualFinanceSync(this)" class="bg-green-50 text-green-700 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 text-xs md:text-xs font-bold px-3 py-1.5 rounded-md hover:bg-green-100 transition flex items-center shadow-md focus:outline-none shrink-0">

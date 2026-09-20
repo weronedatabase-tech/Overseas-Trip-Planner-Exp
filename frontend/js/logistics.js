@@ -1186,11 +1186,11 @@ function buildLogisticsUI() {
   const el_tab_logistics = document.getElementById("tab-logistics");
   if (el_tab_logistics)
     el_tab_logistics.innerHTML = `
-<div class="sticky top-0 z-40 flex overflow-x-auto bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 scrollbar-hide shrink-0 rounded-t-xl md:rounded-none px-2 pt-1">
-    <button onclick="switchLogisticsSubTab('pairings')" id="subTab-pairings" class="px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none">1. Pairings</button>
-    <button onclick="switchLogisticsSubTab('rooms')" id="subTab-rooms" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">2. Rooms</button>
-    <button onclick="switchLogisticsSubTab('groups')" id="subTab-groups" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">3. Groups</button>
-    <button onclick="switchLogisticsSubTab('buses')" id="subTab-buses" class="px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none">4. Buses</button>
+<div class="sticky top-0 z-40 flex overflow-x-auto bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 scrollbar-hide shrink-0 rounded-t-xl md:rounded-none px-2 pt-1 select-none">
+    <button type="button" onclick="switchLogisticsSubTab('pairings')" id="subTab-pairings" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-primary text-primary whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">1. Pairings</span></button>
+    <button type="button" onclick="switchLogisticsSubTab('rooms')" id="subTab-rooms" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">2. Rooms</span></button>
+    <button type="button" onclick="switchLogisticsSubTab('groups')" id="subTab-groups" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">3. Groups</span></button>
+    <button type="button" onclick="switchLogisticsSubTab('buses')" id="subTab-buses" class="subtab-btn px-3 py-2 font-semibold border-b-2 border-transparent text-gray-500 dark:text-gray-400 whitespace-nowrap text-xs md:text-sm transition focus:outline-none cursor-pointer select-none touch-manipulation"><span class="pointer-events-none select-none">4. Buses</span></button>
 </div>
 
 <div id="log-pairings" class="flex-1 flex flex-col min-h-0 w-full relative">
@@ -1234,7 +1234,11 @@ function buildLogisticsUI() {
     <div class="bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-700 p-2 md:p-3 shrink-0 flex flex-col gap-2 shadow-md sticky top-0 z-30">
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
-                <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Room Assignments</h3>
+                <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Rooms</h3>
+                <button onclick="autoAssignRooms()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Rooms">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span class="whitespace-nowrap">Auto</span>
+                </button>
                 <button onclick="resetRoomAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Assignment</span>
@@ -1243,8 +1247,6 @@ function buildLogisticsUI() {
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Rooms</span>
                 </button>
-                <button onclick="autoAssignRooms()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none whitespace-nowrap">Auto-Room</button>
-                
             </div>
             <button id="btn-sync-rooms" onclick="manualSyncRooms(this)" class="text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
@@ -1294,9 +1296,9 @@ function buildLogisticsUI() {
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Groups</h3>
-                <button onclick="autoGroup()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Group">
+                <button onclick="autoGroup()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Groups">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span class="whitespace-nowrap">Auto Group</span>
+                    <span class="whitespace-nowrap">Auto</span>
                 </button>
                 <button onclick="resetGroupAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -1346,9 +1348,9 @@ function buildLogisticsUI() {
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Buses</h3>
-                <button onclick="autoBus()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Bus">
+                <button onclick="autoBus()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Buses">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
-                    <span class="whitespace-nowrap">Auto Bus</span>
+                    <span class="whitespace-nowrap">Auto</span>
                 </button>
                 <button onclick="resetBusAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
@@ -2035,6 +2037,7 @@ function switchLogisticsSubTab(tabId) {
     updateAssistedModeToggleUI();
   }
 }
+window.switchLogisticsSubTab = switchLogisticsSubTab;
 
 async function loadLogisticsData() {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint

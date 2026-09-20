@@ -304,3 +304,43 @@ textarea {
 .animate-pulse-button {
   animation: pulse-button 2s infinite ease-in-out;
 }
+
+/* Ensure interactive subtabs and buttons are not selectable as text and have pointer cursor across full area */
+[id^="subTab-"],
+.subtab-btn {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+  cursor: pointer !important;
+  touch-action: manipulation;
+}
+
+[id^="subTab-"] *,
+.subtab-btn * {
+  pointer-events: none;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+button,
+.nav-item {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+}
+
+/* Ensure toast notifications never block underlying clicks, taps, or trigger text selection */
+#toast {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+#toast.opacity-0 {
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
