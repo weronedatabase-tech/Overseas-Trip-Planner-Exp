@@ -1750,7 +1750,8 @@ window.showContactPaymentPopup = function (pocNric) {
   }
 
   const modalCont = document.getElementById("apcm-content");
-  modalCont.innerHTML = `
+  if (modalCont) {
+    modalCont.innerHTML = `
         <div>
             <h3 class="text-base font-black text-gray-900 dark:text-white mb-1">Contact & Payment</h3>
             <p class="text-xs font-bold text-gray-500 mb-4 uppercase tracking-widest">POC: ${pocMember.shortName || pocMember.fullName}</p>
@@ -1762,5 +1763,6 @@ window.showContactPaymentPopup = function (pocNric) {
         </div>
         ${qrHtml}
     `;
+  }
   modal.classList.remove("hidden-force");
 };

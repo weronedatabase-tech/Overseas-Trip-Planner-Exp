@@ -1302,10 +1302,22 @@ function buildLogisticsUI() {
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
+                <button id="groupAssistedToggleBtn" onclick="toggleAssistedMode()" class="text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
+                    <i class="fa-solid fa-link text-[10px] md:text-[11px]"></i>
+                    <span class="whitespace-nowrap">Assisted Mode</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                </button>
             </div>
             <button onclick="manualSyncGroups()" class="btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
+        </div>
+        <div id="groupUnassistedNotice" class="hidden-force text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-link-slash text-amber-600 dark:text-amber-400 shrink-0"></i>
+                <span><strong>Unassisted Mode Active:</strong> Logically linked participants are not automatically assigned or unassigned.</span>
+            </div>
+            <button onclick="toggleAssistedMode()" class="text-amber-700 dark:text-amber-300 underline text-[10px] font-bold hover:text-amber-900 shrink-0 ml-2">Switch to Assisted</button>
         </div>
         <div class="relative w-full flex items-center gap-2">
             <div class="relative flex-1">
@@ -1342,10 +1354,22 @@ function buildLogisticsUI() {
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
+                <button id="busAssistedToggleBtn" onclick="toggleAssistedMode()" class="text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
+                    <i class="fa-solid fa-link text-[10px] md:text-[11px]"></i>
+                    <span class="whitespace-nowrap">Assisted Mode</span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                </button>
             </div>
             <button onclick="manualSyncBuses()" class="btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
+        </div>
+        <div id="busUnassistedNotice" class="hidden-force text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded px-2 py-1 flex items-center justify-between">
+            <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-link-slash text-amber-600 dark:text-amber-400 shrink-0"></i>
+                <span><strong>Unassisted Mode Active:</strong> Logically linked participants are not automatically assigned or unassigned.</span>
+            </div>
+            <button onclick="toggleAssistedMode()" class="text-amber-700 dark:text-amber-300 underline text-[10px] font-bold hover:text-amber-900 shrink-0 ml-2">Switch to Assisted</button>
         </div>
         <div class="relative w-full flex items-center gap-2">
             <div class="relative flex-1">
@@ -1370,6 +1394,7 @@ function buildLogisticsUI() {
     </div>
 </div>
 `;
+  updateAssistedModeToggleUI();
 }
 
 let pendingGroupUpdates = new Map();
@@ -1380,9 +1405,101 @@ let activeGroupsList =
   JSON.parse(localStorage.getItem("activeGroupsList")) || [];
 let activeBusesList = JSON.parse(localStorage.getItem("activeBusesList")) || [];
 
+// Assisted / Unassisted Mode State
+let logisticsAssistedMode =
+  localStorage.getItem("logisticsAssistedMode") !== "false";
+window.logisticsAssistedMode = logisticsAssistedMode;
+window.groupAssistedMode = logisticsAssistedMode;
+window.busAssistedMode = logisticsAssistedMode;
+
+window.isAssistedMode = function (type) {
+  if (type === "group" && typeof window.groupAssistedMode === "boolean") {
+    return window.groupAssistedMode;
+  }
+  if (type === "bus" && typeof window.busAssistedMode === "boolean") {
+    return window.busAssistedMode;
+  }
+  return window.logisticsAssistedMode;
+};
+
+window.isAssistedModeActive = window.isAssistedMode;
+
+window.toggleAssistedMode = function (forceVal) {
+  if (typeof forceVal === "boolean") {
+    logisticsAssistedMode = forceVal;
+  } else {
+    logisticsAssistedMode = !logisticsAssistedMode;
+  }
+  window.logisticsAssistedMode = logisticsAssistedMode;
+  window.groupAssistedMode = logisticsAssistedMode;
+  window.busAssistedMode = logisticsAssistedMode;
+  localStorage.setItem("logisticsAssistedMode", logisticsAssistedMode);
+  updateAssistedModeToggleUI();
+  showToast(
+    logisticsAssistedMode
+      ? "Assisted Mode: Logically linked participants will be automatically assigned/unassigned."
+      : "Unassisted Mode: Special exceptions active. Logically linked participants will NOT be affected."
+  );
+};
+
+window.toggleGroupAssistedMode = function (forceVal) {
+  window.toggleAssistedMode(forceVal);
+};
+
+window.toggleBusAssistedMode = function (forceVal) {
+  window.toggleAssistedMode(forceVal);
+};
+
+function updateAssistedModeToggleUI() {
+  const isAssisted = window.isAssistedMode();
+  const groupBtn = document.getElementById("groupAssistedToggleBtn");
+  const busBtn = document.getElementById("busAssistedToggleBtn");
+  const groupNotice = document.getElementById("groupUnassistedNotice");
+  const busNotice = document.getElementById("busUnassistedNotice");
+
+  const btnHtml = isAssisted
+    ? `<i class="fa-solid fa-link text-[10px] md:text-[11px] text-emerald-600 dark:text-emerald-400"></i>
+       <span class="whitespace-nowrap">Assisted Mode</span>
+       <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>`
+    : `<i class="fa-solid fa-link-slash text-[10px] md:text-[11px] text-amber-600 dark:text-amber-400"></i>
+       <span class="whitespace-nowrap">Unassisted Mode</span>
+       <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 animate-pulse"></span>`;
+
+  const baseClasses =
+    "text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer";
+  const activeClass = isAssisted
+    ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+    : "bg-amber-50 text-amber-900 border-amber-400 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50 ring-2 ring-amber-400/30";
+
+  [groupBtn, busBtn].forEach((btn) => {
+    if (btn) {
+      btn.className = `${baseClasses} ${activeClass}`;
+      btn.innerHTML = btnHtml;
+      btn.setAttribute(
+        "title",
+        isAssisted
+          ? "Assisted Mode: Logically linked participants (pairings & caregivers) are automatically assigned/unassigned together. Click to switch to Unassisted Mode."
+          : "Unassisted Mode: Special exceptions mode. Only the selected participant is assigned/unassigned without affecting logically linked participants. Click to switch to Assisted Mode."
+      );
+      btn.setAttribute("data-mode", isAssisted ? "assisted" : "unassisted");
+    }
+  });
+
+  if (groupNotice) {
+    if (isAssisted) groupNotice.classList.add("hidden-force");
+    else groupNotice.classList.remove("hidden-force");
+  }
+  if (busNotice) {
+    if (isAssisted) busNotice.classList.add("hidden-force");
+    else busNotice.classList.remove("hidden-force");
+  }
+}
+window.updateAssistedModeToggleUI = updateAssistedModeToggleUI;
+
 function renderGroups() {
   if (!globalLogistics || !document.getElementById("groupListContainer"))
     return;
+  updateAssistedModeToggleUI();
   const query = document.getElementById("groupSearchInput")
     ? document.getElementById("groupSearchInput").value.toLowerCase().trim()
     : "";
@@ -1486,6 +1603,7 @@ function generateGroupCardHtml(item, isAssigned = false) {
 
 function renderBuses() {
   if (!globalLogistics || !document.getElementById("busListContainer")) return;
+  updateAssistedModeToggleUI();
   const query = document.getElementById("busSearchInput")
     ? document.getElementById("busSearchInput").value.toLowerCase().trim()
     : "";
@@ -1616,15 +1734,17 @@ window.handleGroupDrop = async function (nric, groupName) {
   p.logisticsGroup = groupName;
   pendingGroupUpdates.set(nric, { nric: nric, value: groupName });
 
-  // Handle pairing logic (auto group paired vols / caregivers)
-  let connected = getConnectedParticipants(nric);
-  connected.forEach((cNric) => {
-    let cp = globalLogistics.participants.find((x) => x.nric === cNric);
-    if (cp && cp.logisticsGroup !== groupName) {
-      cp.logisticsGroup = groupName;
-      pendingGroupUpdates.set(cNric, { nric: cNric, value: groupName });
-    }
-  });
+  // Handle pairing logic (auto group paired vols / caregivers) only in Assisted Mode
+  if (window.isAssistedMode("group")) {
+    let connected = getConnectedParticipants(nric);
+    connected.forEach((cNric) => {
+      let cp = globalLogistics.participants.find((x) => x.nric === cNric);
+      if (cp && cp.logisticsGroup !== groupName) {
+        cp.logisticsGroup = groupName;
+        pendingGroupUpdates.set(cNric, { nric: cNric, value: groupName });
+      }
+    });
+  }
 
   renderGroups();
   triggerGroupSync();
@@ -1636,15 +1756,17 @@ function handleBusDrop(nric, busName) {
   p.bus = busName;
   pendingBusUpdates.set(nric, { nric: nric, value: busName });
 
-  // Handle pairing logic (auto bus paired vols / caregivers)
-  let connected = getConnectedParticipants(nric);
-  connected.forEach((cNric) => {
-    let cp = globalLogistics.participants.find((x) => x.nric === cNric);
-    if (cp && cp.bus !== busName) {
-      cp.bus = busName;
-      pendingBusUpdates.set(cNric, { nric: cNric, value: busName });
-    }
-  });
+  // Handle pairing logic (auto bus paired vols / caregivers) only in Assisted Mode
+  if (window.isAssistedMode("bus")) {
+    let connected = getConnectedParticipants(nric);
+    connected.forEach((cNric) => {
+      let cp = globalLogistics.participants.find((x) => x.nric === cNric);
+      if (cp && cp.bus !== busName) {
+        cp.bus = busName;
+        pendingBusUpdates.set(cNric, { nric: cNric, value: busName });
+      }
+    });
+  }
 
   renderBuses();
   triggerBusSync();
@@ -1697,7 +1819,9 @@ function autoGroup() {
   let groupIdx = 0;
   unassigned.forEach((p) => {
     if (!p.logisticsGroup) {
-      let connected = getConnectedParticipants(p.nric);
+      let connected = window.isAssistedMode("group")
+        ? getConnectedParticipants(p.nric)
+        : [p.nric];
       let targetGroup = activeGroupsList[groupIdx % activeGroupsList.length];
       connected.forEach((cNric) => {
         let cp = globalLogistics.participants.find((x) => x.nric === cNric);
@@ -1723,9 +1847,11 @@ function autoBus() {
   let busIdx = 0;
   unassigned.forEach((p) => {
     if (!p.bus) {
-      let connected = getConnectedParticipants(p.nric);
-      // Additionally pull in people from the same group
-      if (p.logisticsGroup) {
+      let connected = window.isAssistedMode("bus")
+        ? getConnectedParticipants(p.nric)
+        : [p.nric];
+      // Additionally pull in people from the same group only in assisted mode
+      if (window.isAssistedMode("bus") && p.logisticsGroup) {
         globalLogistics.participants.forEach((x) => {
           if (
             x.logisticsGroup === p.logisticsGroup &&
@@ -1904,6 +2030,9 @@ function switchLogisticsSubTab(tabId) {
       "dark:text-gray-400",
     );
     targetBtn.classList.add("border-primary", "text-primary");
+  }
+  if (tabId === "groups" || tabId === "buses") {
+    updateAssistedModeToggleUI();
   }
 }
 
@@ -2624,9 +2753,14 @@ function openGroupAssignSheet(nric) {
   const p = globalLogistics.participants.find((x) => x.nric === nric);
   if (!p) return;
 
+  const isAssisted = window.isAssistedMode("group");
+  const modeBadge = isAssisted
+    ? `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link text-[9px] mr-1"></i>Assisted</span>`
+    : `<span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link-slash text-[9px] mr-1"></i>Unassisted</span>`;
+
   const el_sheetTitle = document.getElementById("sheetTitle");
   if (el_sheetTitle)
-    el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
+    el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span> ${modeBadge}`;
   const searchInput = document.getElementById("sheetSearchInput");
   if (searchInput) searchInput.value = "";
 
@@ -2643,9 +2777,14 @@ function openBusAssignSheet(nric) {
   const p = globalLogistics.participants.find((x) => x.nric === nric);
   if (!p) return;
 
+  const isAssisted = window.isAssistedMode("bus");
+  const modeBadge = isAssisted
+    ? `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link text-[9px] mr-1"></i>Assisted</span>`
+    : `<span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link-slash text-[9px] mr-1"></i>Unassisted</span>`;
+
   const el_sheetTitle = document.getElementById("sheetTitle");
   if (el_sheetTitle)
-    el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span>`;
+    el_sheetTitle.innerHTML = `Assign <span class="text-primary">${p.displayName || p.name}</span> ${modeBadge}`;
   const searchInput = document.getElementById("sheetSearchInput");
   if (searchInput) searchInput.value = "";
 
@@ -3067,9 +3206,14 @@ window.activeBusTargetName = null;
 window.openGroupAddSheet = function (gName) {
   activeGroupTargetName = gName;
   dndState.type = "grouping";
+  const isAssisted = window.isAssistedMode("group");
+  const modeBadge = isAssisted
+    ? `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link text-[9px] mr-1"></i>Assisted</span>`
+    : `<span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link-slash text-[9px] mr-1"></i>Unassisted</span>`;
+
   const el_sheetTitle = document.getElementById("sheetTitle");
   if (el_sheetTitle)
-    el_sheetTitle.innerHTML = `Add to <span class="ml-1 font-black text-primary">${gName}</span>`;
+    el_sheetTitle.innerHTML = `Add to <span class="ml-1 font-black text-primary">${gName}</span> ${modeBadge}`;
   const searchInput = document.getElementById("sheetSearchInput");
   if (searchInput) searchInput.value = "";
   document
@@ -3180,9 +3324,14 @@ window.assignICToGroupFromSheet = async function (nric, gName) {
 window.openBusAddSheet = function (bName) {
   activeBusTargetName = bName;
   dndState.type = "bussing";
+  const isAssisted = window.isAssistedMode("bus");
+  const modeBadge = isAssisted
+    ? `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link text-[9px] mr-1"></i>Assisted</span>`
+    : `<span class="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700 ml-1.5 whitespace-nowrap"><i class="fa-solid fa-link-slash text-[9px] mr-1"></i>Unassisted</span>`;
+
   const el_sheetTitle = document.getElementById("sheetTitle");
   if (el_sheetTitle)
-    el_sheetTitle.innerHTML = `Add to <span class="ml-1 font-black text-primary">${bName}</span>`;
+    el_sheetTitle.innerHTML = `Add to <span class="ml-1 font-black text-primary">${bName}</span> ${modeBadge}`;
   const searchInput = document.getElementById("sheetSearchInput");
   if (searchInput) searchInput.value = "";
   document

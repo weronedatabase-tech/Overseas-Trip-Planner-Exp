@@ -982,11 +982,13 @@ function closeQuickPairModal() {
 }
 
 function filterQuickPairList() {
-  const input = document
-    .getElementById("quickPairSearch")
-    .value.toLowerCase()
-    .trim();
+  const searchInput = document.getElementById("quickPairSearch");
   const listEl = document.getElementById("quickPairList");
+  if (!listEl) return;
+
+  const input = (searchInput ? searchInput.value || "" : "")
+    .toLowerCase()
+    .trim();
   listEl.innerHTML = "";
 
   const matches = quickPairContext.targetList.filter((name) =>

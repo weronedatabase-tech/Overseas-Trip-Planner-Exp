@@ -285,7 +285,7 @@ function renderMedicalTable() {
        <div class="font-bold text-gray-700 dark:text-gray-300">Medical & Emergency Details</div>
    </th>
 </tr>`;
-  thead.innerHTML = headHtml;
+  if (thead) thead.innerHTML = headHtml;
 
   const tbody = document.getElementById("medicalTableBody");
   let html = "";
@@ -334,7 +334,9 @@ function renderMedicalTable() {
     html += `</div></td></tr>`;
   });
 
-  tbody.innerHTML =
-    html ||
-    `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+  if (tbody) {
+    tbody.innerHTML =
+      html ||
+      `<tr><td colspan="2" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching the criteria.</td></tr>`;
+  }
 }

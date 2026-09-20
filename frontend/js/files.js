@@ -537,6 +537,7 @@ function openDriveFile(url) {
 
 function renderDriveContents(folders, files) {
   const container = document.getElementById("driveContentsList");
+  if (!container) return;
   let html = "";
 
   if (folders.length === 0 && files.length === 0) {

@@ -394,8 +394,10 @@ function fetchOutingStats(url, index) {
         }
       }
       html += "</table>";
-      container.innerHTML = html;
-      container.classList.remove("animate-pulse");
+      if (container) {
+        container.innerHTML = html;
+        container.classList.remove("animate-pulse");
+      }
 
       let msg = "";
       if (res.pending && res.pending.length > 0) {
@@ -408,8 +410,10 @@ function fetchOutingStats(url, index) {
       outingReminders[index] = msg;
       if (btnGroup) btnGroup.classList.remove("hidden");
     } else {
-      container.innerHTML = `<span class="text-red-500 dark:text-red-400" title="${res.message || "Unknown error"}">Error loading stats</span>`;
-      container.classList.remove("animate-pulse");
+      if (container) {
+        container.innerHTML = `<span class="text-red-500 dark:text-red-400" title="${res.message || "Unknown error"}">Error loading stats</span>`;
+        container.classList.remove("animate-pulse");
+      }
     }
   });
 }
@@ -439,6 +443,7 @@ function copyOutingMessage(index, btn) {
 
 function performCopy(text, btn) {
   navigator.clipboard.writeText(text).then(() => {
+    if (!btn) return;
     const original = btn.innerHTML;
     btn.innerHTML =
       '<i class="fa-solid fa-check text-sm md:text-base shrink-0"></i><span class="text-[10px] md:text-[11px] font-semibold truncate">Copied!</span>';
@@ -449,6 +454,7 @@ function performCopy(text, btn) {
       "dark:border-green-800",
     );
     setTimeout(() => {
+      if (!btn) return;
       btn.innerHTML = original;
       btn.classList.remove(
         "text-green-600",
@@ -1043,10 +1049,12 @@ function renderCommAttLists() {
     goneHomeHtml ||
     '<p class="text-[10px] text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
 
-  document.getElementById("commAttNotCheckedCount").textContent =
-    notCheckedCount;
-  document.getElementById("commAttCheckedCount").textContent = checkedCount;
-  document.getElementById("commAttGoneHomeCount").textContent = goneHomeCount;
+  const elNC = document.getElementById("commAttNotCheckedCount");
+  if (elNC) elNC.textContent = notCheckedCount;
+  const elC = document.getElementById("commAttCheckedCount");
+  if (elC) elC.textContent = checkedCount;
+  const elGH = document.getElementById("commAttGoneHomeCount");
+  if (elGH) elGH.textContent = goneHomeCount;
 
   notCheckedList.scrollTop = scrollNC;
   checkedList.scrollTop = scrollC;
@@ -2075,15 +2083,18 @@ function renderBusLists() {
   const scrollB = boardedList.scrollTop;
 
   const juncture = busState.currentJuncture;
-  const filterBus = document.getElementById("busFilterSelect").value;
+  const filterBusEl = document.getElementById("busFilterSelect");
+  const filterBus = filterBusEl ? filterBusEl.value : "ALL";
 
   if (!juncture) {
     notBoardedList.innerHTML =
       '<p class="text-[10px] text-gray-400 p-2 text-center mt-2">N/A</p>';
     boardedList.innerHTML =
       '<p class="text-[10px] text-gray-400 p-2 text-center mt-2">N/A</p>';
-    document.getElementById("busNotBoardedCount").textContent = "0";
-    document.getElementById("busBoardedCount").textContent = "0";
+    const elNBC = document.getElementById("busNotBoardedCount");
+    if (elNBC) elNBC.textContent = "0";
+    const elBC = document.getElementById("busBoardedCount");
+    if (elBC) elBC.textContent = "0";
     return;
   }
 
@@ -2128,8 +2139,10 @@ function renderBusLists() {
     boardedHtml ||
     '<p class="text-[10px] text-gray-400 dark:text-gray-500 font-bold p-2 text-center mt-2">Empty</p>';
 
-  document.getElementById("busNotBoardedCount").textContent = notBoardedCount;
-  document.getElementById("busBoardedCount").textContent = boardedCount;
+  const elNBC = document.getElementById("busNotBoardedCount");
+  if (elNBC) elNBC.textContent = notBoardedCount;
+  const elBC = document.getElementById("busBoardedCount");
+  if (elBC) elBC.textContent = boardedCount;
 
   notBoardedList.scrollTop = scrollNB;
   boardedList.scrollTop = scrollB;

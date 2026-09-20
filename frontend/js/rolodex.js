@@ -16,11 +16,13 @@ const monthsArr = [
 
 function openDatePicker(targetId, type) {
   currentPickerTarget = targetId;
-  document.getElementById("datePickerSheet").classList.remove("hidden-force");
+  const sheet = document.getElementById("datePickerSheet");
+  if (sheet) sheet.classList.remove("hidden-force");
 
   const colD = document.getElementById("colDay");
   const colM = document.getElementById("colMonth");
   const colY = document.getElementById("colYear");
+  if (!colD || !colM || !colY) return;
   const spacer = '<div style="height: 80px;"></div>';
 
   let dHtml = spacer;

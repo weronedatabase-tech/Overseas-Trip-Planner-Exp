@@ -1024,11 +1024,13 @@ function openTableExportModal() {
   }
 
   buildExportTable();
-  document.getElementById("exportTableModal").classList.remove("hidden");
+  const exportModal = document.getElementById("exportTableModal");
+  if (exportModal) exportModal.classList.remove("hidden");
 }
 
 function closeTableExportModal() {
-  document.getElementById("exportTableModal").classList.add("hidden");
+  const exportModal = document.getElementById("exportTableModal");
+  if (exportModal) exportModal.classList.add("hidden");
 }
 
 function buildExportTable() {

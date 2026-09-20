@@ -702,7 +702,7 @@ function renderRosterTable() {
     }
   });
   headHtml += `</tr>`;
-  thead.innerHTML = headHtml;
+  if (thead) thead.innerHTML = headHtml;
 
   const tbody = document.getElementById("rosterTableBody");
   let html = "";
@@ -842,9 +842,11 @@ function renderRosterTable() {
   });
 
   const colCount = rosterCols.filter((c) => c.visible).length + 1;
-  tbody.innerHTML =
-    html ||
-    `<tr><td colspan="${colCount}" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No participants found matching the criteria.</td></tr>`;
+  if (tbody) {
+    tbody.innerHTML =
+      html ||
+      `<tr><td colspan="${colCount}" class="p-6 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No participants found matching the criteria.</td></tr>`;
+  }
 }
 window.openChatGroupsModal = function () {
   const projects = new Set();

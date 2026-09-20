@@ -145,10 +145,13 @@ function handleExtractSearch() {
 }
 
 function renderExtractSearchResults() {
-  const query = (document.getElementById("extractSearchInput").value || "")
+  const searchInput = document.getElementById("extractSearchInput");
+  const cont = document.getElementById("extractSearchResults");
+  if (!cont) return;
+
+  const query = (searchInput ? searchInput.value || "" : "")
     .toLowerCase()
     .trim();
-  const cont = document.getElementById("extractSearchResults");
 
   if (!query) {
     cont.innerHTML = "";
@@ -224,6 +227,8 @@ function renderExtractSearchResults() {
 
 function renderExtractExcluded() {
   const cont = document.getElementById("extractExcludedList");
+  if (!cont) return;
+
   if (extractExcludedNrics.size === 0) {
     cont.innerHTML = `<span class="text-xs text-gray-400 font-medium italic p-2">None selected.</span>`;
     return;
@@ -510,53 +515,58 @@ async function showCustomExtractionPopup() {
 }
 
 function renderCustomColumns() {
-  const query = (document.getElementById("customAvailSearch").value || "")
+  const searchInput = document.getElementById("customAvailSearch");
+  const query = (searchInput ? searchInput.value || "" : "")
     .toLowerCase()
     .trim();
   const availList = document.getElementById("customAvailList");
   const selectedList = document.getElementById("customSelectedList");
 
   // Available
-  let availHtml = "";
-  customAvailableColumns.forEach((col) => {
-    if (customSelectedColumns.includes(col.id)) return;
-    if (query && !col.label.toLowerCase().includes(query)) return;
+  if (availList) {
+    let availHtml = "";
+    customAvailableColumns.forEach((col) => {
+      if (customSelectedColumns.includes(col.id)) return;
+      if (query && !col.label.toLowerCase().includes(query)) return;
 
-    availHtml += `
-        <div class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary transition group cursor-pointer shadow-sm" onclick="addCustomColumn('${col.id}')">
-            <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors truncate pr-2">${col.label}</span>
-            <button class="shrink-0 text-gray-400 group-hover:text-primary transition focus:outline-none">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
-            </button>
-        </div>`;
-  });
-  if (!availHtml)
-    availHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No matching columns</div>`;
-  availList.innerHTML = availHtml;
+      availHtml += `
+          <div class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary transition group cursor-pointer shadow-sm" onclick="addCustomColumn('${col.id}')">
+              <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors truncate pr-2">${col.label}</span>
+              <button class="shrink-0 text-gray-400 group-hover:text-primary transition focus:outline-none">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+              </button>
+          </div>`;
+    });
+    if (!availHtml)
+      availHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No matching columns</div>`;
+    availList.innerHTML = availHtml;
+  }
 
   // Selected
-  let selHtml = "";
-  customSelectedColumns.forEach((colId, index) => {
-    const col = customAvailableColumns.find((c) => c.id === colId);
-    if (!col) return;
-    selHtml += `
-        <div class="flex items-center justify-between p-2 rounded border-2 border-primary/50 bg-white dark:bg-gray-800 shadow-sm transition-colors" draggable="true" ondragstart="handleCustomColDragStart(event, ${index})" ondragover="handleCustomColDragOver(event)" ondrop="handleCustomColDrop(event, ${index})" ondragenter="handleCustomColDragEnter(event)" ondragleave="handleCustomColDragLeave(event)" ondragend="handleCustomColDragEnd(event)">
-            <div class="flex items-center gap-2 overflow-hidden flex-1">
-                <div class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
-                </div>
-                <span class="text-xs font-bold text-gray-900 dark:text-gray-100 truncate flex-1">${index + 1}. ${col.label}</span>
-            </div>
-            <div class="flex items-center gap-1 shrink-0">
-                <button onclick="removeCustomColumn('${col.id}')" class="p-1 rounded text-gray-400 hover:bg-red-50 hover:text-red-500 transition focus:outline-none">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-            </div>
-        </div>`;
-  });
-  if (!selHtml)
-    selHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No columns selected</div>`;
-  selectedList.innerHTML = selHtml;
+  if (selectedList) {
+    let selHtml = "";
+    customSelectedColumns.forEach((colId, index) => {
+      const col = customAvailableColumns.find((c) => c.id === colId);
+      if (!col) return;
+      selHtml += `
+          <div class="flex items-center justify-between p-2 rounded border-2 border-primary/50 bg-white dark:bg-gray-800 shadow-sm transition-colors" draggable="true" ondragstart="handleCustomColDragStart(event, ${index})" ondragover="handleCustomColDragOver(event)" ondrop="handleCustomColDrop(event, ${index})" ondragenter="handleCustomColDragEnter(event)" ondragleave="handleCustomColDragLeave(event)" ondragend="handleCustomColDragEnd(event)">
+              <div class="flex items-center gap-2 overflow-hidden flex-1">
+                  <div class="cursor-grab text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                  </div>
+                  <span class="text-xs font-bold text-gray-900 dark:text-gray-100 truncate flex-1">${index + 1}. ${col.label}</span>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                  <button onclick="removeCustomColumn('${col.id}')" class="p-1 rounded text-gray-400 hover:bg-red-50 hover:text-red-500 transition focus:outline-none">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+              </div>
+          </div>`;
+    });
+    if (!selHtml)
+      selHtml = `<div class="text-[10px] text-center text-gray-400 py-4 font-bold uppercase tracking-widest">No columns selected</div>`;
+    selectedList.innerHTML = selHtml;
+  }
 }
 
 function addCustomColumn(id) {

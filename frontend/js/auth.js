@@ -51,9 +51,10 @@ function togglePassword(id) {
 async function toggleLandingReceipt() {
   const wrapper = document.getElementById("landingReceiptFormWrapper");
   const icon = document.getElementById("receiptExpandIcon");
+  if (!wrapper) return;
   if (wrapper.classList.contains("hidden-force")) {
     wrapper.classList.remove("hidden-force");
-    icon.classList.add("rotate-180");
+    if (icon) icon.classList.add("rotate-180");
 
     try {
       const catSelect = document.getElementById("landingRecCategory");
@@ -85,14 +86,14 @@ async function toggleLandingReceipt() {
             '<option value="" disabled selected>Select Category</option>' +
             optionsHtml;
         }
-        catSelect.innerHTML = optionsHtml;
+        if (catSelect) catSelect.innerHTML = optionsHtml;
       }
     } catch (e) {
       console.error("Failed to fetch finance options", e);
     }
   } else {
     wrapper.classList.add("hidden-force");
-    icon.classList.remove("rotate-180");
+    if (icon) icon.classList.remove("rotate-180");
   }
 }
 

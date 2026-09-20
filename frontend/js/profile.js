@@ -107,10 +107,12 @@ async function loadProfileData() {
 
     renderProfileFullView();
   } catch (e) {
-    tabProfile.innerHTML =
-      '<p class="text-red-500 font-bold text-xs p-2 text-center">Error loading dashboard: ' +
-      (e.message || e) +
-      "</p>";
+    if (tabProfile) {
+      tabProfile.innerHTML =
+        '<p class="text-red-500 font-bold text-xs p-2 text-center">Error loading dashboard: ' +
+        (e.message || e) +
+        "</p>";
+    }
   }
 }
 
@@ -165,6 +167,7 @@ function generatePayNowStr(proxyType, proxyValue, amount, ref) {
 
 function renderProfileFullView() {
   const tabProfile = document.getElementById("tab-profile");
+  if (!tabProfile) return;
   let topBannersHtml = "";
 
   let tripEnd = appSettings.tripEndDate
@@ -1401,8 +1404,11 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
       setIcSyncButtonState("saved");
     } catch (e) {
       console.error("Failed to load attendance", e);
-      container.innerHTML =
-        '<div class="text-red-500">Failed to load attendance data.</div>';
+      const c = document.getElementById("icAttendanceListContainer");
+      if (c) {
+        c.innerHTML =
+          '<div class="text-red-500">Failed to load attendance data.</div>';
+      }
       setIcSyncButtonState("error");
       return;
     }
@@ -1498,7 +1504,8 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
   });
 
   html += "</div>";
-  container.innerHTML = html;
+  const finalContainer = document.getElementById("icAttendanceListContainer") || container;
+  if (finalContainer) finalContainer.innerHTML = html;
 };
 
 window.toggleIcAttendance = function (nric) {
@@ -1558,7 +1565,8 @@ window.toggleIcAttendance = function (nric) {
 
 window.executeIcAttendanceSync = async function () {
   if (pendingIcAttendanceUpdates.size === 0) return;
-  const juncture = document.getElementById("icJunctureSelect").value;
+  const junctureEl = document.getElementById("icJunctureSelect");
+  const juncture = junctureEl ? junctureEl.value : null;
   if (!juncture) return;
 
   isIcAttendanceSyncing = true;

@@ -213,8 +213,10 @@ function clearSearch() {
 
 function filterNames() {
   const input = document.getElementById("volNameSearch");
+  if (!input) return;
   const filter = input.value.toLowerCase();
   const list = document.getElementById("volNameList");
+  if (!list) return;
   if (filter.length > 0) {
     list.classList.remove("hidden");
   } else {
@@ -289,8 +291,9 @@ function toggleProjectList(show) {
 
 function filterProjects() {
   const input = document.getElementById("newVolProjectSearch");
-  const filter = input.value.toLowerCase();
   const list = document.getElementById("projectList");
+  if (!input || !list) return;
+  const filter = input.value.toLowerCase();
   list.innerHTML = "";
   const matches = allProjects.filter((p) => p.toLowerCase().includes(filter));
   matches.forEach((proj) => {
@@ -465,7 +468,10 @@ function loadVolData(name, isManualNew) {
     type: selectedVolType,
     name: name,
   }).then((res) => {
-    fieldsDiv.innerHTML = "";
+    const curFieldsDiv = document.getElementById("dynamicFields");
+    const curTitle = document.getElementById("formTitle");
+    const curSubmitBtn = document.getElementById("volSubmitBtn");
+    if (curFieldsDiv) curFieldsDiv.innerHTML = "";
     if (res.success) {
       const data = res.data;
       originalVolData = JSON.parse(JSON.stringify(data || {}));
@@ -477,11 +483,15 @@ function loadVolData(name, isManualNew) {
       allProjects = res.projectOpts || [];
 
       const htmlSafeName = name ? name.replace(/"/g, "&quot;") : "";
-      title.innerHTML = isNew
-        ? `Add New: <span class="text-green-500">Volunteer</span>`
-        : `Update: <span class="text-blue-500">${htmlSafeName}</span>`;
-      if (isNew) submitBtn.innerText = "Add New Volunteer & Update Attendance";
-      else submitBtn.innerText = "Update Attendance";
+      if (curTitle) {
+        curTitle.innerHTML = isNew
+          ? `Add New: <span class="text-green-500">Volunteer</span>`
+          : `Update: <span class="text-blue-500">${htmlSafeName}</span>`;
+      }
+      if (curSubmitBtn) {
+        if (isNew) curSubmitBtn.innerText = "Add New Volunteer & Update Attendance";
+        else curSubmitBtn.innerText = "Update Attendance";
+      }
 
       let fieldsToShow =
         config && config.length > 0
@@ -581,7 +591,9 @@ function loadVolData(name, isManualNew) {
           if (cleanH.includes("time")) type = "time";
           inputHtml = `<input name="${header}" type="${type}" value="${val.replace(/"/g, "&quot;")}" ${isReadOnly ? "readonly" : ""} class="w-full bg-gray-50 dark:bg-black border ${isReadOnly ? "border-gray-200 dark:border-zinc-800 text-gray-500" : "border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-white focus:border-green-500"} rounded p-2 text-sm [color-scheme:light] dark:[color-scheme:dark] shadow-md">`;
         }
-        fieldsDiv.innerHTML += `<div class="${wrapperClass}"><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">${header}</label>${inputHtml}</div>`;
+        if (curFieldsDiv) {
+          curFieldsDiv.innerHTML += `<div class="${wrapperClass}"><label class="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">${header}</label>${inputHtml}</div>`;
+        }
       });
 
       const attSelect = document.querySelector(
@@ -589,10 +601,12 @@ function loadVolData(name, isManualNew) {
       );
       if (attSelect) toggleDependentFields(attSelect);
     } else {
-      fieldsDiv.innerHTML =
-        '<div class="text-red-500 dark:text-red-400 font-bold">Error: ' +
-        res.message +
-        "</div>";
+      if (curFieldsDiv) {
+        curFieldsDiv.innerHTML =
+          '<div class="text-red-500 dark:text-red-400 font-bold">Error: ' +
+          res.message +
+          "</div>";
+      }
     }
   });
 }
