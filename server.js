@@ -165,6 +165,57 @@ app.post('/api', async (req, res) => {
 
   if (action === 'uploadReceipt') {
     invalidateReceiptsCache();
+    const p = (payload && payload.payload) ? payload.payload : (payload || {});
+    const overrides = loadReceiptOverrides();
+    const newId = "rec_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
+
+    let fileUrl = "";
+    if (p.fileData) {
+      try {
+        const safeName = (p.fileName || 'receipt.jpg').replace(/[^a-zA-Z0-9.-]/g, '_');
+        const storedName = `${Date.now()}_${safeName}`;
+        const filePath = path.join(UPLOADS_DIR, storedName);
+        fs.writeFileSync(filePath, Buffer.from(p.fileData, 'base64'));
+        fileUrl = `/uploads/${storedName}`;
+      } catch (err) {
+        console.warn('Local file write error:', err);
+      }
+    }
+
+    overrides[newId] = {
+      id: newId,
+      ts: Date.now(),
+      uploaderNric: p.uploaderNric || '',
+      uploaderName: p.uploaderName || '',
+      paidByNric: p.paidByNric || p.uploaderNric || '',
+      currency: p.currency || 'SGD',
+      amount: parseFloat(p.amount) || 0,
+      rate: parseFloat(p.rate) || 1,
+      sgdAmount: parseFloat(p.sgdAmount) || 0,
+      categoryId: p.categoryId || '',
+      remarks: p.remarks || '',
+      fileUrl: fileUrl,
+      isDeleted: false,
+      isReimbursed: false,
+    };
+    saveReceiptOverrides(overrides);
+
+    let gasReceipts = [];
+    try {
+      const fetchResponse = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'uploadReceipt', payload: p }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow'
+      });
+      const gasData = await fetchResponse.json();
+      if (gasData && gasData.receipts) gasReceipts = gasData.receipts;
+    } catch (e) {
+      console.warn('GAS uploadReceipt warning:', e.message);
+    }
+
+    const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
+    return res.json({ status: 'success', receipts: merged, receiptId: newId });
   }
 
   const cacheKey = action + JSON.stringify(payload || {});

@@ -1,1 +1,34 @@
-{}
+{
+  "rec_1787229563514_6so6f": {
+    "id": "rec_1787229563514_6so6f",
+    "ts": 1789997267244,
+    "uploaderNric": "T0005911G",
+    "currency": "MYR",
+    "amount": 15780,
+    "rate": 0.28,
+    "sgdAmount": 4418.4,
+    "categoryId": "fin_1781424999389_xo2uphzi3",
+    "fileUrl": "https://drive.google.com/file/d/1m0SliYNpgNXSTao1kOLteFMYv87obK8L/view?usp=drivesdk",
+    "remarks": "",
+    "isDeleted": true,
+    "paidByNric": "T0005911G",
+    "isReimbursed": false,
+    "uploaderName": ""
+  },
+  "rec_1789998225114_vcgdn": {
+    "id": "rec_1789998225114_vcgdn",
+    "ts": 1789998807089,
+    "uploaderNric": "S0000000A",
+    "currency": "MYR",
+    "amount": 500,
+    "rate": 0.285714,
+    "sgdAmount": 142.86,
+    "categoryId": "fin_1781425175971_reurwduwn",
+    "fileUrl": "https://drive.google.com/file/d/1fAIbq7u1KG_G4_IGoL9TmcP0JRdksidF/view?usp=drivesdk",
+    "remarks": "Test",
+    "isDeleted": true,
+    "paidByNric": "S0000000A",
+    "isReimbursed": false,
+    "uploaderName": ""
+  }
+}

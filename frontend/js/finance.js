@@ -23,6 +23,8 @@ let financePollInterval = null;
 let isFinanceSyncing = false;
 let isReceiptSyncing = false;
 let finSearchQuery = "";
+let receiptSearchQuery = "";
+let receiptCategoryFilter = "all";
 
 let finDndState = {
   active: false,
@@ -1245,32 +1247,796 @@ function reorderFieldsInModel(optId) {
 }
 
 // ==========================================
-// TAB 3: RECEIPTS BROWSER
+// TAB 3: RECEIPTS BROWSER & UPLOAD
 // ==========================================
+
+function fuzzyMatchText(text, query) {
+  if (!query) return true;
+  if (!text) return false;
+  text = String(text).toLowerCase();
+  query = String(query).toLowerCase().trim();
+  if (text.includes(query)) return true;
+  if (query.length <= 2) return false;
+
+  let qIdx = 0;
+  for (let i = 0; i < text.length && qIdx < query.length; i++) {
+    if (text[i] === query[qIdx]) {
+      qIdx++;
+    }
+  }
+  return qIdx === query.length;
+}
+
+function matchesReceiptFuzzy(r, query, optMap) {
+  if (!query || !query.trim()) return true;
+  const q = query.toLowerCase().trim();
+  const tokens = q.split(/\s+/).filter(Boolean);
+
+  const catName = (optMap && optMap[r.categoryId] ? optMap[r.categoryId] : (r.categoryId || "")).toLowerCase();
+  let uploaderName = (r.uploaderName || r.uploaderNric || "").toLowerCase();
+  let payerName = (r.paidByNric || r.uploaderNric || "").toLowerCase();
+  let uploaderShortName = "";
+  let payerShortName = "";
+
+  if (globalLogistics && globalLogistics.participants) {
+    const up = globalLogistics.participants.find((x) => x.nric === r.uploaderNric);
+    if (up) {
+      uploaderName = (up.name || "").toLowerCase();
+      uploaderShortName = (up.shortName || "").toLowerCase();
+    }
+    const pp = globalLogistics.participants.find((x) => x.nric === (r.paidByNric || r.uploaderNric));
+    if (pp) {
+      payerName = (pp.name || "").toLowerCase();
+      payerShortName = (pp.shortName || "").toLowerCase();
+    }
+  }
+
+  const dateStr = (
+    typeof formatDDMmmYYYY === "function"
+      ? formatDDMmmYYYY(r.ts)
+      : new Date(r.ts).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+  ).toLowerCase();
+
+  const searchableFields = [
+    catName,
+    (r.categoryId || "").toLowerCase(),
+    uploaderName,
+    uploaderShortName,
+    (r.uploaderNric || "").toLowerCase(),
+    payerName,
+    payerShortName,
+    (r.paidByNric || "").toLowerCase(),
+    dateStr,
+    (r.currency || "").toLowerCase(),
+    String(r.amount || ""),
+    String(r.sgdAmount || ""),
+    (r.remarks || "").toLowerCase(),
+    r.isReimbursed ? "reimbursed" : "pending",
+    (r.id || "").toLowerCase(),
+  ];
+
+  const combined = searchableFields.join(" ");
+  if (combined.includes(q)) return true;
+
+  return tokens.every((token) => {
+    return searchableFields.some((field) => fuzzyMatchText(field, token));
+  });
+}
+
+function populateFinReceiptCategories(selectEl) {
+  if (!selectEl) selectEl = document.getElementById("finRecCategory");
+  if (!selectEl) return;
+
+  const currentVal = selectEl.value;
+  let optionsHtml = "";
+
+  if (financeConfig && financeConfig.finalOptionId) {
+    const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+    if (opt && opt.fields && opt.fields.length > 0) {
+      opt.fields.forEach((f) => {
+        optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+      });
+    }
+  }
+
+  // If no finalOptionId fields found, check any available finance option
+  if (!optionsHtml && financeOptions && financeOptions.length > 0) {
+    financeOptions.forEach((opt) => {
+      if (opt && opt.fields) {
+        opt.fields.forEach((f) => {
+          optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+        });
+      }
+    });
+  }
+
+  // Fallback defaults
+  if (!optionsHtml) {
+    defaultFinanceFields.forEach((name) => {
+      optionsHtml += `<option value="${name}">${name}</option>`;
+    });
+  }
+
+  selectEl.innerHTML = '<option value="" disabled selected>Select Category</option>' + optionsHtml;
+  if (currentVal) selectEl.value = currentVal;
+}
+
+function toggleFinReceiptUpload() {
+  const wrapper = document.getElementById("finReceiptFormWrapper");
+  const icon = document.getElementById("finReceiptExpandIcon");
+  if (!wrapper) return;
+  const isHidden = wrapper.classList.contains("hidden-force");
+  if (isHidden) {
+    wrapper.classList.remove("hidden-force");
+    if (icon) icon.classList.add("rotate-180");
+    populateFinReceiptCategories();
+
+    // Prefill user details if available
+    const nricInput = document.getElementById("finRecNric");
+    const nameInput = document.getElementById("finRecName");
+    if (currentUser) {
+      if (nricInput && !nricInput.value && currentUser.nric && currentUser.nric !== "ADMIN") {
+        nricInput.value = currentUser.nric;
+      }
+      if (nameInput && !nameInput.value && currentUser.name && currentUser.name !== "Admin") {
+        nameInput.value = currentUser.name;
+      }
+    }
+  } else {
+    wrapper.classList.add("hidden-force");
+    if (icon) icon.classList.remove("rotate-180");
+  }
+}
+
+function finRecCurChange() {
+  const curSelect = document.getElementById("finRecCurrency");
+  if (!curSelect) return;
+  const cur = curSelect.value;
+  const rateContainer = document.getElementById("finRecBidirectionalRate");
+  const rateInput = document.getElementById("finRecRate");
+
+  if (cur === "SGD") {
+    if (rateContainer) rateContainer.classList.add("hidden-force");
+    if (rateInput) rateInput.value = "1";
+  } else {
+    if (rateContainer) rateContainer.classList.remove("hidden-force");
+    const label1 = document.getElementById("finRecCurLabel1");
+    const label2 = document.getElementById("finRecCurLabel2");
+    if (label1) label1.innerText = cur;
+    if (label2) label2.innerText = cur;
+
+    let rate = getActualRate(cur);
+    if (cur === "MYR" && rate === 1) rate = 0.28;
+
+    if (rateInput) rateInput.value = rate;
+    const toSgd = document.getElementById("finRecRateToSgd");
+    const fromSgd = document.getElementById("finRecRateFromSgd");
+    if (toSgd) toSgd.value = rate.toFixed(2);
+    if (fromSgd) fromSgd.value = (1 / rate).toFixed(2);
+  }
+  finRecCalcSgd();
+}
+
+function handleFinRecRateInputSync(mode, value) {
+  const val = parseFloat(value);
+  const inputToSgd = document.getElementById("finRecRateToSgd");
+  const inputFromSgd = document.getElementById("finRecRateFromSgd");
+  const hiddenRate = document.getElementById("finRecRate");
+
+  if (isNaN(val) || val <= 0 || value.trim() === "") {
+    if (value.trim() === "") {
+      if (mode === "to_sgd" && inputFromSgd) inputFromSgd.value = "";
+      if (mode === "from_sgd" && inputToSgd) inputToSgd.value = "";
+    }
+    if (hiddenRate) hiddenRate.value = 1;
+  } else {
+    const inverse = 1 / val;
+    if (mode === "to_sgd") {
+      if (inputFromSgd) inputFromSgd.value = inverse.toFixed(2);
+      if (hiddenRate) hiddenRate.value = val;
+    } else if (mode === "from_sgd") {
+      if (inputToSgd) inputToSgd.value = inverse.toFixed(2);
+      if (hiddenRate) hiddenRate.value = inverse;
+    }
+  }
+  finRecCalcSgd();
+}
+
+function finRecCalcSgd() {
+  const amtInput = document.getElementById("finRecAmount");
+  const rateInput = document.getElementById("finRecRate");
+  const sgdInput = document.getElementById("finRecSgd");
+  if (!amtInput || !sgdInput) return;
+  const amt = parseFloat(amtInput.value) || 0;
+  const rate = parseFloat(rateInput ? rateInput.value : 1) || 1;
+  sgdInput.value = (amt * rate).toFixed(2);
+}
+
+async function submitFinReceiptUpload(e) {
+  e.preventDefault();
+  const btn = document.getElementById("finRecBtn");
+  const err = document.getElementById("finReceiptError");
+  const succ = document.getElementById("finReceiptSuccess");
+  if (err) err.classList.add("hidden-force");
+  if (succ) succ.classList.add("hidden-force");
+
+  const nricInput = document.getElementById("finRecNric");
+  const nric = nricInput ? nricInput.value.trim().toUpperCase() : "";
+  const nameField = document.getElementById("finRecName");
+  const uploaderName = nameField ? nameField.value.trim() : "";
+  const amountInput = document.getElementById("finRecAmount");
+  const amount = parseFloat(amountInput ? amountInput.value : 0) || 0;
+  const catInput = document.getElementById("finRecCategory");
+  const category = catInput ? catInput.value.trim() : "";
+  const remarksInput = document.getElementById("finRecRemarks");
+  const remarks = remarksInput ? remarksInput.value.trim() : "";
+  const fileInput = document.getElementById("finRecFile");
+
+  const showError = (msg) => {
+    if (err) {
+      err.textContent = msg;
+      err.classList.remove("hidden-force");
+    } else if (typeof showToast === "function") {
+      showToast(msg, true);
+    }
+  };
+
+  if (!nric) {
+    return showError("Uploader NRIC is required.");
+  }
+  if (typeof isValidNRIC === "function" && !isValidNRIC(nric) && nric.length < 5) {
+    return showError("Invalid NRIC/FIN or Passport format.");
+  }
+  if (amount <= 0) {
+    return showError("Amount must be greater than 0.");
+  }
+  if (!category) {
+    return showError("Category is required.");
+  }
+  if (!fileInput || !fileInput.files.length) {
+    return showError("Please select a file.");
+  }
+
+  const file = fileInput.files[0];
+  if (file.size > 4 * 1024 * 1024) {
+    return showError("File exceeds 4MB limit.");
+  }
+
+  if (btn) setBtnLoading(btn, true);
+  try {
+    const base64 = await toBase64(file);
+
+    const ext = file.name.split(".").pop() || "png";
+    const receiptNo = `${nric.slice(-4)}${Date.now().toString().slice(-4)}`;
+    const finalFileName = `${uploaderName || nric} - ${receiptNo}.${ext}`;
+
+    const curEl = document.getElementById("finRecCurrency");
+    const rateEl = document.getElementById("finRecRate");
+    const sgdEl = document.getElementById("finRecSgd");
+
+    const payload = {
+      uploaderNric: nric,
+      uploaderName: uploaderName,
+      currency: curEl ? curEl.value : "SGD",
+      amount: amount,
+      rate: parseFloat(rateEl ? rateEl.value : 1) || 1,
+      sgdAmount: parseFloat(sgdEl ? sgdEl.value : amount) || amount,
+      categoryId: category,
+      remarks: remarks,
+      fileName: finalFileName,
+      mimeType: file.type,
+      fileData: base64.split(",")[1],
+    };
+
+    const res = await apiCall("uploadReceipt", { payload: payload });
+
+    if (succ) {
+      succ.textContent = "Receipt uploaded successfully!";
+      succ.classList.remove("hidden-force");
+    }
+
+    const form = document.getElementById("finReceiptForm");
+    if (form) form.reset();
+
+    // Reset currency to SGD & update rates
+    if (curEl) curEl.value = "SGD";
+    finRecCurChange();
+
+    // Restore prefilled NRIC and Name if logged in
+    if (currentUser) {
+      if (nricInput && currentUser.nric && currentUser.nric !== "ADMIN") {
+        nricInput.value = currentUser.nric;
+      }
+      if (nameField && currentUser.name && currentUser.name !== "Admin") {
+        nameField.value = currentUser.name;
+      }
+    }
+
+    if (typeof showToast === "function") {
+      showToast("Receipt uploaded successfully!");
+    }
+
+    // Auto refresh the Receipts page to show the update
+    if (res && res.receipts && Array.isArray(res.receipts)) {
+      globalReceipts = res.receipts;
+      window.globalReceipts = globalReceipts;
+    } else {
+      const recRes = await apiCall("fetchReceipts", { force: true });
+      if (recRes && recRes.receipts) {
+        globalReceipts = recRes.receipts;
+        window.globalReceipts = globalReceipts;
+      }
+    }
+
+    renderReceiptsBrowser();
+    if (typeof calculateAndUpdateFinalized === "function") {
+      calculateAndUpdateFinalized();
+    }
+  } catch (error) {
+    showError(error.message || "Failed to upload receipt.");
+  } finally {
+    if (btn) setBtnLoading(btn, false);
+  }
+}
+
+function handleReceiptSearch() {
+  const input = document.getElementById("receiptSearchInput");
+  if (!input) return;
+  receiptSearchQuery = input.value;
+  const start = input.selectionStart;
+  const end = input.selectionEnd;
+
+  renderReceiptsBrowser();
+
+  const newInput = document.getElementById("receiptSearchInput");
+  if (newInput) {
+    newInput.focus();
+    try {
+      newInput.setSelectionRange(start, end);
+    } catch (e) {}
+  }
+}
+
+function handleReceiptCategoryFilter(catVal) {
+  receiptCategoryFilter = catVal || "all";
+  renderReceiptsBrowser();
+}
+
+function resetReceiptFilters() {
+  receiptSearchQuery = "";
+  receiptCategoryFilter = "all";
+  const input = document.getElementById("receiptSearchInput");
+  if (input) input.value = "";
+  const catSelect = document.getElementById("receiptCategoryFilter");
+  if (catSelect) catSelect.value = "all";
+  renderReceiptsBrowser();
+}
+
 function renderReceiptsBrowser() {
   const cont = document.getElementById("fin-tab-receipts");
   if (!cont || cont.classList.contains("hidden-force")) return;
 
-  const activeReceipts = globalReceipts
+  const activeReceipts = (globalReceipts || [])
     .filter((r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot")
     .sort((a, b) => b.ts - a.ts);
 
+  let optMap = {};
+  if (financeConfig && financeConfig.finalOptionId) {
+    const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+    if (opt && opt.fields) opt.fields.forEach((f) => (optMap[f.id] = f.name));
+  }
+  if (financeOptions && financeOptions.length > 0) {
+    financeOptions.forEach((opt) => {
+      if (opt && opt.fields) {
+        opt.fields.forEach((f) => {
+          if (!optMap[f.id]) optMap[f.id] = f.name;
+        });
+      }
+    });
+  }
+
+  // Check if outer skeleton exists
+  let listContainer = document.getElementById("financeReceiptsListContainer");
+  if (!listContainer) {
+    cont.innerHTML = `
+      <div class="flex flex-col gap-3 pb-6 max-w-5xl mx-auto w-full">
+        <!-- UPLOAD RECEIPT BOX (Identical to landing page) -->
+        <div id="finReceiptUploadBox" class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-700 w-full border-t-4 border-t-purple-500 transition-all">
+          <button
+            type="button"
+            id="finReceiptToggleBtn"
+            onclick="toggleFinReceiptUpload()"
+            class="w-full flex justify-between items-center focus:outline-none cursor-pointer"
+          >
+            <div class="flex items-center gap-3">
+              <div class="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+              </div>
+              <div class="text-left">
+                <h3 class="text-base font-black text-gray-900 dark:text-white tracking-tight">
+                  Upload Receipt
+                </h3>
+                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                  Click to add and record trip expenses
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-purple-600 dark:text-purple-400 hidden sm:inline">Add Receipt</span>
+              <svg
+                id="finReceiptExpandIcon"
+                class="w-6 h-6 text-gray-400 transition-transform duration-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+          <div id="finReceiptFormWrapper" class="hidden-force mt-5 text-left border-t-2 border-gray-100 dark:border-gray-700/60 pt-4">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 font-bold">
+              Please fill in the details of the receipt.
+            </p>
+            <div
+              id="finReceiptError"
+              class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border-2 border-red-200 dark:border-red-800"
+            ></div>
+            <div
+              id="finReceiptSuccess"
+              class="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 p-3 rounded-lg text-sm mb-4 font-bold hidden-force border-2 border-green-200 dark:border-green-800"
+            ></div>
+            <form id="finReceiptForm" onsubmit="submitFinReceiptUpload(event)" class="flex flex-col gap-4">
+              <div>
+                <label for="finRecNric" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Uploader NRIC
+                </label>
+                <input
+                  type="text"
+                  id="finRecNric"
+                  required
+                  oninput="if (typeof isValidNRIC === 'function' && isValidNRIC(this.value)) { const err = document.getElementById('finReceiptError'); if (err) err.classList.add('hidden-force'); }"
+                  class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl uppercase font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  placeholder="S1234567A"
+                />
+              </div>
+              <div>
+                <label for="finRecName" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="finRecName"
+                  class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  placeholder="John Doe"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="finRecCurrency" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Currency
+                  </label>
+                  <select
+                    id="finRecCurrency"
+                    onchange="finRecCurChange()"
+                    required
+                    class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  >
+                    <option value="SGD" selected>SGD</option>
+                    <option value="MYR">MYR</option>
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="GBP">GBP</option>
+                    <option value="AUD">AUD</option>
+                    <option value="IDR">IDR</option>
+                    <option value="THB">THB</option>
+                    <option value="JPY">JPY</option>
+                    <option value="KRW">KRW</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="finRecAmount" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Amount
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    id="finRecAmount"
+                    oninput="finRecCalcSgd()"
+                    required
+                    class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-right"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+
+              <div id="finRecBidirectionalRate" class="hidden-force flex flex-col gap-2 p-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900/50">
+                <label class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b-2 border-gray-200 dark:border-gray-700 pb-1 mb-1">
+                  Exchange Rate
+                </label>
+                <div class="flex items-center justify-between">
+                  <div class="font-black text-xs text-gray-500 w-12 shrink-0">
+                    1 <span id="finRecCurLabel1">MYR</span>
+                  </div>
+                  <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+                  <div class="flex-1 min-w-0 pr-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="finRecRateToSgd"
+                      placeholder="0.00"
+                      oninput="handleFinRecRateInputSync('to_sgd', this.value)"
+                      class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-md placeholder-gray-400 text-right"
+                    />
+                  </div>
+                  <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">SGD</div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <div class="font-black text-xs text-gray-500 w-12 shrink-0">1 SGD</div>
+                  <div class="font-bold text-xs text-gray-400 px-1 shrink-0">=</div>
+                  <div class="flex-1 min-w-0 pr-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      id="finRecRateFromSgd"
+                      placeholder="0.00"
+                      oninput="handleFinRecRateInputSync('from_sgd', this.value)"
+                      class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-gray-900 dark:text-white transition shadow-md placeholder-gray-400 text-right"
+                    />
+                  </div>
+                  <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">
+                    <span id="finRecCurLabel2">MYR</span>
+                  </div>
+                </div>
+                <input type="hidden" id="finRecRate" value="1" />
+              </div>
+
+              <div>
+                <label for="finRecSgd" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  SGD Equiv
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="finRecSgd"
+                  readonly
+                  class="w-full p-2.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-right"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label for="finRecCategory" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Category
+                </label>
+                <select
+                  id="finRecCategory"
+                  required
+                  class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                >
+                  <option value="" disabled selected>Loading categories...</option>
+                </select>
+              </div>
+              <div>
+                <label for="finRecFile" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Receipt File
+                </label>
+                <input
+                  type="file"
+                  id="finRecFile"
+                  required
+                  accept="image/*,.pdf"
+                  class="w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 dark:file:bg-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-600 cursor-pointer"
+                />
+              </div>
+              <div>
+                <label for="finRecRemarks" class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Remarks (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="finRecRemarks"
+                  class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-xl font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500/20"
+                  placeholder="Details..."
+                />
+              </div>
+              <button
+                type="submit"
+                id="finRecBtn"
+                class="w-full bg-purple-600 text-white py-3.5 rounded-xl font-bold text-lg hover:bg-purple-700 transition flex justify-center items-center shadow-lg focus:outline-none mt-2 cursor-pointer"
+              >
+                <span class="btn-text">Upload</span>
+                <div class="btn-spinner spinner-white hidden-force ml-2"></div>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- SEARCH AND FILTER TOOLBAR -->
+        <div id="receiptsFilterToolbar" class="bg-white dark:bg-gray-800 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+          <!-- Fuzzy search input -->
+          <div class="relative flex-1 min-w-0">
+            <input
+              type="text"
+              id="receiptSearchInput"
+              oninput="handleReceiptSearch()"
+              value="${receiptSearchQuery.replace(/"/g, '&quot;')}"
+              placeholder="Fuzzy search receipts (category, name, NRIC, remarks, amount...)"
+              class="w-full py-2 pl-9 pr-8 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition"
+            />
+            <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <button
+              type="button"
+              id="clearReceiptSearchBtn"
+              onclick="clearSearch('receiptSearchInput', 'handleReceiptSearch')"
+              class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none ${receiptSearchQuery ? '' : 'hidden-force'}"
+              title="Clear search"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Category filter dropdown -->
+          <div class="flex items-center gap-2 shrink-0">
+            <label for="receiptCategoryFilter" class="text-xs font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">
+              Category:
+            </label>
+            <select
+              id="receiptCategoryFilter"
+              onchange="handleReceiptCategoryFilter(this.value)"
+              class="py-2 px-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition max-w-[220px]"
+            >
+              <option value="all">All Categories</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- RESULTS SUMMARY -->
+        <div id="receiptResultsSummary" class="flex justify-between items-center px-1 text-xs text-gray-500 dark:text-gray-400">
+          <div id="receiptResultsCount" class="font-bold">0 receipts</div>
+          <div id="receiptResultsTotalSgd" class="font-extrabold text-purple-600 dark:text-purple-400">Total: SGD 0.00</div>
+        </div>
+
+        <!-- LIST CONTAINER -->
+        <div id="financeReceiptsListContainer" class="flex flex-col gap-3"></div>
+      </div>
+    `;
+
+    populateFinReceiptCategories();
+    listContainer = document.getElementById("financeReceiptsListContainer");
+  }
+
+  // Update clear button visibility
+  const clearBtn = document.getElementById("clearReceiptSearchBtn");
+  if (clearBtn) {
+    if (receiptSearchQuery) clearBtn.classList.remove("hidden-force");
+    else clearBtn.classList.add("hidden-force");
+  }
+
+  // Populate category filter options
+  const catFilterSelect = document.getElementById("receiptCategoryFilter");
+  if (catFilterSelect) {
+    const catCounts = {};
+    activeReceipts.forEach((r) => {
+      const cId = r.categoryId || "uncategorized";
+      catCounts[cId] = (catCounts[cId] || 0) + 1;
+    });
+
+    const catList = [];
+    const seenCatIds = new Set();
+
+    Object.keys(optMap).forEach((cId) => {
+      catList.push({
+        id: cId,
+        name: optMap[cId],
+        count: catCounts[cId] || 0,
+      });
+      seenCatIds.add(cId);
+    });
+
+    Object.keys(catCounts).forEach((cId) => {
+      if (!seenCatIds.has(cId)) {
+        catList.push({
+          id: cId,
+          name: optMap[cId] || cId,
+          count: catCounts[cId],
+        });
+        seenCatIds.add(cId);
+      }
+    });
+
+    catList.sort((a, b) => a.name.localeCompare(b.name));
+
+    let catFilterHtml = `<option value="all" ${receiptCategoryFilter === "all" ? "selected" : ""}>All Categories (${activeReceipts.length})</option>`;
+    catList.forEach((c) => {
+      const sel = receiptCategoryFilter === c.id ? "selected" : "";
+      catFilterHtml += `<option value="${c.id}" ${sel}>${c.name} (${c.count})</option>`;
+    });
+
+    catFilterSelect.innerHTML = catFilterHtml;
+  }
+
+  // Filter receipts
+  let filteredReceipts = activeReceipts;
+
+  if (receiptCategoryFilter && receiptCategoryFilter !== "all") {
+    filteredReceipts = filteredReceipts.filter((r) => r.categoryId === receiptCategoryFilter);
+  }
+
+  if (receiptSearchQuery && receiptSearchQuery.trim()) {
+    filteredReceipts = filteredReceipts.filter((r) => matchesReceiptFuzzy(r, receiptSearchQuery, optMap));
+  }
+
+  // Update stats & summary
+  const summaryCountEl = document.getElementById("receiptResultsCount");
+  const summaryTotalEl = document.getElementById("receiptResultsTotalSgd");
+  const filteredTotalSgd = filteredReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount) || 0), 0);
+  const allTotalSgd = activeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount) || 0), 0);
+
+  if (summaryCountEl) {
+    if (receiptCategoryFilter !== "all" || (receiptSearchQuery && receiptSearchQuery.trim())) {
+      summaryCountEl.innerHTML = `Showing ${filteredReceipts.length} of ${activeReceipts.length} receipts <button type="button" onclick="resetReceiptFilters()" class="ml-2 text-primary hover:underline font-bold text-xs cursor-pointer">Clear filters</button>`;
+    } else {
+      summaryCountEl.textContent = `${activeReceipts.length} ${activeReceipts.length === 1 ? "receipt" : "receipts"}`;
+    }
+  }
+
+  if (summaryTotalEl) {
+    if (receiptCategoryFilter !== "all" || (receiptSearchQuery && receiptSearchQuery.trim())) {
+      summaryTotalEl.textContent = `Filtered Total: SGD ${filteredTotalSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      summaryTotalEl.textContent = `Total: SGD ${allTotalSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  }
+
+  // Render cards or empty state
+  if (!listContainer) return;
+
   if (activeReceipts.length === 0) {
-    if (cont)
-      cont.innerHTML = `<div class="w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500"><svg class="w-12 h-12 mb-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p class="text-xs font-bold uppercase tracking-widest">No receipts uploaded.</p></div>`;
+    listContainer.innerHTML = `
+      <div class="w-full py-12 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800/40 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6">
+        <div class="p-3 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full mb-3">
+          <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <p class="text-sm font-black text-gray-700 dark:text-gray-300 mb-1">No Receipts Uploaded Yet</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 text-center max-w-sm mb-4">Click "Upload Receipt" above to record official trip expenses.</p>
+        <button type="button" onclick="toggleFinReceiptUpload()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-md transition cursor-pointer">
+          Upload First Receipt
+        </button>
+      </div>
+    `;
     return;
   }
 
-  let optMap = {};
-  if (financeConfig.finalOptionId) {
-    const opt = financeOptions.find(
-      (o) => o.id === financeConfig.finalOptionId,
-    );
-    if (opt) opt.fields.forEach((f) => (optMap[f.id] = f.name));
+  if (filteredReceipts.length === 0) {
+    listContainer.innerHTML = `
+      <div class="w-full py-10 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800/40 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-6">
+        <svg class="w-10 h-10 mb-2 opacity-50 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <p class="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">No receipts match your search or filter</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">Try adjusting your keywords or category filter</p>
+        <button type="button" onclick="resetReceiptFilters()" class="px-3.5 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-xs font-bold transition cursor-pointer">
+          Clear Search & Filters
+        </button>
+      </div>
+    `;
+    return;
   }
 
   let rowsHtml = "";
-  activeReceipts.forEach((r) => {
+  filteredReceipts.forEach((r) => {
     const dateStr =
       typeof formatDDMmmYYYY === "function"
         ? formatDDMmmYYYY(r.ts)
@@ -1285,16 +2051,13 @@ function renderReceiptsBrowser() {
     let payerName = r.paidByNric || r.uploaderNric;
 
     if (globalLogistics && globalLogistics.participants) {
-      const up = globalLogistics.participants.find(
-        (x) => x.nric === r.uploaderNric,
-      );
+      const up = globalLogistics.participants.find((x) => x.nric === r.uploaderNric);
       if (up) uploaderName = up.shortName || up.name;
       else if (r.uploaderName) uploaderName = r.uploaderName;
 
       const pp = globalLogistics.participants.find((x) => x.nric === payerName);
       if (pp) payerName = pp.shortName || pp.name;
-      else if (r.uploaderName && payerName === r.uploaderNric)
-        payerName = r.uploaderName;
+      else if (r.uploaderName && payerName === r.uploaderNric) payerName = r.uploaderName;
     }
 
     const isReimClass = r.isReimbursed
@@ -1306,15 +2069,15 @@ function renderReceiptsBrowser() {
       const toSgd = (r.sgdAmount / r.amount).toFixed(2);
       const fromSgd = (r.amount / r.sgdAmount).toFixed(2);
       rateHtml = `
-            <div class="mt-1 flex flex-col gap-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-lg border-2 border-gray-100 dark:border-gray-700/50">
-                <div class="flex justify-between"><span>1 ${r.currency}</span><span>= ${toSgd} SGD</span></div>
-                <div class="flex justify-between"><span>1 SGD</span><span>= ${fromSgd} ${r.currency}</span></div>
-            </div>
-        `;
+        <div class="mt-1 flex flex-col gap-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-lg border-2 border-gray-100 dark:border-gray-700/50">
+          <div class="flex justify-between"><span>1 ${r.currency}</span><span>= ${toSgd} SGD</span></div>
+          <div class="flex justify-between"><span>1 SGD</span><span>= ${fromSgd} ${r.currency}</span></div>
+        </div>
+      `;
     }
 
     rowsHtml += `
-    <div class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col md:flex-row md:items-center gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+    <div id="receipt-card-${r.id}" class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col md:flex-row md:items-center gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
         <!-- Top row on mobile / Left group on desktop -->
         <div class="flex justify-between items-start md:items-center w-full md:w-auto md:flex-1">
             <div class="flex flex-col">
@@ -1350,17 +2113,17 @@ function renderReceiptsBrowser() {
 
         <!-- Actions -->
         <div class="flex items-center justify-between md:justify-end gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-700 w-full md:w-auto md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4 shrink-0">
-            <button onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
+            <button id="btn-reimbursed-${r.id}" onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
                 ${r.isReimbursed ? "Reimbursed" : "Pending"}
             </button>
             <div class="flex items-center gap-1.5">
-                ${r.fileUrl ? `<a href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
-                <button onclick="openEditReceiptModal('${r.id}')" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded focus:outline-none flex items-center justify-center" title="Edit Receipt">
+                ${r.fileUrl ? `<a id="btn-view-receipt-${r.id}" href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
+                <button id="btn-edit-receipt-${r.id}" onclick="openEditReceiptModal('${r.id}')" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Edit Receipt">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                   </svg>
                 </button>
-                <button onclick="openDeleteReceiptModal('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center" title="Delete Receipt">
+                <button id="btn-delete-receipt-${r.id}" onclick="openDeleteReceiptModal('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Delete Receipt">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
@@ -1370,12 +2133,21 @@ function renderReceiptsBrowser() {
     </div>`;
   });
 
-  if (cont)
-    cont.innerHTML = `
-<div class="flex flex-col gap-3 pb-4">
-    ${rowsHtml}
-</div>`;
+  listContainer.innerHTML = rowsHtml;
 }
+
+window.fuzzyMatchText = fuzzyMatchText;
+window.matchesReceiptFuzzy = matchesReceiptFuzzy;
+window.populateFinReceiptCategories = populateFinReceiptCategories;
+window.toggleFinReceiptUpload = toggleFinReceiptUpload;
+window.finRecCurChange = finRecCurChange;
+window.handleFinRecRateInputSync = handleFinRecRateInputSync;
+window.finRecCalcSgd = finRecCalcSgd;
+window.submitFinReceiptUpload = submitFinReceiptUpload;
+window.handleReceiptSearch = handleReceiptSearch;
+window.handleReceiptCategoryFilter = handleReceiptCategoryFilter;
+window.resetReceiptFilters = resetReceiptFilters;
+window.renderReceiptsBrowser = renderReceiptsBrowser;
 
 function toggleReceiptReimbursed(id, status) {
   const rec = globalReceipts.find((r) => r.id === id);
