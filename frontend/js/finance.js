@@ -1,6 +1,9 @@
 let financeOptions = [];
 let pendingFinanceUpdates = new Map();
 let pendingReceiptUpdates = new Map();
+let locallyDeletedReceiptIds = new Set();
+let pendingDeleteReceiptId = null;
+let activeEditingReceipt = null;
 var globalFinanceRates = { SGD: 1, MYR: 0.28 };
 let globalReceipts = [];
 let financeConfig = {
@@ -447,10 +450,21 @@ async function executeReceiptSync() {
 
   try {
     const res = await apiCall("syncReceipts", { updates: updates });
-    if (res.receipts) globalReceipts = res.receipts;
+    if (res && res.receipts) {
+      globalReceipts = res.receipts.map((r) => {
+        if (locallyDeletedReceiptIds.has(r.id)) {
+          return { ...r, isDeleted: true };
+        }
+        if (pendingReceiptUpdates.has(r.id)) {
+          return { ...r, ...pendingReceiptUpdates.get(r.id) };
+        }
+        return r;
+      });
+    }
     setFinanceSyncButtonState("saved");
     renderReceiptsBrowser();
     renderFinalizedFinances();
+    renderFeeTracker();
   } catch (e) {
     setFinanceSyncButtonState("error");
     updates.forEach((u) => pendingReceiptUpdates.set(u.id, u));
@@ -492,7 +506,16 @@ function startFinancePolling() {
       let hasChanges = false;
 
       if (recRes.receipts) {
-        globalReceipts = recRes.receipts;
+        const incoming = recRes.receipts;
+        globalReceipts = incoming.map((r) => {
+          if (pendingReceiptUpdates.has(r.id)) {
+            return { ...r, ...pendingReceiptUpdates.get(r.id) };
+          }
+          if (locallyDeletedReceiptIds.has(r.id)) {
+            return { ...r, isDeleted: true };
+          }
+          return r;
+        });
         hasChanges = true;
       }
 
@@ -1326,13 +1349,22 @@ function renderReceiptsBrowser() {
         ${r.remarks ? `<div class="text-xs font-medium text-gray-500 dark:text-gray-400 italic md:w-[140px] shrink-0 truncate md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4" title="${r.remarks}">"${r.remarks}"</div>` : `<div class="hidden md:block md:w-[140px] shrink-0 md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4"></div>`}
 
         <!-- Actions -->
-        <div class="flex items-center justify-between md:justify-end gap-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-700 w-full md:w-auto md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4 shrink-0">
+        <div class="flex items-center justify-between md:justify-end gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-700 w-full md:w-auto md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4 shrink-0">
             <button onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
                 ${r.isReimbursed ? "Reimbursed" : "Pending"}
             </button>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
                 ${r.fileUrl ? `<a href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
-                <button onclick="deleteReceipt('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center" title="Delete"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                <button onclick="openEditReceiptModal('${r.id}')" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded focus:outline-none flex items-center justify-center" title="Edit Receipt">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </button>
+                <button onclick="openDeleteReceiptModal('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center" title="Delete Receipt">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
             </div>
         </div>
     </div>`;
@@ -1354,16 +1386,468 @@ function toggleReceiptReimbursed(id, status) {
   }
 }
 
-function deleteReceipt(id) {
-  // Iframe blocks window.confirm, so we bypass it.
+// ==========================================
+// DELETE RECEIPT MODAL & FLOW
+// ==========================================
+function openDeleteReceiptModal(id) {
+  const rec = globalReceipts.find((r) => r.id === id);
+  if (!rec) return;
+  pendingDeleteReceiptId = id;
+
+  let optMap = {};
+  if (financeConfig.finalOptionId) {
+    const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+    if (opt) opt.fields.forEach((f) => (optMap[f.id] = f.name));
+  }
+  const catName = optMap[rec.categoryId] || rec.categoryId || "General Expense";
+
+  let uploaderName = rec.uploaderNric;
+  if (globalLogistics && globalLogistics.participants) {
+    const up = globalLogistics.participants.find((x) => x.nric === rec.uploaderNric);
+    if (up) uploaderName = `${up.shortName || up.name} (${rec.uploaderNric})`;
+    else if (rec.uploaderName) uploaderName = `${rec.uploaderName} (${rec.uploaderNric})`;
+  } else if (rec.uploaderName) {
+    uploaderName = `${rec.uploaderName} (${rec.uploaderNric})`;
+  }
+
+  const dateStr =
+    typeof formatDDMmmYYYY === "function"
+      ? formatDDMmmYYYY(rec.ts)
+      : new Date(rec.ts).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+
+  const detailsEl = document.getElementById("deleteRecDetails");
+  if (detailsEl) {
+    detailsEl.innerHTML = `
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Category:</span>
+        <span class="font-bold text-gray-900 dark:text-white">${catName}</span>
+      </div>
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Amount:</span>
+        <span class="font-bold text-gray-900 dark:text-white">${rec.currency} ${Number(rec.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })} (SGD ${Number(rec.sgdAmount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })})</span>
+      </div>
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Uploader:</span>
+        <span class="font-bold text-gray-900 dark:text-white">${uploaderName}</span>
+      </div>
+      <div class="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+        <span class="text-gray-500 dark:text-gray-400">Date:</span>
+        <span class="font-bold text-gray-900 dark:text-white">${dateStr}</span>
+      </div>
+      ${rec.remarks ? `
+      <div class="flex justify-between py-1">
+        <span class="text-gray-500 dark:text-gray-400">Remarks:</span>
+        <span class="font-bold text-gray-900 dark:text-white italic truncate max-w-[200px]">${rec.remarks}</span>
+      </div>` : ""}
+    `;
+  }
+
+  const modal = document.getElementById("deleteReceiptModal");
+  if (modal) modal.classList.remove("hidden-force");
+}
+
+function closeDeleteReceiptModal() {
+  pendingDeleteReceiptId = null;
+  const modal = document.getElementById("deleteReceiptModal");
+  if (modal) modal.classList.add("hidden-force");
+}
+
+async function executeDeleteReceiptConfirmed() {
+  if (!pendingDeleteReceiptId) return;
+  const id = pendingDeleteReceiptId;
+  closeDeleteReceiptModal();
+
   const rec = globalReceipts.find((r) => r.id === id);
   if (rec) {
     rec.isDeleted = true;
-    queueReceiptUpdate(rec);
+    rec.ts = Date.now();
+    locallyDeletedReceiptIds.add(id);
+    pendingReceiptUpdates.set(id, rec);
+
     renderReceiptsBrowser();
     renderFinalizedFinances();
-    if (typeof showToast === "function") showToast("Receipt deleted.");
+    renderFeeTracker();
+
+    await executeReceiptSync();
+    if (typeof showToast === "function") showToast("Receipt deleted successfully.");
   }
+}
+
+function deleteReceipt(id) {
+  openDeleteReceiptModal(id);
+}
+
+// ==========================================
+// EDIT RECEIPT MODAL & FLOW
+// ==========================================
+function openEditReceiptModal(id) {
+  const rec = globalReceipts.find((r) => r.id === id);
+  if (!rec) return;
+  activeEditingReceipt = rec;
+
+  const modal = document.getElementById("editReceiptModal");
+  if (!modal) return;
+
+  document.getElementById("editRecId").value = rec.id;
+  document.getElementById("editRecTs").value = rec.ts || Date.now();
+  document.getElementById("editRecIdLabel").textContent = `ID: ${rec.id}`;
+
+  // Populate Participants dropdowns
+  const uploaderSelect = document.getElementById("editRecUploaderSelect");
+  const paidBySelect = document.getElementById("editRecPaidBySelect");
+
+  let participantOptions = '<option value="">Select participant...</option>';
+  if (globalLogistics && globalLogistics.participants) {
+    const sorted = [...globalLogistics.participants].sort((a, b) => {
+      const nameA = a.shortName || a.name || "";
+      const nameB = b.shortName || b.name || "";
+      return nameA.localeCompare(nameB);
+    });
+    sorted.forEach((p) => {
+      const name = p.shortName || p.name || p.fullName || "";
+      participantOptions += `<option value="${p.nric}">${name} (${p.nric}${p.role ? " - " + p.role : ""})</option>`;
+    });
+  }
+
+  if (uploaderSelect) uploaderSelect.innerHTML = participantOptions;
+  if (paidBySelect) paidBySelect.innerHTML = participantOptions;
+
+  // Set uploader values
+  if (uploaderSelect) uploaderSelect.value = rec.uploaderNric || "";
+  document.getElementById("editRecUploaderNric").value = rec.uploaderNric || "";
+  
+  let currentUploaderName = rec.uploaderName || "";
+  if (!currentUploaderName && globalLogistics && globalLogistics.participants) {
+    const up = globalLogistics.participants.find((x) => x.nric === rec.uploaderNric);
+    if (up) currentUploaderName = up.fullName || up.name || up.shortName || "";
+  }
+  document.getElementById("editRecUploaderName").value = currentUploaderName;
+
+  // Set paid by values
+  const payerNric = rec.paidByNric || rec.uploaderNric || "";
+  if (paidBySelect) paidBySelect.value = payerNric;
+  document.getElementById("editRecPaidByNric").value = payerNric;
+
+  // Populate categories
+  const categorySelect = document.getElementById("editRecCategory");
+  let catOptions = "";
+  let foundCategory = false;
+
+  if (financeConfig.finalOptionId) {
+    const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+    if (opt && opt.fields) {
+      opt.fields.forEach((f) => {
+        if (f.id === rec.categoryId) foundCategory = true;
+        catOptions += `<option value="${f.id}">${f.name}</option>`;
+      });
+    }
+  } else if (financeOptions.length > 0) {
+    // Check all options
+    const uniqueFields = new Map();
+    financeOptions.forEach((o) => {
+      if (o.fields) {
+        o.fields.forEach((f) => uniqueFields.set(f.id, f.name));
+      }
+    });
+    uniqueFields.forEach((name, fId) => {
+      if (fId === rec.categoryId) foundCategory = true;
+      catOptions += `<option value="${fId}">${name}</option>`;
+    });
+  }
+
+  // Fees Payment Screenshot option
+  if ("Fees Payment Screenshot" === rec.categoryId) foundCategory = true;
+  catOptions += `<option value="Fees Payment Screenshot">Fees Payment Screenshot</option>`;
+
+  // If the category ID is a custom or legacy ID, preserve it
+  if (!foundCategory && rec.categoryId) {
+    catOptions += `<option value="${rec.categoryId}">${rec.categoryId}</option>`;
+  }
+
+  if (categorySelect) {
+    categorySelect.innerHTML = catOptions;
+    categorySelect.value = rec.categoryId;
+  }
+
+  // Currency & Amounts
+  const cur = rec.currency || "SGD";
+  document.getElementById("editRecCurrency").value = cur;
+  document.getElementById("editRecAmount").value = rec.amount !== undefined ? rec.amount : "";
+  
+  const rate = rec.rate || 1;
+  document.getElementById("editRecRate").value = rate;
+  document.getElementById("editRecInverseRate").value = rate > 0 ? parseFloat((1 / rate).toFixed(4)) : 1;
+  document.getElementById("editRecSgdAmount").value = rec.sgdAmount !== undefined ? rec.sgdAmount : "";
+
+  // File
+  const fileLink = document.getElementById("editRecFileLink");
+  const noFileText = document.getElementById("editRecNoFileText");
+  const fileUrlInput = document.getElementById("editRecFileUrl");
+  const fileInput = document.getElementById("editRecFileInput");
+  if (fileInput) fileInput.value = "";
+
+  if (rec.fileUrl) {
+    if (fileLink) {
+      fileLink.href = rec.fileUrl;
+      fileLink.classList.remove("hidden-force");
+    }
+    if (noFileText) noFileText.classList.add("hidden-force");
+    if (fileUrlInput) fileUrlInput.value = rec.fileUrl;
+  } else {
+    if (fileLink) fileLink.classList.add("hidden-force");
+    if (noFileText) noFileText.classList.remove("hidden-force");
+    if (fileUrlInput) fileUrlInput.value = "";
+  }
+
+  // Remarks
+  document.getElementById("editRecRemarks").value = rec.remarks || "";
+
+  // Reimbursed
+  document.getElementById("editRecIsReimbursed").checked =
+    rec.isReimbursed === true || String(rec.isReimbursed).toUpperCase() === "TRUE";
+
+  handleEditCurrencyChange(cur);
+
+  const errorEl = document.getElementById("editRecError");
+  if (errorEl) {
+    errorEl.textContent = "";
+    errorEl.classList.add("hidden-force");
+  }
+
+  modal.classList.remove("hidden-force");
+}
+
+function closeEditReceiptModal() {
+  activeEditingReceipt = null;
+  const modal = document.getElementById("editReceiptModal");
+  if (modal) modal.classList.add("hidden-force");
+}
+
+function handleEditUploaderSelect(nric) {
+  if (!nric) return;
+  document.getElementById("editRecUploaderNric").value = nric;
+  if (globalLogistics && globalLogistics.participants) {
+    const up = globalLogistics.participants.find((x) => x.nric === nric);
+    if (up) {
+      document.getElementById("editRecUploaderName").value =
+        up.fullName || up.name || up.shortName || "";
+    }
+  }
+
+  const paidByNric = document.getElementById("editRecPaidByNric").value.trim();
+  if (!paidByNric) {
+    document.getElementById("editRecPaidByNric").value = nric;
+    const paidBySelect = document.getElementById("editRecPaidBySelect");
+    if (paidBySelect) paidBySelect.value = nric;
+  }
+}
+
+function handleEditPaidBySelect(nric) {
+  if (nric) {
+    document.getElementById("editRecPaidByNric").value = nric;
+  }
+}
+
+function handleEditCurrencyChange(currency) {
+  const rateCurElements = document.querySelectorAll(".rateCurCode");
+  rateCurElements.forEach((el) => (el.textContent = currency));
+
+  const curLabel = document.getElementById("editRecCurLabel");
+  if (curLabel) curLabel.textContent = currency;
+
+  const rateContainer = document.getElementById("editRecRateContainer");
+
+  if (currency === "SGD") {
+    if (rateContainer) rateContainer.classList.add("hidden-force");
+    document.getElementById("editRecRate").value = 1;
+    document.getElementById("editRecInverseRate").value = 1;
+    const amt = parseFloat(document.getElementById("editRecAmount").value) || 0;
+    document.getElementById("editRecSgdAmount").value = amt.toFixed(2);
+  } else {
+    if (rateContainer) rateContainer.classList.remove("hidden-force");
+    const currentRate = parseFloat(document.getElementById("editRecRate").value);
+    if (isNaN(currentRate) || currentRate <= 0 || currentRate === 1) {
+      const defaultRate =
+        (financeConfig.customRates && financeConfig.customRates[currency]) ||
+        globalFinanceRates[currency] ||
+        (currency === "MYR" ? 0.28 : 1);
+      document.getElementById("editRecRate").value = defaultRate;
+      document.getElementById("editRecInverseRate").value =
+        parseFloat((1 / defaultRate).toFixed(4));
+    }
+    handleEditAmountInput();
+  }
+}
+
+function handleEditAmountInput() {
+  const amt = parseFloat(document.getElementById("editRecAmount").value) || 0;
+  const cur = document.getElementById("editRecCurrency").value;
+  if (cur === "SGD") {
+    document.getElementById("editRecSgdAmount").value = amt.toFixed(2);
+  } else {
+    const rate = parseFloat(document.getElementById("editRecRate").value) || 1;
+    document.getElementById("editRecSgdAmount").value = (amt * rate).toFixed(2);
+  }
+}
+
+function handleEditRateInput(val) {
+  const r = parseFloat(val);
+  if (r > 0) {
+    document.getElementById("editRecInverseRate").value = parseFloat(
+      (1 / r).toFixed(4),
+    );
+  }
+  handleEditAmountInput();
+}
+
+function handleEditInverseRateInput(val) {
+  const inv = parseFloat(val);
+  if (inv > 0) {
+    const r = 1 / inv;
+    document.getElementById("editRecRate").value = parseFloat(r.toFixed(6));
+    handleEditAmountInput();
+  }
+}
+
+function handleEditSgdAmountInput() {
+  const cur = document.getElementById("editRecCurrency").value;
+  if (cur === "SGD") {
+    document.getElementById("editRecAmount").value =
+      document.getElementById("editRecSgdAmount").value;
+  } else {
+    const amt = parseFloat(document.getElementById("editRecAmount").value);
+    const sgd = parseFloat(document.getElementById("editRecSgdAmount").value);
+    if (amt > 0 && sgd > 0) {
+      const r = sgd / amt;
+      document.getElementById("editRecRate").value = parseFloat(r.toFixed(6));
+      document.getElementById("editRecInverseRate").value = parseFloat(
+        (1 / r).toFixed(4),
+      );
+    }
+  }
+}
+
+async function saveEditedReceipt(e) {
+  e.preventDefault();
+
+  const id = document.getElementById("editRecId").value;
+  const rec = globalReceipts.find((r) => r.id === id);
+  if (!rec) {
+    alert("Receipt not found.");
+    return;
+  }
+
+  const saveBtn = document.getElementById("editRecSaveBtn");
+  const errorEl = document.getElementById("editRecError");
+  if (errorEl) errorEl.classList.add("hidden-force");
+
+  const uploaderNric = document.getElementById("editRecUploaderNric").value.trim().toUpperCase();
+  const uploaderName = document.getElementById("editRecUploaderName").value.trim();
+  const paidByNric = (document.getElementById("editRecPaidByNric").value.trim() || uploaderNric).toUpperCase();
+  const categoryId = document.getElementById("editRecCategory").value;
+  const currency = document.getElementById("editRecCurrency").value;
+  const amount = parseFloat(document.getElementById("editRecAmount").value);
+  const rate = parseFloat(document.getElementById("editRecRate").value) || 1;
+  const sgdAmount = parseFloat(document.getElementById("editRecSgdAmount").value);
+  const remarks = document.getElementById("editRecRemarks").value.trim();
+  const isReimbursed = document.getElementById("editRecIsReimbursed").checked;
+
+  if (!uploaderNric) {
+    if (errorEl) {
+      errorEl.textContent = "Please enter the uploader NRIC.";
+      errorEl.classList.remove("hidden-force");
+    }
+    return;
+  }
+
+  if (isNaN(amount) || amount < 0) {
+    if (errorEl) {
+      errorEl.textContent = "Please enter a valid amount.";
+      errorEl.classList.remove("hidden-force");
+    }
+    return;
+  }
+
+  let finalFileUrl = document.getElementById("editRecFileUrl").value.trim() || rec.fileUrl || "";
+
+  // Check if a new file was chosen
+  const fileInput = document.getElementById("editRecFileInput");
+  if (fileInput && fileInput.files && fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = `
+        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Uploading File...</span>
+      `;
+    }
+
+    try {
+      const base64Data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const res = reader.result;
+          const commaIdx = res.indexOf(",");
+          resolve(commaIdx !== -1 ? res.substring(commaIdx + 1) : res);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const uploadResp = await fetch("/api/upload-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: file.name,
+          mimeType: file.type,
+          fileData: base64Data,
+          API_URL: typeof SCRIPT_URL !== "undefined" ? SCRIPT_URL : "",
+        }),
+      });
+      const uploadJson = await uploadResp.json();
+      if (uploadJson && (uploadJson.fileUrl || uploadJson.localUrl)) {
+        finalFileUrl = uploadJson.fileUrl || uploadJson.localUrl;
+      }
+    } catch (err) {
+      console.warn("File upload error:", err);
+    }
+  }
+
+  // Update receipt object
+  rec.uploaderNric = uploaderNric;
+  rec.uploaderName = uploaderName;
+  rec.paidByNric = paidByNric;
+  rec.categoryId = categoryId;
+  rec.currency = currency;
+  rec.amount = amount;
+  rec.rate = rate;
+  rec.sgdAmount = isNaN(sgdAmount) ? (amount * rate) : sgdAmount;
+  rec.fileUrl = finalFileUrl;
+  rec.remarks = remarks;
+  rec.isReimbursed = isReimbursed;
+  rec.ts = Date.now();
+
+  pendingReceiptUpdates.set(rec.id, rec);
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = "<span>Save Changes</span>";
+  }
+
+  closeEditReceiptModal();
+  renderReceiptsBrowser();
+  renderFinalizedFinances();
+  renderFeeTracker();
+
+  await executeReceiptSync();
+  if (typeof showToast === "function") showToast("Receipt updated successfully!");
 }
 
 // ==========================================

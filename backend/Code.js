@@ -157,7 +157,7 @@ if (name === "Raw Data") {
   sheet.appendRow([""]);
   sheet.appendRow(["Currency Setup", "SGD to MYR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDMYR")']);
 } else if (name === "Receipts") {
-  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed"]);
+  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed", "Uploader Name"]);
   sheet.setFrozenRows(1);
 } else if (name === "Rooms") {
   sheet.appendRow(["Room ID", "Room Name", "Capacity", "Occupants", "Last Updated", "Updated By", "Is Deleted"]);
@@ -1117,7 +1117,7 @@ const ss = getDatabase();
 let sheet = ss.getSheetByName("Receipts");
 if (!sheet) {
   sheet = ss.insertSheet("Receipts");
-  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed"]);
+  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed", "Uploader Name"]);
 }
 
 const tripFolder = getTripFolder();
@@ -1173,7 +1173,7 @@ if (payload.categoryId === "Fees Payment Screenshot") {
 
 sheet.appendRow([
 newId, new Date(), payload.uploaderNric, payload.currency, payload.amount, payload.rate, 
-payload.sgdAmount, payload.categoryId, fileUrl, payload.remarks, false, payload.paidByNric || payload.uploaderNric, false
+payload.sgdAmount, payload.categoryId, fileUrl, payload.remarks, false, payload.paidByNric || payload.uploaderNric, false, payload.uploaderName || ''
 ]);
 
 fetchReceipts(true);
@@ -1187,13 +1187,25 @@ const ss = getDatabase();
 let sheet = ss.getSheetByName("Receipts");
 if (!sheet) {
   sheet = ss.insertSheet("Receipts");
-  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed"]);
+  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed", "Uploader Name"]);
 }
 
 const lock = LockService.getScriptLock();
 try {
 lock.waitLock(15000);
+const lastCol = sheet.getLastColumn();
+if (lastCol < 14) {
+  try { sheet.getRange(1, 14).setValue("Uploader Name"); } catch(e) {}
+}
+
 const data = sheet.getDataRange().getValues();
+const targetCols = Math.max(14, sheet.getLastColumn(), data[0] ? data[0].length : 14);
+
+for (let r = 0; r < data.length; r++) {
+  while (data[r].length < targetCols) {
+    data[r].push('');
+  }
+}
 const existingMap = {};
 for (let i = 1; i < data.length; i++) {
 const id = String(data[i][0]).trim();
@@ -1226,7 +1238,7 @@ if (existingMap[u.id] !== undefined) {
   }
 }
 });
-if(dataChanged) sheet.getRange(1, 1, data.length, data[0].length).setValues(data);
+if(dataChanged) sheet.getRange(1, 1, data.length, targetCols).setValues(data);
 
 fetchReceipts(true);
 return fetchReceipts();
