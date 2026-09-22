@@ -274,6 +274,8 @@ function switchFinanceSubTab(tabId) {
 
   renderAllFinanceTabs();
 }
+window.switchFinanceSubTab = switchFinanceSubTab;
+window.switchFinanceTab = switchFinanceSubTab;
 
 function renderAllFinanceTabs() {
   renderFinalizedFinances();
@@ -590,8 +592,53 @@ async function manualFinanceSync(btn) {
 }
 
 // ==========================================
-// TAB 1: FINALIZED FINANCES
+// TAB 1: FINALIZED FINANCES & FEE COMPARISONS
 // ==========================================
+function getFeeSummaryTotals() {
+  const baseFee = financeConfig.perPersonFee || 0;
+  let totalFeesExpected = 0;
+  let totalFeesCollected = 0;
+  let totalPocCount = 0;
+  let paidPocCount = 0;
+  let totalParticipantsCount = 0;
+
+  if (globalLogistics && Array.isArray(globalLogistics.participants)) {
+    totalParticipantsCount = globalLogistics.participants.length;
+    const groups = {};
+    globalLogistics.participants.forEach((p) => {
+      const targetPoc = p.pocNric || p.nric;
+      if (!groups[targetPoc]) groups[targetPoc] = [];
+      groups[targetPoc].push(p);
+    });
+
+    const pocKeys = Object.keys(groups);
+    totalPocCount = pocKeys.length;
+
+    pocKeys.forEach((poc) => {
+      const members = groups[poc];
+      const size = members.length;
+      const dev = financeConfig.feeDeviations?.[poc]?.amount || 0;
+      const isPaid = financeConfig.feesReceived?.[poc] === true;
+
+      const finalExpected = size * baseFee + dev;
+      totalFeesExpected += finalExpected;
+      if (isPaid) {
+        totalFeesCollected += finalExpected;
+        paidPocCount++;
+      }
+    });
+  }
+
+  return {
+    totalFeesExpected,
+    totalFeesCollected,
+    totalPocCount,
+    paidPocCount,
+    totalParticipantsCount,
+    baseFee,
+  };
+}
+
 function renderFinalizedFinances() {
   const cont = document.getElementById("fin-tab-finalized");
   if (!cont || cont.classList.contains("hidden-force")) return;
@@ -599,7 +646,7 @@ function renderFinalizedFinances() {
   if (!financeConfig.finalOptionId) {
     if (cont)
       cont.innerHTML = `
-    <div class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
+    <div id="finalized-empty-state" class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
@@ -613,7 +660,7 @@ function renderFinalizedFinances() {
   if (!opt) {
     if (cont)
       cont.innerHTML = `
-    <div class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
+    <div id="finalized-empty-state" class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
@@ -622,9 +669,40 @@ function renderFinalizedFinances() {
   }
 
   const pax = getActivePax(opt);
-  let grandPlannedSgd = 0;
-  let grandActualSgd = 0;
+  const feeTotals = getFeeSummaryTotals();
+  const totalFeesExpected = feeTotals.totalFeesExpected;
+  const totalFeesCollected = feeTotals.totalFeesCollected;
+  const totalPocCount = feeTotals.totalPocCount;
+  const paidPocCount = feeTotals.paidPocCount;
+  const baseFee = feeTotals.baseFee;
 
+  let grandPlannedSgd = 0;
+
+  // Build category mapping
+  let optMap = {};
+  if (financeConfig && financeConfig.finalOptionId) {
+    const optObj = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+    if (optObj && optObj.fields) optObj.fields.forEach((f) => (optMap[f.id] = f.name));
+  }
+  if (financeOptions) {
+    financeOptions.forEach((o) => {
+      if (o && o.fields) {
+        o.fields.forEach((f) => {
+          if (!optMap[f.id]) optMap[f.id] = f.name;
+        });
+      }
+    });
+  }
+
+  const activeExpenseReceipts = globalReceipts.filter(
+    (r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot",
+  );
+  const grandActualSgd = activeExpenseReceipts.reduce(
+    (sum, r) => sum + (r.sgdAmount || 0),
+    0,
+  );
+
+  const matchedReceiptIds = new Set();
   let rowsHtml = "";
 
   opt.fields.forEach((f) => {
@@ -634,12 +712,24 @@ function renderFinalizedFinances() {
     const rawCost = f.costType === "per_pax" ? baseCost * pax : baseCost;
     const plannedSgd = rawCost * (1 + taxPct / 100) * rate;
 
-    const actualSgd = globalReceipts
-      .filter((r) => r.categoryId === f.id && !r.isDeleted)
-      .reduce((sum, r) => sum + r.sgdAmount, 0);
+    const catReceipts = activeExpenseReceipts.filter((r) => {
+      if (r.categoryId === f.id) return true;
+      const rCatName =
+        typeof getReceiptCategoryName === "function"
+          ? getReceiptCategoryName(r, optMap)
+          : r.categoryId || "";
+      return (
+        rCatName && rCatName.toLowerCase() === (f.name || "").toLowerCase()
+      );
+    });
+
+    catReceipts.forEach((r) => matchedReceiptIds.add(r.id));
+    const actualSgd = catReceipts.reduce(
+      (sum, r) => sum + (r.sgdAmount || 0),
+      0,
+    );
 
     grandPlannedSgd += plannedSgd;
-    grandActualSgd += actualSgd;
 
     const diff = plannedSgd - actualSgd;
     const diffClass =
@@ -649,58 +739,249 @@ function renderFinalizedFinances() {
 
     rowsHtml += `
     <tr class="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-        <td class="py-1.5 px-2 text-sm font-bold text-gray-900 dark:text-gray-100">${f.name}</td>
-        <td class="py-1.5 px-2 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-        <td class="py-1.5 px-2 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-        <td class="py-1.5 px-2 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-sm font-bold text-gray-900 dark:text-gray-100">
+            ${f.name}
+            ${catReceipts.length > 0 ? `<span class="ml-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500">(${catReceipts.length} receipt${catReceipts.length > 1 ? "s" : ""})</span>` : ""}
+        </td>
+        <td class="py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
     </tr>`;
   });
 
+  // Check for any active expense receipts not matching the option's fields
+  const unmatchedReceipts = activeExpenseReceipts.filter(
+    (r) => !matchedReceiptIds.has(r.id),
+  );
+  if (unmatchedReceipts.length > 0) {
+    const unmatchedActualSgd = unmatchedReceipts.reduce(
+      (sum, r) => sum + (r.sgdAmount || 0),
+      0,
+    );
+    rowsHtml += `
+    <tr class="hover:bg-amber-50/50 dark:hover:bg-amber-950/20 bg-amber-50/30 dark:bg-amber-950/10 transition">
+        <td class="py-2 px-3 text-sm font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Other / Uncategorized Expenses
+            <span class="text-[10px] font-bold text-amber-600/80 dark:text-amber-400">(${unmatchedReceipts.length} receipt${unmatchedReceipts.length > 1 ? "s" : ""})</span>
+        </td>
+        <td class="py-2 px-3 text-xs font-semibold text-gray-400 text-right whitespace-nowrap">SGD 0.00</td>
+        <td class="py-2 px-3 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${unmatchedActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-black text-rose-600 dark:text-rose-500 text-right whitespace-nowrap">-SGD ${unmatchedActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+    </tr>`;
+  }
+
+  // Core Financial Comparisons
+  // Comparison 1: Expected Fees vs. Planned Expenses
+  const plannedDiff = totalFeesExpected - grandPlannedSgd;
+  const isPlannedCovered = plannedDiff >= 0;
+
+  // Comparison 2: Fees Collected vs. Actual Expenses
+  const actualDiff = totalFeesCollected - grandActualSgd;
+  const isActualSolvent = actualDiff >= 0;
+
+  // Expense Budget Execution Variance (Planned Expenses - Actual Expenses)
+  const expenseVariance = grandPlannedSgd - grandActualSgd;
+
   if (cont)
     cont.innerHTML = `
-<div class="bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
-    <div class="bg-green-50 dark:bg-green-900/20 p-4 border-b-2 border-green-100 dark:border-green-800 flex justify-between items-center">
+<div id="finalized-finances-container" class="bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 overflow-hidden">
+    <!-- Header with Option Title & Quick Navigation -->
+    <div id="finalized-budget-header" class="bg-green-50 dark:bg-green-900/20 p-4 border-b-2 border-green-100 dark:border-green-800 flex flex-wrap justify-between items-center gap-3">
         <div>
-            <h3 class="font-black text-lg text-green-800 dark:text-green-300 tracking-tight flex items-center gap-2">
-                <svg class="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                Finalized Budget: ${opt.title}
-            </h3>
-            <p class="text-xs font-bold text-green-600/80 dark:text-green-400 mt-1 uppercase tracking-widest">Active Pax: ${pax} | Currency: SGD</p>
+            <div class="flex items-center gap-2">
+                <span class="p-1.5 rounded-lg bg-green-500 text-white shadow-sm flex items-center justify-center">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </span>
+                <h3 class="font-black text-lg text-green-900 dark:text-green-300 tracking-tight">
+                    Finalized Budget: ${opt.title}
+                </h3>
+            </div>
+            <p class="text-xs font-bold text-green-700 dark:text-green-400 mt-1 uppercase tracking-wider">
+                Active Pax: <span class="font-black">${pax}</span> | Target Fee: <span class="font-black">${baseFee > 0 ? "SGD " + baseFee.toFixed(2) + " / pax" : "Not Set"}</span> | Currency: <span class="font-black">SGD</span>
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-goto-fee-tracker" onclick="switchFinanceSubTab('fees')" class="text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-gray-700 shadow-sm transition flex items-center gap-1.5 focus:outline-none">
+                <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Fee Tracker
+            </button>
+            <button id="btn-goto-receipts" onclick="switchFinanceSubTab('receipts')" class="text-xs font-bold px-3 py-1.5 rounded-lg border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm transition flex items-center gap-1.5 focus:outline-none">
+                <svg class="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Receipts Browser
+            </button>
         </div>
     </div>
     
-    <div class="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-200 dark:divide-gray-700 bg-gray-50/50 dark:bg-gray-950/50 border-b-2 border-gray-200 dark:border-gray-700">
-        <div class="p-4 text-center flex flex-col">
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Total Planned</span>
-            <span class="text-lg font-black text-gray-800 dark:text-gray-200">SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+    <!-- PRIMARY COMPARISONS SECTION: PLANNED vs EXPECTED & ACTUAL vs COLLECTED -->
+    <div id="finalized-comparisons-block" class="p-4 bg-gray-50/50 dark:bg-gray-950/40 border-b-2 border-gray-200 dark:border-gray-800">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            
+            <!-- COMPARISON 1: EXPECTED FEES vs. PLANNED EXPENSES -->
+            <div id="finalized-planned-comparison-card" class="bg-white dark:bg-gray-900 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between gap-2 pb-2 mb-3 border-b-2 border-gray-100 dark:border-gray-800">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500 shrink-0"></span>
+                            <h4 class="font-black text-xs md:text-sm text-gray-900 dark:text-white uppercase tracking-wider">
+                                Planned Expenses vs. Expected Fees
+                            </h4>
+                        </div>
+                        <span class="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isPlannedCovered ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700" : "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700"}">
+                            ${isPlannedCovered ? "Budget Fully Funded" : "Funding Deficit"}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-blue-50/40 dark:bg-blue-950/20 p-3 rounded-lg border-2 border-blue-100 dark:border-blue-900/40 flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 mb-1">Total Fees Expected</span>
+                            <span class="text-base md:text-lg font-black text-blue-700 dark:text-blue-400 leading-tight">
+                                SGD ${totalFeesExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                                ${totalPocCount > 0 ? `${totalPocCount} families expected` : "Set in Fee Tracker"}
+                            </span>
+                        </div>
+
+                        <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-800 flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Total Planned Expenses</span>
+                            <span class="text-base md:text-lg font-black text-gray-900 dark:text-white leading-tight">
+                                SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                                ${opt.fields.length} budget categories
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Projected Net Balance:</span>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500">Expected Fees &minus; Planned Expenses</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-base md:text-lg font-black ${isPlannedCovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
+                            ${plannedDiff >= 0 ? "+" : ""}SGD ${plannedDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                        <span class="block text-[10px] font-bold ${isPlannedCovered ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} uppercase tracking-wider">
+                            ${isPlannedCovered ? "Projected Surplus" : "Projected Shortfall"}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COMPARISON 2: FEES COLLECTED vs. ACTUAL EXPENSES -->
+            <div id="finalized-actual-comparison-card" class="bg-white dark:bg-gray-900 rounded-xl p-4 border-2 border-gray-200 dark:border-gray-800 shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between gap-2 pb-2 mb-3 border-b-2 border-gray-100 dark:border-gray-800">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-green-500 shrink-0"></span>
+                            <h4 class="font-black text-xs md:text-sm text-gray-900 dark:text-white uppercase tracking-wider">
+                                Actual Expenses vs. Fees Collected
+                            </h4>
+                        </div>
+                        <span class="text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${isActualSolvent ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700" : "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700"}">
+                            ${isActualSolvent ? "Cash Surplus" : "Cash Deficit"}
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div class="bg-green-50/40 dark:bg-green-950/20 p-3 rounded-lg border-2 border-green-100 dark:border-green-900/40 flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-green-800 dark:text-green-300 mb-1">Total Fees Collected</span>
+                            <span class="text-base md:text-lg font-black text-green-700 dark:text-green-400 leading-tight">
+                                SGD ${totalFeesCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                                ${paidPocCount}/${totalPocCount} families paid
+                            </span>
+                        </div>
+
+                        <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-800 flex flex-col">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Total Actual Expenses</span>
+                            <span class="text-base md:text-lg font-black text-gray-900 dark:text-white leading-tight">
+                                SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            </span>
+                            <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                                ${activeExpenseReceipts.length} expense receipts
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Current Cash Position:</span>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500">Fees Collected &minus; Actual Expenses</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-base md:text-lg font-black ${isActualSolvent ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
+                            ${actualDiff >= 0 ? "+" : ""}SGD ${actualDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        </span>
+                        <span class="block text-[10px] font-bold ${isActualSolvent ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} uppercase tracking-wider">
+                            ${isActualSolvent ? "Cash In Hand" : "Cash Shortfall"}
+                        </span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="p-4 text-center flex flex-col">
-            <span class="text-xs font-bold text-green-500 uppercase tracking-widest mb-1">Total Actual</span>
-            <span class="text-lg font-black text-green-700 dark:text-green-400">SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-        </div>
-        <div class="p-4 text-center flex flex-col">
-            <span class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Variance</span>
-            <span class="text-lg font-black ${grandPlannedSgd - grandActualSgd < 0 ? "text-rose-600 dark:text-rose-500" : "text-purple-600 dark:text-purple-400"}">${grandPlannedSgd - grandActualSgd > 0 ? "+" : ""}${(grandPlannedSgd - grandActualSgd).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-        </div>
-        <div class="p-4 text-center flex flex-col">
-            <span class="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">Actual Per Pax</span>
-            <span class="text-lg font-black text-emerald-700 dark:text-emerald-400">SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+
+        <!-- QUICK SUMMARY STRIP: EXPENSES VARIANCE & PER PAX -->
+        <div id="finalized-metrics-strip" class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 pt-3 border-t-2 border-gray-200 dark:border-gray-800">
+            <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center">
+                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Planned / Pax</span>
+                <span class="text-xs md:text-sm font-black text-gray-800 dark:text-gray-200 mt-0.5">
+                    SGD ${(pax > 0 ? grandPlannedSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+            </div>
+            <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center">
+                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actual / Pax</span>
+                <span class="text-xs md:text-sm font-black text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+            </div>
+            <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center">
+                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Expense Variance</span>
+                <span class="text-xs md:text-sm font-black ${expenseVariance < 0 ? "text-rose-600 dark:text-rose-400" : "text-purple-600 dark:text-purple-400"} mt-0.5">
+                    ${expenseVariance > 0 ? "+" : ""}SGD ${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                </span>
+            </div>
+            <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center">
+                <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fees Collection</span>
+                <span class="text-xs md:text-sm font-black text-blue-600 dark:text-blue-400 mt-0.5">
+                    ${totalFeesExpected > 0 ? Math.round((totalFeesCollected / totalFeesExpected) * 100) : 0}% (${paidPocCount}/${totalPocCount})
+                </span>
+            </div>
         </div>
     </div>
 
+    <!-- Category Expense Breakdown Table -->
+    <div class="p-3 bg-gray-100/70 dark:bg-gray-800/40 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">Category Expense Breakdown</span>
+        <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">${opt.fields.length} budget categories</span>
+    </div>
+
     <div class="overflow-x-auto custom-scrollbar">
-        <table class="w-full text-left border-collapse min-w-[600px]">
+        <table id="finalized-categories-table" class="w-full text-left border-collapse min-w-[600px]">
             <thead class="bg-gray-100 dark:bg-gray-800 text-xs uppercase font-black text-gray-500 dark:text-gray-400 tracking-wider">
                 <tr>
-                    <th class="py-1.5 px-2">Category</th>
-                    <th class="py-1.5 px-2 text-right">Planned (SGD)</th>
-                    <th class="py-1.5 px-2 text-right">Actual (SGD)</th>
-                    <th class="py-1.5 px-2 text-right">Variance</th>
+                    <th class="py-2 px-3">Category</th>
+                    <th class="py-2 px-3 text-right">Planned (SGD)</th>
+                    <th class="py-2 px-3 text-right">Actual (SGD)</th>
+                    <th class="py-2 px-3 text-right">Variance</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
                 ${rowsHtml}
             </tbody>
+            <tfoot class="bg-gray-50 dark:bg-gray-950/80 border-t-2 border-gray-300 dark:border-gray-700 font-bold">
+                <tr>
+                    <td class="py-2.5 px-3 text-xs uppercase tracking-wider font-black text-gray-900 dark:text-white">Total Expenses</td>
+                    <td class="py-2.5 px-3 text-xs font-black text-gray-900 dark:text-white text-right whitespace-nowrap">SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td class="py-2.5 px-3 text-xs font-black text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td class="py-2.5 px-3 text-xs font-black ${expenseVariance < 0 ? "text-rose-600 dark:text-rose-400" : "text-purple-600 dark:text-purple-400"} text-right whitespace-nowrap">${expenseVariance > 0 ? "+" : ""}${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                </tr>
+            </tfoot>
         </table>
     </div>
 </div>
@@ -1327,18 +1608,31 @@ function matchesReceiptFuzzy(r, query, optMap) {
   });
 }
 
+function getReceiptCategoryName(r, optMap) {
+  if (!r) return "Uncategorized";
+  if (r.categoryId && optMap && optMap[r.categoryId]) {
+    return optMap[r.categoryId];
+  }
+  return r.categoryId || "Uncategorized";
+}
+
 function populateFinReceiptCategories(selectEl) {
   if (!selectEl) selectEl = document.getElementById("finRecCategory");
   if (!selectEl) return;
 
   const currentVal = selectEl.value;
   let optionsHtml = "";
+  const seenNames = new Set();
 
   if (financeConfig && financeConfig.finalOptionId) {
     const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
     if (opt && opt.fields && opt.fields.length > 0) {
       opt.fields.forEach((f) => {
-        optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+        const name = (f.name || "").trim();
+        if (name && !seenNames.has(name.toLowerCase())) {
+          seenNames.add(name.toLowerCase());
+          optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+        }
       });
     }
   }
@@ -1348,16 +1642,24 @@ function populateFinReceiptCategories(selectEl) {
     financeOptions.forEach((opt) => {
       if (opt && opt.fields) {
         opt.fields.forEach((f) => {
-          optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+          const name = (f.name || "").trim();
+          if (name && !seenNames.has(name.toLowerCase())) {
+            seenNames.add(name.toLowerCase());
+            optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+          }
         });
       }
     });
   }
 
   // Fallback defaults
-  if (!optionsHtml) {
+  if (!optionsHtml && typeof defaultFinanceFields !== "undefined") {
     defaultFinanceFields.forEach((name) => {
-      optionsHtml += `<option value="${name}">${name}</option>`;
+      const trimmed = (name || "").trim();
+      if (trimmed && !seenNames.has(trimmed.toLowerCase())) {
+        seenNames.add(trimmed.toLowerCase());
+        optionsHtml += `<option value="${trimmed}">${trimmed}</option>`;
+      }
     });
   }
 
@@ -1922,44 +2224,83 @@ function renderReceiptsBrowser() {
     else clearBtn.classList.add("hidden-force");
   }
 
-  // Populate category filter options
+  // Populate category filter options (deduplicated by category name)
   const catFilterSelect = document.getElementById("receiptCategoryFilter");
   if (catFilterSelect) {
-    const catCounts = {};
-    activeReceipts.forEach((r) => {
-      const cId = r.categoryId || "uncategorized";
-      catCounts[cId] = (catCounts[cId] || 0) + 1;
-    });
+    // 1. Gather primary category names matching the upload receipt dropdown
+    const primaryCategoryNames = [];
+    const seenCategoryNames = new Set();
 
-    const catList = [];
-    const seenCatIds = new Set();
-
-    Object.keys(optMap).forEach((cId) => {
-      catList.push({
-        id: cId,
-        name: optMap[cId],
-        count: catCounts[cId] || 0,
-      });
-      seenCatIds.add(cId);
-    });
-
-    Object.keys(catCounts).forEach((cId) => {
-      if (!seenCatIds.has(cId)) {
-        catList.push({
-          id: cId,
-          name: optMap[cId] || cId,
-          count: catCounts[cId],
+    if (financeConfig && financeConfig.finalOptionId) {
+      const opt = financeOptions.find((o) => o.id === financeConfig.finalOptionId);
+      if (opt && opt.fields && opt.fields.length > 0) {
+        opt.fields.forEach((f) => {
+          const name = (f.name || "").trim();
+          if (name && !seenCategoryNames.has(name.toLowerCase())) {
+            seenCategoryNames.add(name.toLowerCase());
+            primaryCategoryNames.push(name);
+          }
         });
-        seenCatIds.add(cId);
+      }
+    }
+
+    if (primaryCategoryNames.length === 0 && financeOptions && financeOptions.length > 0) {
+      financeOptions.forEach((opt) => {
+        if (opt && opt.fields) {
+          opt.fields.forEach((f) => {
+            const name = (f.name || "").trim();
+            if (name && !seenCategoryNames.has(name.toLowerCase())) {
+              seenCategoryNames.add(name.toLowerCase());
+              primaryCategoryNames.push(name);
+            }
+          });
+        }
+      });
+    }
+
+    if (primaryCategoryNames.length === 0 && typeof defaultFinanceFields !== "undefined") {
+      defaultFinanceFields.forEach((fName) => {
+        const name = (fName || "").trim();
+        if (name && !seenCategoryNames.has(name.toLowerCase())) {
+          seenCategoryNames.add(name.toLowerCase());
+          primaryCategoryNames.push(name);
+        }
+      });
+    }
+
+    // 2. Count active receipts per category name
+    const catNameCounts = {};
+    activeReceipts.forEach((r) => {
+      const cName = getReceiptCategoryName(r, optMap);
+      const key = cName.toLowerCase();
+      catNameCounts[key] = (catNameCounts[key] || 0) + 1;
+    });
+
+    // 3. Include any extra categories present in existing receipts
+    const extraCategoryNames = [];
+    activeReceipts.forEach((r) => {
+      const cName = getReceiptCategoryName(r, optMap);
+      if (cName && !seenCategoryNames.has(cName.toLowerCase())) {
+        seenCategoryNames.add(cName.toLowerCase());
+        extraCategoryNames.push(cName);
       }
     });
+    extraCategoryNames.sort((a, b) => a.localeCompare(b));
 
-    catList.sort((a, b) => a.name.localeCompare(b.name));
+    const filterCategories = [...primaryCategoryNames, ...extraCategoryNames];
+
+    // Normalize receiptCategoryFilter if previously set to an ID
+    if (receiptCategoryFilter && receiptCategoryFilter !== "all") {
+      if (optMap[receiptCategoryFilter]) {
+        receiptCategoryFilter = optMap[receiptCategoryFilter];
+      }
+    }
 
     let catFilterHtml = `<option value="all" ${receiptCategoryFilter === "all" ? "selected" : ""}>All Categories (${activeReceipts.length})</option>`;
-    catList.forEach((c) => {
-      const sel = receiptCategoryFilter === c.id ? "selected" : "";
-      catFilterHtml += `<option value="${c.id}" ${sel}>${c.name} (${c.count})</option>`;
+    filterCategories.forEach((catName) => {
+      const count = catNameCounts[catName.toLowerCase()] || 0;
+      const isSelected = receiptCategoryFilter.toLowerCase() === catName.toLowerCase();
+      catFilterHtml += `<option value="${catName.replace(/"/g, "&quot;")}" ${isSelected ? "selected" : ""}>${catName} (${count})</option>`;
     });
 
     catFilterSelect.innerHTML = catFilterHtml;
@@ -1969,7 +2310,14 @@ function renderReceiptsBrowser() {
   let filteredReceipts = activeReceipts;
 
   if (receiptCategoryFilter && receiptCategoryFilter !== "all") {
-    filteredReceipts = filteredReceipts.filter((r) => r.categoryId === receiptCategoryFilter);
+    const filterLower = receiptCategoryFilter.toLowerCase();
+    filteredReceipts = filteredReceipts.filter((r) => {
+      const rCatName = getReceiptCategoryName(r, optMap);
+      return (
+        rCatName.toLowerCase() === filterLower ||
+        (r.categoryId && r.categoryId.toLowerCase() === filterLower)
+      );
+    });
   }
 
   if (receiptSearchQuery && receiptSearchQuery.trim()) {
@@ -2138,6 +2486,7 @@ function renderReceiptsBrowser() {
 
 window.fuzzyMatchText = fuzzyMatchText;
 window.matchesReceiptFuzzy = matchesReceiptFuzzy;
+window.getReceiptCategoryName = getReceiptCategoryName;
 window.populateFinReceiptCategories = populateFinReceiptCategories;
 window.toggleFinReceiptUpload = toggleFinReceiptUpload;
 window.finRecCurChange = finRecCurChange;
@@ -2868,6 +3217,7 @@ function updateFeeDeviation(poc, field, value) {
   }
 
   queueFinanceUpdate();
+  renderFinalizedFinances();
 }
 
 function toggleFeeReceived(poc, status) {
@@ -2875,6 +3225,7 @@ function toggleFeeReceived(poc, status) {
   financeConfig.feesReceived[poc] = status;
   queueFinanceUpdate();
   renderFeeTracker();
+  renderFinalizedFinances();
 }
 
 function generateAdminPayNowStr(proxyType, proxyValue, amount, ref) {
@@ -3022,3 +3373,7 @@ window.showContactPaymentPopup = function (pocNric) {
   }
   modal.classList.remove("hidden-force");
 };
+
+window.renderFinalizedFinances = renderFinalizedFinances;
+window.calculateAndUpdateFinalized = renderFinalizedFinances;
+window.getFeeSummaryTotals = getFeeSummaryTotals;
