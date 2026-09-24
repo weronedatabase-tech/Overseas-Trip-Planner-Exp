@@ -46,6 +46,10 @@ document.addEventListener("DOMContentLoaded", () => {
     navigateTo("index.html");
     return;
   }
+  if (!currentUser && isPublic) {
+    const viewLoading = document.getElementById("viewLoading");
+    if (viewLoading) viewLoading.classList.add("hidden-force");
+  }
 
   if (currentUser) {
     const deskUserName = document.getElementById("deskUserName");

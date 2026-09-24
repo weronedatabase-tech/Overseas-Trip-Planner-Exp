@@ -639,6 +639,30 @@ function getFeeSummaryTotals() {
   };
 }
 
+function getDeduplicatedActiveReceipts(receipts) {
+  const raw = (receipts || globalReceipts || [])
+    .filter((r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot")
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  const list = [];
+  const seenIds = new Set();
+  raw.forEach((r) => {
+    if (seenIds.has(r.id)) return;
+    const isDup = list.some((existing) =>
+      existing.uploaderNric === r.uploaderNric &&
+      Number(existing.amount) === Number(r.amount) &&
+      existing.currency === r.currency &&
+      existing.categoryId === r.categoryId &&
+      Math.abs((existing.ts || 0) - (r.ts || 0)) < 120000
+    );
+    if (!isDup) {
+      seenIds.add(r.id);
+      list.push(r);
+    }
+  });
+  return list;
+}
+
 function renderFinalizedFinances() {
   const cont = document.getElementById("fin-tab-finalized");
   if (!cont || cont.classList.contains("hidden-force")) return;
@@ -694,9 +718,7 @@ function renderFinalizedFinances() {
     });
   }
 
-  const activeExpenseReceipts = globalReceipts.filter(
-    (r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot",
-  );
+  const activeExpenseReceipts = getDeduplicatedActiveReceipts(globalReceipts);
   const grandActualSgd = activeExpenseReceipts.reduce(
     (sum, r) => sum + (r.sgdAmount || 0),
     0,
@@ -1922,9 +1944,7 @@ function renderReceiptsBrowser() {
   const cont = document.getElementById("fin-tab-receipts");
   if (!cont || cont.classList.contains("hidden-force")) return;
 
-  const activeReceipts = (globalReceipts || [])
-    .filter((r) => !r.isDeleted && r.categoryId !== "Fees Payment Screenshot")
-    .sort((a, b) => b.ts - a.ts);
+  const activeReceipts = getDeduplicatedActiveReceipts(globalReceipts);
 
   let optMap = {};
   if (financeConfig && financeConfig.finalOptionId) {
@@ -1946,44 +1966,44 @@ function renderReceiptsBrowser() {
   if (!listContainer) {
     cont.innerHTML = `
       <div class="flex flex-col gap-3 pb-6 max-w-5xl mx-auto w-full">
-        <!-- UPLOAD RECEIPT BOX (Identical to landing page) -->
-        <div id="finReceiptUploadBox" class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-700 w-full border-t-4 border-t-purple-500 transition-all">
+        <!-- UPLOAD RECEIPT BOX -->
+        <div id="finReceiptUploadBox" class="bg-white dark:bg-gray-800 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-xl shadow-sm border-[3px] border-purple-500 dark:border-purple-400 hover:border-purple-600 dark:hover:border-purple-300 w-full transition-all">
           <button
             type="button"
             id="finReceiptToggleBtn"
             onclick="toggleFinReceiptUpload()"
             class="w-full flex justify-between items-center focus:outline-none cursor-pointer"
           >
-            <div class="flex items-center gap-3">
-              <div class="p-2 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-7 h-7 shrink-0 bg-purple-50 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 rounded-lg flex items-center justify-center">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
               </div>
-              <div class="text-left">
-                <h3 class="text-base font-black text-gray-900 dark:text-white tracking-tight">
+              <div class="text-left flex items-baseline gap-2 truncate">
+                <span class="text-xs sm:text-sm font-bold text-gray-900 dark:text-white tracking-tight">
                   Upload Receipt
-                </h3>
-                <p class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                  Click to add and record trip expenses
-                </p>
+                </span>
+                <span class="text-[11px] text-gray-400 dark:text-gray-500 font-medium hidden sm:inline">
+                  • Record trip expense
+                </span>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-purple-600 dark:text-purple-400 hidden sm:inline">Add Receipt</span>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-[11px] sm:text-xs font-bold text-purple-600 dark:text-purple-400">Add</span>
               <svg
                 id="finReceiptExpandIcon"
-                class="w-6 h-6 text-gray-400 transition-transform duration-300"
+                class="w-4 h-4 text-gray-400 transition-transform duration-300"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </button>
-          <div id="finReceiptFormWrapper" class="hidden-force mt-5 text-left border-t-2 border-gray-100 dark:border-gray-700/60 pt-4">
-            <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 font-bold">
+          <div id="finReceiptFormWrapper" class="hidden-force mt-3 pt-3 text-left border-t-2 border-gray-100 dark:border-gray-700/60">
+            <p class="text-xs text-gray-500 dark:text-gray-400 mb-3 font-bold">
               Please fill in the details of the receipt.
             </p>
             <div
@@ -2425,42 +2445,29 @@ function renderReceiptsBrowser() {
     }
 
     rowsHtml += `
-    <div id="receipt-card-${r.id}" class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col md:flex-row md:items-center gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
-        <!-- Top row on mobile / Left group on desktop -->
-        <div class="flex justify-between items-start md:items-center w-full md:w-auto md:flex-1">
-            <div class="flex flex-col">
+    <div id="receipt-card-${r.id}" class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+        <!-- Top row: Date, Category, Users on left / Amounts and Rate on right -->
+        <div class="flex justify-between items-start w-full gap-3">
+            <div class="flex flex-col min-w-0">
                 <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-0.5 tracking-wider uppercase">${dateStr}</span>
-                <span class="text-sm font-black text-primary truncate max-w-[200px]" title="${catName}">${catName}</span>
-                <div class="flex md:hidden flex-col mt-1.5 leading-tight">
-                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[180px]">Up: ${uploaderName}</span>
-                    <span class="text-[11px] font-black text-green-600 dark:text-green-400 uppercase truncate max-w-[180px]">Paid: ${payerName}</span>
+                <span class="text-sm font-black text-primary truncate max-w-[200px] sm:max-w-md md:max-w-xl" title="${catName}">${catName}</span>
+                <div class="flex flex-col mt-1.5 leading-tight">
+                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Uploaded by: ${uploaderName}">Up: ${uploaderName}</span>
+                    <span class="text-[11px] font-black text-green-600 dark:text-green-400 uppercase truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Paid by: ${payerName}">Paid: ${payerName}</span>
                 </div>
             </div>
-            <div class="flex flex-col items-end md:hidden">
+            <div class="flex flex-col items-end shrink-0">
                 <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5 mb-1">SGD ${r.sgdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 ${rateHtml}
             </div>
         </div>
 
-        <!-- Users on desktop -->
-        <div class="hidden md:flex flex-col text-xs leading-tight md:w-[140px] shrink-0 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
-           <div class="font-bold text-gray-800 dark:text-gray-200 truncate" title="Uploaded by: ${uploaderName}">Up: ${uploaderName}</div>
-           <div class="font-black text-green-600 dark:text-green-400 uppercase mt-0.5 truncate" title="Paid by: ${payerName}">Paid: ${payerName}</div>
-        </div>
-        
-        <!-- Amounts on desktop -->
-        <div class="hidden md:flex flex-col items-end text-right md:w-[120px] shrink-0 border-l-2 border-gray-100 dark:border-gray-700 pl-4">
-            <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-            <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5">SGD ${r.sgdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-            ${rateHtml ? `<div class="w-full mt-1.5">${rateHtml}</div>` : ""}
-        </div>
-
         <!-- Remarks -->
-        ${r.remarks ? `<div class="text-xs font-medium text-gray-500 dark:text-gray-400 italic md:w-[140px] shrink-0 truncate md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4" title="${r.remarks}">"${r.remarks}"</div>` : `<div class="hidden md:block md:w-[140px] shrink-0 md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4"></div>`}
+        ${r.remarks ? `<div class="text-xs font-medium text-gray-500 dark:text-gray-400 italic break-words" title="${r.remarks}">"${r.remarks}"</div>` : ""}
 
         <!-- Actions -->
-        <div class="flex items-center justify-between md:justify-end gap-2.5 pt-3 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-gray-700 w-full md:w-auto md:border-l md:border-gray-100 dark:md:border-gray-700 md:pl-4 shrink-0">
+        <div class="flex items-center justify-between gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-700 w-full">
             <button id="btn-reimbursed-${r.id}" onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
                 ${r.isReimbursed ? "Reimbursed" : "Pending"}
             </button>

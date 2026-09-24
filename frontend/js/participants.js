@@ -344,111 +344,185 @@ window.showRosterBreakdownModal = function () {
   document.body.insertAdjacentHTML("beforeend", modalHtml);
 };
 
+function applyLogisticsToRoster(logisticsData) {
+  if (!adminRosterData || adminRosterData.length === 0 || !logisticsData) return;
+  const roomsMap = {};
+  if (logisticsData.rooms) {
+    logisticsData.rooms
+      .filter((r) => !r.isDeleted)
+      .forEach((r) => {
+        (r.occupants || []).forEach((n) => (roomsMap[n] = r.name.toUpperCase()));
+      });
+  }
+
+  const pairingsMap = {};
+  if (logisticsData.pairings) {
+    logisticsData.pairings
+      .filter((p) => p.status === "ACTIVE")
+      .forEach((pair) => {
+        if (!pairingsMap[pair.traineeNric]) pairingsMap[pair.traineeNric] = [];
+        if (!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+
+        const v = adminRosterData.find((x) => x.nric === pair.volNric);
+        const t = adminRosterData.find((x) => x.nric === pair.traineeNric);
+
+        if (v)
+          pairingsMap[pair.traineeNric].push(
+            (v.shortName || v.fullName || "").toUpperCase(),
+          );
+        if (t)
+          pairingsMap[pair.volNric].push(
+            (t.shortName || t.fullName || "").toUpperCase(),
+          );
+      });
+  }
+
+  adminRosterData.forEach((p) => {
+    p.room = roomsMap[p.nric] || "UNASSIGNED";
+    let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
+    if (p.role === "CAREGIVER") {
+      const myPoc = p.pocNric || p.nric;
+      const myTrainees = adminRosterData.filter(
+        (x) => x.role === "TRAINEE" && (x.pocNric || x.nric) === myPoc,
+      );
+      myTrainees.forEach((t) => {
+        if (t && pairingsMap[t.nric]) {
+          myPairings.push(...pairingsMap[t.nric]);
+        }
+      });
+    }
+    p.pairings =
+      myPairings.length > 0
+        ? Array.from(new Set(myPairings)).join(", ")
+        : "NONE";
+  });
+}
+
 async function loadParticipantsData() {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-  if (adminRosterData && adminRosterData.length > 0) {
-    if (typeof processDisplayNames === "function")
-      processDisplayNames(adminRosterData);
-    if (typeof applyGlobalSorting === "function")
-      adminRosterData = applyGlobalSorting(adminRosterData);
-    renderRosterTable();
-    const loader = document.getElementById("rosterLoading");
-    if (loader) loader.classList.add("hidden-force");
-    return;
+  // 1. Instant Cache Hydration from sessionStorage / localStorage
+  if (!adminRosterData || adminRosterData.length === 0) {
+    try {
+      const cached =
+        sessionStorage.getItem("cachedAdminRoster") ||
+        localStorage.getItem("cachedAdminRoster");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          adminRosterData = parsed;
+          window.adminRosterData = adminRosterData;
+          applyCaregiverLabels(adminRosterData);
+
+          try {
+            const cachedLog =
+              sessionStorage.getItem("cachedLogistics") ||
+              localStorage.getItem("cachedLogistics");
+            if (cachedLog) applyLogisticsToRoster(JSON.parse(cachedLog));
+          } catch (e) {}
+
+          if (typeof processDisplayNames === "function")
+            processDisplayNames(adminRosterData);
+          if (typeof applyGlobalSorting === "function")
+            adminRosterData = applyGlobalSorting(adminRosterData);
+          renderRosterTable();
+        }
+      }
+    } catch (e) {}
   }
+
   const loader = document.getElementById("rosterLoading");
-  if (loader) loader.classList.remove("hidden-force");
+  if (loader && (!adminRosterData || adminRosterData.length === 0)) {
+    loader.classList.remove("hidden-force");
+  }
 
   try {
-    const [rostRes, logRes] = await Promise.all([
-      apiCall("fetchAdminRoster").catch((e) => {
-        console.warn("fetchAdminRoster failed", e);
-        return { roster: [] };
-      }),
-      apiCall("fetchLogistics").catch((e) => {
-        console.warn("fetchLogistics failed", e);
-        return null;
-      }),
-    ]);
+    const rostRes = await apiCall("fetchAdminRoster");
 
-    adminRosterData = rostRes.roster || [];
-    applyCaregiverLabels(adminRosterData);
-    window.adminRosterData = adminRosterData;
-    if (window.populateLogisticsDropdown) window.populateLogisticsDropdown();
-    const logisticsData = logRes || { rooms: [], pairings: [] };
+    if (rostRes && Array.isArray(rostRes.roster) && rostRes.roster.length > 0) {
+      adminRosterData = rostRes.roster;
+      try {
+        sessionStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+        localStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+      } catch (e) {}
 
-    traineeShortNames = {};
-    adminRosterData.forEach((p) => {
-      if (p.role === "TRAINEE") {
-        traineeShortNames[(p.fullName || "").toLowerCase()] = (
-          p.shortName ||
-          p.fullName ||
-          ""
-        ).toUpperCase();
-      }
-    });
+      applyCaregiverLabels(adminRosterData);
+      window.adminRosterData = adminRosterData;
 
-    const roomsMap = {};
-    if (logisticsData.rooms) {
-      logisticsData.rooms
-        .filter((r) => !r.isDeleted)
-        .forEach((r) => {
-          r.occupants.forEach((n) => (roomsMap[n] = r.name.toUpperCase()));
-        });
-    }
+      traineeShortNames = {};
+      adminRosterData.forEach((p) => {
+        if (p.role === "TRAINEE") {
+          traineeShortNames[(p.fullName || "").toLowerCase()] = (
+            p.shortName ||
+            p.fullName ||
+            ""
+          ).toUpperCase();
+        }
+      });
 
-    const pairingsMap = {};
-    if (logisticsData.pairings) {
-      logisticsData.pairings
-        .filter((p) => p.status === "ACTIVE")
-        .forEach((pair) => {
-          if (!pairingsMap[pair.traineeNric])
-            pairingsMap[pair.traineeNric] = [];
-          if (!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+      if (window.populateLogisticsDropdown) window.populateLogisticsDropdown();
 
-          const v = adminRosterData.find((x) => x.nric === pair.volNric);
-          const t = adminRosterData.find((x) => x.nric === pair.traineeNric);
+      // Apply cached logistics if available while waiting for background refresh
+      try {
+        const cachedLog =
+          sessionStorage.getItem("cachedLogistics") ||
+          localStorage.getItem("cachedLogistics");
+        if (cachedLog) applyLogisticsToRoster(JSON.parse(cachedLog));
+      } catch (e) {}
 
-          if (v)
-            pairingsMap[pair.traineeNric].push(
-              (v.shortName || v.fullName || "").toUpperCase(),
-            );
-          if (t)
-            pairingsMap[pair.volNric].push(
-              (t.shortName || t.fullName || "").toUpperCase(),
-            );
-        });
-    }
+      if (typeof processDisplayNames === "function")
+        processDisplayNames(adminRosterData);
+      if (typeof applyGlobalSorting === "function")
+        adminRosterData = applyGlobalSorting(adminRosterData);
 
-    adminRosterData.forEach((p) => {
-      p.room = roomsMap[p.nric] || "UNASSIGNED";
-      let myPairings = pairingsMap[p.nric] ? [...pairingsMap[p.nric]] : [];
-      if (p.role === "CAREGIVER") {
-        const myPoc = p.pocNric || p.nric;
-        const myTrainees = adminRosterData.filter(
-          (x) => x.role === "TRAINEE" && (x.pocNric || x.nric) === myPoc,
-        );
-        myTrainees.forEach((t) => {
-          if (t && pairingsMap[t.nric]) {
-            myPairings.push(...pairingsMap[t.nric]);
+      updateCheckAllRosterColumnsState();
+      renderRosterTable();
+
+      // Background non-blocking fetch for logistics to enrich rooms & pairings
+      apiCall("fetchLogistics")
+        .then((logRes) => {
+          if (logRes && adminRosterData && adminRosterData.length > 0) {
+            try {
+              sessionStorage.setItem("cachedLogistics", JSON.stringify(logRes));
+            } catch (e) {}
+            applyLogisticsToRoster(logRes);
+            renderRosterTable();
           }
-        });
-      } else if (p.role === "VOLUNTEER") {
-        // For volunteer, myPairings already only contains Trainees based on the pairingsMap[pair.volNric] pushing t.shortName. We ensure caregivers are NOT pushed.
-        // Since pairingsMap[pair.volNric] only pushes the trainee involved in the pair, it's correct.
+        })
+        .catch((err) => console.warn("Background fetchLogistics notice:", err));
+    } else if (!adminRosterData || adminRosterData.length === 0) {
+      const tbody = document.getElementById("rosterBody");
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
+          <div class="flex flex-col items-center justify-center gap-3">
+            <svg class="w-12 h-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <p class="text-gray-600 dark:text-gray-300 font-medium text-base">No participants found or database is warming up</p>
+            <button onclick="loadParticipantsData()" class="mt-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer">
+              Retry Loading Roster
+            </button>
+          </div>
+        </td></tr>`;
       }
-      p.pairings =
-        myPairings.length > 0
-          ? Array.from(new Set(myPairings)).join(", ")
-          : "NONE";
-    });
-
-    updateCheckAllRosterColumnsState();
-    renderRosterTable();
+    }
   } catch (e) {
-    console.error(e);
-    showToast("Error: " + e.message, true);
+    console.error("loadParticipantsData error:", e);
+    if (!adminRosterData || adminRosterData.length === 0) {
+      const tbody = document.getElementById("rosterBody");
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
+          <div class="flex flex-col items-center justify-center gap-3">
+            <svg class="w-12 h-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <p class="text-gray-600 dark:text-gray-300 font-medium text-base">Unable to connect to database</p>
+            <p class="text-gray-400 text-xs max-w-sm">The database is currently warming up. Tap retry below.</p>
+            <button onclick="loadParticipantsData()" class="mt-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer">
+              Retry Loading Roster
+            </button>
+          </div>
+        </td></tr>`;
+      }
+    } else {
+      showToast("Displaying cached roster. Database sync in progress.");
+    }
   } finally {
     if (loader) loader.classList.add("hidden-force");
   }

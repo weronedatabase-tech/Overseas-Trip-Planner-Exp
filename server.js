@@ -40,11 +40,22 @@ function mergeReceiptsWithOverrides(receipts, overrides) {
   if (Array.isArray(receipts)) {
     receipts.forEach(r => map.set(r.id, { ...r }));
   }
-  Object.values(overrides).forEach(ov => {
+  Object.values(overrides || {}).forEach(ov => {
     if (map.has(ov.id)) {
       map.set(ov.id, { ...map.get(ov.id), ...ov });
     } else {
-      map.set(ov.id, { ...ov });
+      // Check if this override is an exact duplicate of a receipt already in GAS
+      const isDuplicate = Array.from(map.values()).some(existing => 
+        !existing.isDeleted &&
+        existing.uploaderNric === ov.uploaderNric &&
+        Number(existing.amount) === Number(ov.amount) &&
+        existing.currency === ov.currency &&
+        existing.categoryId === ov.categoryId &&
+        Math.abs((existing.ts || 0) - (ov.ts || 0)) < 120000
+      );
+      if (!isDuplicate) {
+        map.set(ov.id, { ...ov });
+      }
     }
   });
   return Array.from(map.values());
@@ -167,21 +178,47 @@ app.post('/api', async (req, res) => {
     invalidateReceiptsCache();
     const p = (payload && payload.payload) ? payload.payload : (payload || {});
     const overrides = loadReceiptOverrides();
-    const newId = "rec_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
 
-    let fileUrl = "";
+    let localFileUrl = "";
     if (p.fileData) {
       try {
         const safeName = (p.fileName || 'receipt.jpg').replace(/[^a-zA-Z0-9.-]/g, '_');
         const storedName = `${Date.now()}_${safeName}`;
         const filePath = path.join(UPLOADS_DIR, storedName);
         fs.writeFileSync(filePath, Buffer.from(p.fileData, 'base64'));
-        fileUrl = `/uploads/${storedName}`;
+        localFileUrl = `/uploads/${storedName}`;
       } catch (err) {
         console.warn('Local file write error:', err);
       }
     }
 
+    let gasReceipts = [];
+    let gasSuccess = false;
+    try {
+      const fetchResponse = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'uploadReceipt', payload: p }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow'
+      });
+      const gasData = await fetchResponse.json();
+      if (gasData && Array.isArray(gasData.receipts)) {
+        gasReceipts = gasData.receipts;
+        gasSuccess = true;
+      }
+    } catch (e) {
+      console.warn('GAS uploadReceipt warning:', e.message);
+    }
+
+    if (gasSuccess) {
+      // Receipt was created in GAS with its authoritative ID.
+      // Do not store duplicate in overrides.
+      const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
+      return res.json({ status: 'success', receipts: merged });
+    }
+
+    // Fallback: only if GAS call failed, store offline receipt in overrides
+    const newId = "rec_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5);
     overrides[newId] = {
       id: newId,
       ts: Date.now(),
@@ -194,25 +231,11 @@ app.post('/api', async (req, res) => {
       sgdAmount: parseFloat(p.sgdAmount) || 0,
       categoryId: p.categoryId || '',
       remarks: p.remarks || '',
-      fileUrl: fileUrl,
+      fileUrl: localFileUrl,
       isDeleted: false,
       isReimbursed: false,
     };
     saveReceiptOverrides(overrides);
-
-    let gasReceipts = [];
-    try {
-      const fetchResponse = await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'uploadReceipt', payload: p }),
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        redirect: 'follow'
-      });
-      const gasData = await fetchResponse.json();
-      if (gasData && gasData.receipts) gasReceipts = gasData.receipts;
-    } catch (e) {
-      console.warn('GAS uploadReceipt warning:', e.message);
-    }
 
     const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
     return res.json({ status: 'success', receipts: merged, receiptId: newId });

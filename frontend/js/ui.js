@@ -334,7 +334,19 @@ async function updateApp(btn) {
   setBtnLoading(btn, true);
   showToast("Clearing global database cache & updating app...");
   try {
-    await apiCall("clearCache");
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("cachedAdminRoster");
+      localStorage.removeItem("cachedLogistics");
+      localStorage.removeItem("appSettings");
+      if (typeof htmlCache !== "undefined" && htmlCache.clear) htmlCache.clear();
+    } catch (e) {}
+
+    await Promise.race([
+      apiCall("clearCache").catch((e) => console.warn("clearCache error:", e)),
+      new Promise((r) => setTimeout(r, 2000)),
+    ]);
+
     if ("caches" in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map((name) => caches.delete(name)));
@@ -346,11 +358,12 @@ async function updateApp(btn) {
   } catch (e) {
     console.error(e);
   }
+  showToast("Cache cleared! Reloading...");
   setTimeout(() => {
     const url = new URL(window.location.href);
     url.searchParams.set("v", new Date().getTime());
     window.location.replace(url.toString());
-  }, 500);
+  }, 350);
 }
 
 function handleEnter(e, func) {
