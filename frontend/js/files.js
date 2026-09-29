@@ -69,7 +69,7 @@ function buildFilesUI() {
          </div>
          <div class="py-1.5">
            <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('doc')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-             <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Doc
+             <svg class="mr-3 h-5 w-5 text-blue-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Doc
            </a>
            <a href="javascript:void(0)" onclick="toggleDriveAddMenu(); promptCreateGoogleDoc('sheet')" class="group flex items-center px-4 py-2 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
              <svg class="mr-3 h-5 w-5 text-green-600 pointer-events-none" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Google Sheet
@@ -103,7 +103,7 @@ function buildFilesUI() {
   <span id="driveLoadingText" class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
 </div>
 
-<div id="pinnedTripFilesBar" class="p-2 md:p-3 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 shrink-0"></div>
+<div id="pinnedTripFilesBar" class="px-2 py-1 md:px-3 md:py-1 bg-gray-50/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800 shrink-0"></div>
 
 <div id="driveContentsList" class="flex-grow overflow-y-auto p-2 md:p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 custom-scrollbar pb-10">
 </div>
@@ -696,62 +696,42 @@ function updatePinnedTripFilesUI() {
   const docSet = Boolean(docId || docName || docUrl);
 
   container.innerHTML = `
-  <div class="rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 p-2.5">
-    <div class="flex items-center justify-between mb-2">
-      <div class="flex items-center gap-1.5">
-        <span class="p-1 rounded bg-primary/10 text-primary dark:text-green-400">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
-        </span>
-        <h4 class="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">Trip Display Files</h4>
+  <div class="flex items-center gap-1.5 md:gap-2 flex-wrap md:flex-nowrap">
+    <!-- Infographic Pill -->
+    <div class="flex items-center gap-1.5 flex-1 min-w-[210px] bg-white dark:bg-gray-800 border ${infoSet ? 'border-indigo-300 dark:border-indigo-700/80 bg-indigo-50/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg px-2 py-0.5 md:py-1 shadow-xs transition">
+      <span class="inline-flex items-center gap-1 text-[11px] font-black ${infoSet ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'} uppercase tracking-tight shrink-0">
+        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+        Infographic
+      </span>
+      <span class="text-gray-300 dark:text-gray-600 text-xs">|</span>
+      <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate flex-1 min-w-0" title="${infoSet ? (infoName || 'Infographic File') : 'No infographic set'}">
+        ${infoSet ? (infoName || 'Infographic File') : '<span class="text-gray-400 font-normal italic text-[11px]">Not set</span>'}
+      </span>
+      <div class="flex items-center gap-1 shrink-0 ml-auto">
+        <button onclick="openTripFilePickerModal('infographic')" class="px-2 py-0.5 text-[11px] font-bold ${infoSet ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Infographic file">
+          ${infoSet ? 'Change' : 'Choose'}
+        </button>
+        ${infoSet && (infoUrl || infoId) ? `<button onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
+        ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-1 py-0.5 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition" title="Remove as Landing Infographic">&times;</button>` : ''}
       </div>
-      <span class="text-[11px] text-gray-500 dark:text-gray-400 font-bold">Drive View Rights: Anyone with link</span>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-      <!-- Infographic Card -->
-      <div class="p-2.5 rounded-lg border-2 ${infoSet ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20' : 'border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'} flex flex-col justify-between transition">
-        <div>
-          <div class="flex items-center justify-between gap-1 mb-1">
-            <span class="text-xs font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-tight flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
-              Landing Page Infographic
-            </span>
-            ${infoSet ? '<span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60 px-1.5 py-0.5 rounded">Active on Landing</span>' : '<span class="text-[10px] font-bold text-gray-400">Not Set</span>'}
-          </div>
-          <p class="text-xs ${infoSet ? 'font-bold text-gray-900 dark:text-white truncate' : 'text-gray-500 dark:text-gray-400'} mb-2">
-            ${infoSet ? (infoName || 'Infographic File') : 'Displays directly as an image on the landing page.'}
-          </p>
-        </div>
-        <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200 dark:border-gray-700/60">
-          <button onclick="openTripFilePickerModal('infographic')" class="px-2.5 py-1 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-sm transition active:scale-95">
-            ${infoSet ? 'Change' : 'Choose File'}
-          </button>
-          ${infoSet && (infoUrl || infoId) ? `<button onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition">View</button>` : ''}
-          ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-2 py-1 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md ml-auto transition">Clear</button>` : ''}
-        </div>
-      </div>
-
-      <!-- Info Doc Card -->
-      <div class="p-2.5 rounded-lg border-2 ${docSet ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'} flex flex-col justify-between transition">
-        <div>
-          <div class="flex items-center justify-between gap-1 mb-1">
-            <span class="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-tight flex items-center gap-1">
-              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-              Participant Trip Info Doc
-            </span>
-            ${docSet ? '<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">Active in Profiles</span>' : '<span class="text-[10px] font-bold text-gray-400">Not Set</span>'}
-          </div>
-          <p class="text-xs ${docSet ? 'font-bold text-gray-900 dark:text-white truncate' : 'text-gray-500 dark:text-gray-400'} mb-2">
-            ${docSet ? (docName || 'Info Doc File') : 'Linked via "Trip Info" button on participant profiles.'}
-          </p>
-        </div>
-        <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200 dark:border-gray-700/60">
-          <button onclick="openTripFilePickerModal('infoDoc')" class="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition active:scale-95">
-            ${docSet ? 'Change' : 'Choose File'}
-          </button>
-          ${docSet && (docUrl || docId) ? `<button onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition">View</button>` : ''}
-          ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-2 py-1 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md ml-auto transition">Clear</button>` : ''}
-        </div>
+    <!-- Info Doc Pill -->
+    <div class="flex items-center gap-1.5 flex-1 min-w-[210px] bg-white dark:bg-gray-800 border ${docSet ? 'border-emerald-300 dark:border-emerald-700/80 bg-emerald-50/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg px-2 py-0.5 md:py-1 shadow-xs transition">
+      <span class="inline-flex items-center gap-1 text-[11px] font-black ${docSet ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'} uppercase tracking-tight shrink-0">
+        <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+        Trip Info
+      </span>
+      <span class="text-gray-300 dark:text-gray-600 text-xs">|</span>
+      <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate flex-1 min-w-0" title="${docSet ? (docName || 'Info Doc File') : 'No info doc set'}">
+        ${docSet ? (docName || 'Info Doc File') : '<span class="text-gray-400 font-normal italic text-[11px]">Not set</span>'}
+      </span>
+      <div class="flex items-center gap-1 shrink-0 ml-auto">
+        <button onclick="openTripFilePickerModal('infoDoc')" class="px-2 py-0.5 text-[11px] font-bold ${docSet ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Info Doc file">
+          ${docSet ? 'Change' : 'Choose'}
+        </button>
+        ${docSet && (docUrl || docId) ? `<button onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
+        ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-1 py-0.5 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition" title="Remove as Profile Trip Info Doc">&times;</button>` : ''}
       </div>
     </div>
   </div>
