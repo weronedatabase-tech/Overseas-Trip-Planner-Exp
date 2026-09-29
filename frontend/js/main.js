@@ -162,10 +162,21 @@ async function showParticipantSummaryModal(nric) {
     modal.innerHTML = `
       <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-3xl shadow-2xl border-2 border-gray-200 dark:border-gray-700 animate-slide-up flex flex-col overflow-hidden my-auto">
         <div class="flex justify-between items-center p-4 border-b-2 border-gray-200 dark:border-gray-700 shrink-0 bg-gray-50 dark:bg-gray-900/50">
-          <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
-            <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-            Participant Summary
-          </h3>
+          <div class="flex items-center gap-2.5">
+            <h3 class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+              Profile
+            </h3>
+            <button 
+              type="button" 
+              onclick="openTripInfoDoc()" 
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-sm active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0"
+              title="Open Trip Info Document"
+            >
+              <svg class="w-3.5 h-3.5 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+              <span>Trip Info</span>
+            </button>
+          </div>
           <button type="button" onclick="closeParticipantSummaryModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none">&times;</button>
         </div>
         <div id="gpm-content" class="p-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
@@ -629,6 +640,64 @@ function applyHydrationDOMUpdates() {
   renderHeaderLegend();
   renderHeaderHelpline();
   renderLandingHelpline();
+  renderLandingInfographic();
+}
+
+function renderLandingInfographic() {
+  const box = document.getElementById("landingInfographicBox");
+  const img = document.getElementById("landingInfographicImg");
+  const link = document.getElementById("landingInfographicFullLink");
+  const title = document.getElementById("landingInfographicTitle");
+  if (!box || !img) return;
+
+  let settings = typeof appSettings !== "undefined" ? appSettings : {};
+  if (!settings.tripInfographicId && !settings.tripInfographicUrl) {
+    try {
+      const stored = localStorage.getItem("appSettings");
+      if (stored) settings = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  const infoId = settings.tripInfographicId || "";
+  const infoName = settings.tripInfographicName || "";
+  const infoUrl = settings.tripInfographicUrl || "";
+
+  if (infoId || infoUrl) {
+    let imgSrc = "";
+    if (infoUrl && (infoUrl.startsWith("/uploads/") || infoUrl.startsWith("data:") || infoUrl.startsWith("blob:"))) {
+      imgSrc = infoUrl;
+    } else if (infoId) {
+      imgSrc = `https://lh3.googleusercontent.com/d/${infoId}`;
+    } else {
+      const match = infoUrl.match(/[-\w]{25,}/);
+      imgSrc = match ? `https://lh3.googleusercontent.com/d/${match[0]}` : infoUrl;
+    }
+
+    const driveFileId = infoId || (infoUrl.match(/[-\w]{25,}/) ? infoUrl.match(/[-\w]{25,}/)[0] : "");
+    img.dataset.driveId = driveFileId;
+    img.onerror = function () {
+      const id = this.dataset.driveId;
+      if (!id) return;
+      if (!this.dataset.fallbackCount) {
+        this.dataset.fallbackCount = "1";
+        this.src = `https://drive.google.com/thumbnail?id=${id}&sz=w2000`;
+      } else if (this.dataset.fallbackCount === "1") {
+        this.dataset.fallbackCount = "2";
+        this.src = `https://drive.google.com/uc?export=view&id=${id}`;
+      }
+    };
+
+    img.src = imgSrc;
+    if (title && infoName) {
+      title.textContent = infoName;
+    }
+    if (link) {
+      link.href = infoUrl || (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view?usp=sharing` : "#");
+    }
+    box.classList.remove("hidden-force");
+  } else {
+    box.classList.add("hidden-force");
+  }
 }
 
 function renderHeaderHelpline() {

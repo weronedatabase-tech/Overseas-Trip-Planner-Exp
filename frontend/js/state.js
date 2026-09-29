@@ -11,6 +11,12 @@ let appSettings = {
   sortingRules: [],
   tripTitle: "",
   tripYear: "",
+  tripInfographicId: "",
+  tripInfographicName: "",
+  tripInfographicUrl: "",
+  tripInfoDocId: "",
+  tripInfoDocName: "",
+  tripInfoDocUrl: "",
 };
 let globalLogistics = null;
 

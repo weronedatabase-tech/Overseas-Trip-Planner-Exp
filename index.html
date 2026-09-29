@@ -97,6 +97,44 @@
               Please select an option below.
             </p>
           </div>
+
+          <!-- Trip Infographic Image Card -->
+          <div
+            id="landingInfographicBox"
+            class="hidden-force bg-white dark:bg-gray-800 rounded-3xl shadow-md border-2 border-gray-200 dark:border-gray-700 overflow-hidden w-full transition-all animate-slide-up mb-4"
+          >
+            <div class="px-5 py-3 bg-gradient-to-r from-gray-50 to-indigo-50/40 dark:from-gray-900 dark:to-indigo-950/20 border-b-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                </span>
+                <span id="landingInfographicTitle" class="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider">Trip Infographic</span>
+              </div>
+              <a
+                id="landingInfographicFullLink"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-xs font-bold text-primary dark:text-green-400 hover:underline flex items-center gap-1"
+                title="Open in Google Drive"
+              >
+                <span>Open Full</span>
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            </div>
+            <div class="p-3 bg-gray-50/50 dark:bg-gray-900/40 flex justify-center items-center">
+              <img
+                id="landingInfographicImg"
+                src=""
+                alt="Trip Infographic"
+                class="w-full h-auto max-h-[550px] object-contain rounded-2xl shadow-sm hover:opacity-95 transition cursor-pointer"
+                onclick="openInfographicModal(this.src)"
+              />
+            </div>
+          </div>
+
           <div
             id="landingRegBox"
             class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-700 text-center border-t-4 border-t-green-500 hidden-force"
@@ -479,10 +517,38 @@
     <script src="frontend/js/main.js"></script>
     <script src="frontend/js/auth.js"></script>
     <script>
+      function openInfographicModal(src) {
+        if (!src) return;
+        let modal = document.getElementById("infographicModal");
+        if (!modal) {
+          modal = document.createElement("div");
+          modal.id = "infographicModal";
+          modal.className = "fixed inset-0 bg-black/80 z-[200] flex flex-col justify-center items-center p-3 backdrop-blur-md";
+          modal.innerHTML = `
+            <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+              <button onclick="document.getElementById('infographicModal').classList.add('hidden-force')" class="absolute -top-10 right-0 text-white hover:text-gray-300 text-3xl font-black px-2 focus:outline-none cursor-pointer">&times;</button>
+              <img id="infographicModalImg" src="" alt="Infographic" class="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+            </div>
+          `;
+          modal.addEventListener("click", (e) => {
+            if (e.target === modal || e.target.tagName === 'BUTTON') {
+              modal.classList.add("hidden-force");
+            }
+          });
+          document.body.appendChild(modal);
+        }
+        document.getElementById("infographicModalImg").src = src;
+        modal.classList.remove("hidden-force");
+      }
+
       window.initPage = () => {
         if (currentUser) {
           if (currentUser.role === "admin") navigateTo("roster.html");
           else navigateTo("dashboard.html");
+          return;
+        }
+        if (typeof renderLandingInfographic === "function") {
+          renderLandingInfographic();
         }
       };
     </script>

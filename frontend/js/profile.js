@@ -249,7 +249,15 @@ function renderProfileFullView() {
           : "text-orange-600 dark:text-orange-400";
     let headerLabel =
       i === 0
-        ? '<span class="text-base font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">My Profile</span>'
+        ? `<div class="flex items-center justify-between flex-wrap gap-2 mb-2.5">
+             <div class="flex items-center gap-2">
+               <span class="text-base font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest inline-block shadow-md">Profile</span>
+               <button type="button" onclick="openTripInfoDoc()" class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0" title="Open Trip Info Document">
+                 <svg class="w-3.5 h-3.5 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                 <span>Trip Info</span>
+               </button>
+             </div>
+           </div>`
         : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">Family Member</span>';
 
     profilesHtml += `
@@ -541,7 +549,21 @@ function renderProfileFullView() {
 </div>
 `;
 
-  let personalDetailsHeader = '<div id="section-my-profile" class="pb-28">';
+  let personalDetailsHeader = `
+    <div id="section-my-profile" class="pb-28">
+      <div class="flex items-center justify-between flex-wrap gap-2 pb-2 mb-3 border-b-2 border-gray-200 dark:border-gray-800">
+        <div class="flex items-center gap-3">
+          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
+            <svg class="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+            Profile
+          </h2>
+          <button type="button" onclick="openTripInfoDoc()" class="inline-flex items-center gap-1.5 px-3 py-1 text-xs md:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0" title="Open Trip Info Document">
+            <svg class="w-4 h-4 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+            <span>Trip Info</span>
+          </button>
+        </div>
+      </div>
+  `;
 
   let myGroupHtml = "";
   if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {

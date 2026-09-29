@@ -1392,3 +1392,73 @@ window.confirmPicker = function confirmPicker() {
 window.closePicker = function closePicker() {
   document.getElementById("datePickerSheet").classList.add("hidden-force");
 };
+
+window.openTripInfoDoc = function openTripInfoDoc() {
+  let settings = typeof appSettings !== "undefined" ? appSettings : {};
+  if (!settings.tripInfoDocId && !settings.tripInfoDocUrl) {
+    try {
+      const stored = localStorage.getItem("appSettings");
+      if (stored) settings = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  const url = settings.tripInfoDocUrl || "";
+  const id = settings.tripInfoDocId || "";
+  const name = settings.tripInfoDocName || "Trip Info Document";
+
+  let targetUrl = url;
+  if (!targetUrl && id) {
+    targetUrl = `https://drive.google.com/file/d/${id}/view?usp=sharing`;
+  }
+
+  if (!targetUrl && !id) {
+    if (typeof showToast === "function") {
+      showToast("Trip Info document has not been set by Admin yet.", true);
+    } else {
+      alert("Trip Info document has not been set by Admin yet.");
+    }
+    return;
+  }
+
+  const driveId = id || (targetUrl.match(/[-\w]{25,}/) ? targetUrl.match(/[-\w]{25,}/)[0] : "");
+  const previewSrc = driveId
+    ? `https://drive.google.com/file/d/${driveId}/preview`
+    : targetUrl;
+
+  let modal = document.getElementById("tripInfoDocModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "tripInfoDocModal";
+    modal.className =
+      "fixed inset-0 bg-black/70 z-[130] flex justify-center items-center p-3 md:p-6 backdrop-blur-sm";
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl h-[90vh] shadow-2xl border-2 border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden animate-slide-up">
+      <div class="flex items-center justify-between p-3.5 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 shrink-0">
+        <div class="flex items-center gap-2 min-w-0 pr-2">
+          <span class="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+          </span>
+          <div class="min-w-0">
+            <h3 class="text-sm font-black text-gray-900 dark:text-white truncate">${name}</h3>
+            <p class="text-[11px] text-gray-500 dark:text-gray-400">Official Trip Information Document</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a href="${targetUrl}" target="_blank" rel="noopener noreferrer" class="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm transition flex items-center gap-1 active:scale-95">
+            <span>Open in Drive</span>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          </a>
+          <button onclick="document.getElementById('tripInfoDocModal').classList.add('hidden-force')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-2xl font-bold px-2 focus:outline-none">&times;</button>
+        </div>
+      </div>
+      <div class="flex-1 bg-gray-100 dark:bg-gray-950 p-1 relative">
+        <iframe src="${previewSrc}" class="w-full h-full rounded-xl border-0" allow="autoplay"></iframe>
+      </div>
+    </div>
+  `;
+  modal.classList.remove("hidden-force");
+};
+

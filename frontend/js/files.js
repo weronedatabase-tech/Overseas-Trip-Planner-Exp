@@ -1,6 +1,7 @@
 let currentDrivePath = [];
 let driveClipboard = null;
 let selectedDriveItems = new Map();
+let lastLoadedDriveFiles = [];
 
 document.addEventListener("click", (e) => {
   const menu = document.getElementById("driveAddMenu");
@@ -102,11 +103,14 @@ function buildFilesUI() {
   <span id="driveLoadingText" class="text-primary dark:text-green-400 font-bold text-xs tracking-wide shadow-md bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 px-3 py-1 rounded-full mt-2">Loading folder...</span>
 </div>
 
+<div id="pinnedTripFilesBar" class="p-2 md:p-3 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 shrink-0"></div>
+
 <div id="driveContentsList" class="flex-grow overflow-y-auto p-2 md:p-3 space-y-1.5 bg-gray-50 dark:bg-gray-950 custom-scrollbar pb-10">
 </div>
 </div>
 `;
   updatePasteButtonState();
+  updatePinnedTripFilesUI();
 }
 
 function toggleDriveAddMenu(event) {
@@ -536,6 +540,8 @@ function openDriveFile(url) {
 }
 
 function renderDriveContents(folders, files) {
+  lastLoadedDriveFiles = files || [];
+  updatePinnedTripFilesUI();
   const container = document.getElementById("driveContentsList");
   if (!container) return;
   let html = "";
@@ -604,19 +610,39 @@ function renderDriveContents(folders, files) {
     } else if (f.mimeType.includes("pdf")) {
       bgClass = "bg-red-50 dark:bg-red-900/30";
       iconHtml = `<svg class="w-5 h-5 text-red-600 dark:text-red-500" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM16.5 9h-1v2h1V9z"/><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6z"/></svg>`;
+    } else if (f.mimeType.includes("image")) {
+      bgClass = "bg-indigo-50 dark:bg-indigo-900/30";
+      iconHtml = `<svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>`;
     } else {
       iconHtml = `<svg class="w-5 h-5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm6 1.5L18.5 9H12V3.5z"/></svg>`;
+    }
+
+    const isInfographic = Boolean(
+      (appSettings && appSettings.tripInfographicId && f.id === appSettings.tripInfographicId) ||
+      (appSettings && appSettings.tripInfographicName && f.name === appSettings.tripInfographicName)
+    );
+    const isInfoDoc = Boolean(
+      (appSettings && appSettings.tripInfoDocId && f.id === appSettings.tripInfoDocId) ||
+      (appSettings && appSettings.tripInfoDocName && f.name === appSettings.tripInfoDocName)
+    );
+
+    let badgesHtml = "";
+    if (isInfographic) {
+      badgesHtml += `<span class="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800 shrink-0 shadow-sm"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg> Infographic</span>`;
+    }
+    if (isInfoDoc) {
+      badgesHtml += `<span class="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0 shadow-sm"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg> Trip Info Doc</span>`;
     }
 
     const shortcutBadge = f.isShortcut
       ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-md p-0.5"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>`
       : "";
     const nameHtml = f.isShortcut
-      ? `<div class="flex flex-col min-w-0"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
-      : `<span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>`;
+      ? `<div class="flex flex-col min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>${badgesHtml}</div><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
+      : `<div class="flex items-center gap-1.5 min-w-0 flex-wrap"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>${badgesHtml}</div>`;
 
     html += `
- <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
+ <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 ${isInfographic ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50/20' : (isInfoDoc ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/20' : 'border-gray-200 dark:border-gray-700')} shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
     <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', false, '${safeName}')">
     </div>
@@ -628,6 +654,12 @@ function renderDriveContents(folders, files) {
         ${nameHtml}
     </div>
     <div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+        <button onclick="actionSetTripFile('infographic', '${f.id}', '${safeName}', '${f.url}')" class="p-2 ${isInfographic ? 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/60 font-black' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700'} rounded-md transition focus:outline-none shrink-0" title="${isInfographic ? 'Currently Set as Landing Infographic' : 'Set as Landing Page Infographic'}">
+           <svg class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+        </button>
+        <button onclick="actionSetTripFile('infoDoc', '${f.id}', '${safeName}', '${f.url}')" class="p-2 ${isInfoDoc ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/60 font-black' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-700'} rounded-md transition focus:outline-none shrink-0" title="${isInfoDoc ? 'Currently Set as Profile Trip Info Doc' : 'Set as Profile Trip Info Doc'}">
+           <svg class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+        </button>
         <button onclick="actionSingleCopy('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Copy File">
            ${copyIcon}
         </button>
@@ -646,4 +678,240 @@ function renderDriveContents(folders, files) {
   });
 
   container.innerHTML = html;
+}
+
+function updatePinnedTripFilesUI() {
+  const container = document.getElementById("pinnedTripFilesBar");
+  if (!container) return;
+
+  const infoId = (appSettings && appSettings.tripInfographicId) || "";
+  const infoName = (appSettings && appSettings.tripInfographicName) || "";
+  const infoUrl = (appSettings && appSettings.tripInfographicUrl) || "";
+
+  const docId = (appSettings && appSettings.tripInfoDocId) || "";
+  const docName = (appSettings && appSettings.tripInfoDocName) || "";
+  const docUrl = (appSettings && appSettings.tripInfoDocUrl) || "";
+
+  const infoSet = Boolean(infoId || infoName || infoUrl);
+  const docSet = Boolean(docId || docName || docUrl);
+
+  container.innerHTML = `
+  <div class="rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40 p-2.5">
+    <div class="flex items-center justify-between mb-2">
+      <div class="flex items-center gap-1.5">
+        <span class="p-1 rounded bg-primary/10 text-primary dark:text-green-400">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" /></svg>
+        </span>
+        <h4 class="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">Trip Display Files</h4>
+      </div>
+      <span class="text-[11px] text-gray-500 dark:text-gray-400 font-bold">Drive View Rights: Anyone with link</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+      <!-- Infographic Card -->
+      <div class="p-2.5 rounded-lg border-2 ${infoSet ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20' : 'border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'} flex flex-col justify-between transition">
+        <div>
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="text-xs font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-tight flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+              Landing Page Infographic
+            </span>
+            ${infoSet ? '<span class="text-[10px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-900/60 px-1.5 py-0.5 rounded">Active on Landing</span>' : '<span class="text-[10px] font-bold text-gray-400">Not Set</span>'}
+          </div>
+          <p class="text-xs ${infoSet ? 'font-bold text-gray-900 dark:text-white truncate' : 'text-gray-500 dark:text-gray-400'} mb-2">
+            ${infoSet ? (infoName || 'Infographic File') : 'Displays directly as an image on the landing page.'}
+          </p>
+        </div>
+        <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200 dark:border-gray-700/60">
+          <button onclick="openTripFilePickerModal('infographic')" class="px-2.5 py-1 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md shadow-sm transition active:scale-95">
+            ${infoSet ? 'Change' : 'Choose File'}
+          </button>
+          ${infoSet && (infoUrl || infoId) ? `<button onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition">View</button>` : ''}
+          ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-2 py-1 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md ml-auto transition">Clear</button>` : ''}
+        </div>
+      </div>
+
+      <!-- Info Doc Card -->
+      <div class="p-2.5 rounded-lg border-2 ${docSet ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20' : 'border-dashed border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800'} flex flex-col justify-between transition">
+        <div>
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-tight flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+              Participant Trip Info Doc
+            </span>
+            ${docSet ? '<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">Active in Profiles</span>' : '<span class="text-[10px] font-bold text-gray-400">Not Set</span>'}
+          </div>
+          <p class="text-xs ${docSet ? 'font-bold text-gray-900 dark:text-white truncate' : 'text-gray-500 dark:text-gray-400'} mb-2">
+            ${docSet ? (docName || 'Info Doc File') : 'Linked via "Trip Info" button on participant profiles.'}
+          </p>
+        </div>
+        <div class="flex items-center gap-1.5 pt-1 border-t border-gray-200 dark:border-gray-700/60">
+          <button onclick="openTripFilePickerModal('infoDoc')" class="px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-md shadow-sm transition active:scale-95">
+            ${docSet ? 'Change' : 'Choose File'}
+          </button>
+          ${docSet && (docUrl || docId) ? `<button onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition">View</button>` : ''}
+          ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-2 py-1 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-md ml-auto transition">Clear</button>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>
+  `;
+}
+
+async function actionSetTripFile(fileType, fileId, fileName, fileUrl) {
+  const isInfographic = fileType === "infographic";
+  const title = isInfographic ? "Landing Page Infographic" : "Participant Trip Info Doc";
+  const message = isInfographic
+    ? `Set "${fileName}" as the Trip Infographic?\n\n• The file's view rights in Google Drive will be set to 'Anyone with link able to view'.\n• It will appear directly as an image on the landing page.`
+    : `Set "${fileName}" as the Trip Info Doc?\n\n• The file's view rights in Google Drive will be set to 'Anyone with link able to view'.\n• It will be accessible from all participants' profiles via the "Trip Info" button.`;
+
+  if (!confirm(message)) return;
+
+  const overlay = document.getElementById("driveLoadingOverlay");
+  const loadText = document.getElementById("driveLoadingText");
+  if (overlay) {
+    overlay.classList.remove("hidden-force");
+    if (loadText) loadText.textContent = `Setting ${title} & updating Drive permissions...`;
+  }
+
+  try {
+    const res = await apiCall("setTripFile", {
+      fileType: fileType,
+      fileId: fileId,
+      fileName: fileName,
+      fileUrl: fileUrl
+    });
+
+    if (isInfographic) {
+      appSettings.tripInfographicId = fileId;
+      appSettings.tripInfographicName = fileName;
+      appSettings.tripInfographicUrl = fileUrl;
+    } else {
+      appSettings.tripInfoDocId = fileId;
+      appSettings.tripInfoDocName = fileName;
+      appSettings.tripInfoDocUrl = fileUrl;
+    }
+    localStorage.setItem("appSettings", JSON.stringify(appSettings));
+
+    showToast(`"${fileName}" set as ${title}! Google Drive view rights updated to anyone with link.`);
+    updatePinnedTripFilesUI();
+    const current = currentDrivePath[currentDrivePath.length - 1] || { id: "root", name: "Trip Folder" };
+    loadDriveFolder(current.id, current.name, true);
+  } catch (err) {
+    showToast("Failed to set file: " + err.message, true);
+  } finally {
+    if (overlay) overlay.classList.add("hidden-force");
+  }
+}
+
+async function actionClearTripFile(fileType) {
+  const isInfographic = fileType === "infographic";
+  const title = isInfographic ? "Landing Page Infographic" : "Participant Trip Info Doc";
+  if (!confirm(`Are you sure you want to clear the ${title}?`)) return;
+
+  const overlay = document.getElementById("driveLoadingOverlay");
+  const loadText = document.getElementById("driveLoadingText");
+  if (overlay) {
+    overlay.classList.remove("hidden-force");
+    if (loadText) loadText.textContent = `Clearing ${title}...`;
+  }
+
+  try {
+    await apiCall("setTripFile", {
+      fileType: fileType,
+      fileId: "",
+      fileName: "",
+      fileUrl: ""
+    });
+
+    if (isInfographic) {
+      appSettings.tripInfographicId = "";
+      appSettings.tripInfographicName = "";
+      appSettings.tripInfographicUrl = "";
+    } else {
+      appSettings.tripInfoDocId = "";
+      appSettings.tripInfoDocName = "";
+      appSettings.tripInfoDocUrl = "";
+    }
+    localStorage.setItem("appSettings", JSON.stringify(appSettings));
+
+    showToast(`${title} cleared successfully.`);
+    updatePinnedTripFilesUI();
+    const current = currentDrivePath[currentDrivePath.length - 1] || { id: "root", name: "Trip Folder" };
+    loadDriveFolder(current.id, current.name, true);
+  } catch (err) {
+    showToast("Failed to clear file: " + err.message, true);
+  } finally {
+    if (overlay) overlay.classList.add("hidden-force");
+  }
+}
+
+function openTripFilePickerModal(fileType) {
+  const isInfographic = fileType === "infographic";
+  const title = isInfographic ? "Choose Landing Page Infographic" : "Choose Profile Trip Info Doc";
+
+  let modal = document.getElementById("tripFilePickerModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "tripFilePickerModal";
+    modal.className = "fixed inset-0 bg-black/60 z-[120] flex justify-center items-center p-3 backdrop-blur-sm";
+    document.body.appendChild(modal);
+  }
+
+  const filesToPick = (lastLoadedDriveFiles || []).filter(f => !f.mimeType.includes("folder"));
+
+  let filesListHtml = "";
+  if (filesToPick.length === 0) {
+    filesListHtml = `
+      <div class="py-8 text-center text-gray-500 dark:text-gray-400">
+        <svg class="w-10 h-10 mx-auto mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+        <p class="font-bold text-sm">No files in current folder</p>
+        <p class="text-xs mt-1">Navigate to a folder with files or upload a new file first.</p>
+      </div>`;
+  } else {
+    filesListHtml = filesToPick.map(f => {
+      const safeName = f.name.replace(/'/g, "\\'");
+      const isCur = isInfographic 
+        ? (appSettings.tripInfographicId === f.id || appSettings.tripInfographicName === f.name)
+        : (appSettings.tripInfoDocId === f.id || appSettings.tripInfoDocName === f.name);
+
+      return `
+        <div class="flex items-center justify-between p-2.5 rounded-lg border-2 ${isCur ? 'border-primary bg-green-50/50 dark:bg-green-950/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'} hover:border-primary transition">
+          <div class="flex items-center gap-2.5 min-w-0 pr-2">
+            <div class="w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0 text-gray-600 dark:text-gray-300">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            </div>
+            <div class="min-w-0">
+              <p class="font-bold text-xs md:text-sm text-gray-900 dark:text-white truncate">${f.name}</p>
+              <span class="text-[10px] text-gray-400 dark:text-gray-500">${f.mimeType || 'File'}</span>
+            </div>
+          </div>
+          <button onclick="document.getElementById('tripFilePickerModal').classList.add('hidden-force'); actionSetTripFile('${fileType}', '${f.id}', '${safeName}', '${f.url}')" class="px-3 py-1.5 text-xs font-bold rounded-lg ${isCur ? 'bg-green-600 text-white' : 'bg-primary hover:bg-green-600 text-white'} shadow-sm shrink-0 active:scale-95 transition">
+            ${isCur ? 'Currently Selected' : 'Select'}
+          </button>
+        </div>
+      `;
+    }).join("");
+  }
+
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-2xl border-2 border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden animate-slide-up max-h-[85vh]">
+      <div class="flex items-center justify-between p-3.5 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+        <div>
+          <h3 class="text-sm font-black text-gray-900 dark:text-white">${title}</h3>
+          <p class="text-[11px] text-gray-500 dark:text-gray-400">Select a file from current folder. Google Drive view rights will be set to 'Anyone with link'.</p>
+        </div>
+        <button onclick="document.getElementById('tripFilePickerModal').classList.add('hidden-force')" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold px-2">&times;</button>
+      </div>
+      <div class="p-3 overflow-y-auto space-y-2 flex-grow custom-scrollbar">
+        ${filesListHtml}
+      </div>
+      <div class="p-3 border-t-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 flex justify-between items-center">
+        <span class="text-[11px] text-gray-500 dark:text-gray-400">Current folder: <span class="font-bold text-gray-800 dark:text-gray-200">${(currentDrivePath[currentDrivePath.length - 1] || {}).name || 'Trip Folder'}</span></span>
+        <button onclick="document.getElementById('tripFilePickerModal').classList.add('hidden-force')" class="px-3 py-1.5 text-xs font-bold bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700 transition">Close</button>
+      </div>
+    </div>
+  `;
+
+  modal.classList.remove("hidden-force");
 }

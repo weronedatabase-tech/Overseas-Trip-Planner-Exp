@@ -234,6 +234,7 @@ case 'uploadReceipt': result = uploadReceipt(data.payload); break;
 case 'syncReceipts': result = syncReceipts(data.updates); break;
 case 'fetchMinutes': result = fetchMinutes(); break;
 case 'syncMinutes': result = syncMinutes(data.updates, data.takenBy); break;
+case 'setTripFile': result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl); break;
 case 'archiveAndReset': result = archiveAndReset(); break;
 default: throw new Error("Unknown action.");
 }
@@ -276,7 +277,13 @@ sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty(
 customViewsOrder: props.getProperty('CUSTOM_VIEWS_ORDER') ? JSON.parse(props.getProperty('CUSTOM_VIEWS_ORDER')) : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
 driveAccessList: props.getProperty('APP_GRANTED_ACCESS') ? JSON.parse(props.getProperty('APP_GRANTED_ACCESS')) : {}, 
 tripTitle: props.getProperty('TRIP_TITLE') || '', tripYear: props.getProperty('TRIP_YEAR') || '',
-tripStartDate: props.getProperty('TRIP_START_DATE') || '', tripEndDate: props.getProperty('TRIP_END_DATE') || ''
+tripStartDate: props.getProperty('TRIP_START_DATE') || '', tripEndDate: props.getProperty('TRIP_END_DATE') || '',
+tripInfographicId: props.getProperty('TRIP_INFOGRAPHIC_ID') || '',
+tripInfographicName: props.getProperty('TRIP_INFOGRAPHIC_NAME') || '',
+tripInfographicUrl: props.getProperty('TRIP_INFOGRAPHIC_URL') || '',
+tripInfoDocId: props.getProperty('TRIP_INFODOC_ID') || '',
+tripInfoDocName: props.getProperty('TRIP_INFODOC_NAME') || '',
+tripInfoDocUrl: props.getProperty('TRIP_INFODOC_URL') || ''
 };
 }
 
@@ -1471,11 +1478,54 @@ emails.forEach(email => { email = String(email || '').trim().toLowerCase(); if (
 props.setProperty('APP_GRANTED_ACCESS', JSON.stringify(access)); return { status: 'success', driveAccessList: access, results: results };
 }
 
+function setTripFile(fileType, fileId, fileName, fileUrl) {
+  const props = PropertiesService.getScriptProperties();
+  fileId = String(fileId || '').trim();
+  fileName = String(fileName || '').trim();
+  fileUrl = String(fileUrl || '').trim();
+
+  if (fileId) {
+    try {
+      const file = DriveApp.getFileById(fileId);
+      // Ensure anyone with link has view permission
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      if (!fileUrl) fileUrl = file.getUrl();
+      if (!fileName) fileName = file.getName();
+    } catch (e) {
+      console.warn("setSharing error: " + e.message);
+    }
+  }
+
+  if (fileType === 'infographic') {
+    if (fileId) {
+      props.setProperty('TRIP_INFOGRAPHIC_ID', fileId);
+      props.setProperty('TRIP_INFOGRAPHIC_NAME', fileName);
+      props.setProperty('TRIP_INFOGRAPHIC_URL', fileUrl);
+    } else {
+      props.deleteProperty('TRIP_INFOGRAPHIC_ID');
+      props.deleteProperty('TRIP_INFOGRAPHIC_NAME');
+      props.deleteProperty('TRIP_INFOGRAPHIC_URL');
+    }
+  } else if (fileType === 'infoDoc') {
+    if (fileId) {
+      props.setProperty('TRIP_INFODOC_ID', fileId);
+      props.setProperty('TRIP_INFODOC_NAME', fileName);
+      props.setProperty('TRIP_INFODOC_URL', fileUrl);
+    } else {
+      props.deleteProperty('TRIP_INFODOC_ID');
+      props.deleteProperty('TRIP_INFODOC_NAME');
+      props.deleteProperty('TRIP_INFODOC_URL');
+    }
+  }
+
+  return getAppConfig();
+}
+
 function archiveAndReset() {
 const props = PropertiesService.getScriptProperties(); const dbId = getDbId();
 try { if (dbId) { const folder = getTripFolder(); const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}'); for (let email in accessObj) { try { if (accessObj[email] === 'editor') folder.removeEditor(email); else folder.removeViewer(email); } catch(e) { } } } } catch (e) {}
 if (dbId) { const t = props.getProperty('TRIP_TITLE') || 'Archived Trip'; const y = props.getProperty('TRIP_YEAR') || new Date().getFullYear(); const d = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"); try { DriveApp.getFileById(dbId).setName(`${t} ${y} (Archived ${d})`); } catch(e){} }
-['DB_SHEET_ID', 'TRIP_TITLE', 'TRIP_YEAR', 'TRIP_START_DATE', 'TRIP_END_DATE', 'COMMITTEE_LIST', 'ATTENDANCE_JUNCTURES', 'APP_GRANTED_ACCESS'].forEach(k => props.deleteProperty(k));
+['DB_SHEET_ID', 'TRIP_TITLE', 'TRIP_YEAR', 'TRIP_START_DATE', 'TRIP_END_DATE', 'COMMITTEE_LIST', 'ATTENDANCE_JUNCTURES', 'APP_GRANTED_ACCESS', 'TRIP_INFOGRAPHIC_ID', 'TRIP_INFOGRAPHIC_NAME', 'TRIP_INFOGRAPHIC_URL', 'TRIP_INFODOC_ID', 'TRIP_INFODOC_NAME', 'TRIP_INFODOC_URL'].forEach(k => props.deleteProperty(k));
 props.setProperty('REGISTRATION_OPEN', 'false'); props.setProperty('ALLOW_EDITS', 'false');
 const cache = CacheService.getScriptCache();
 // Wipe caches related to this trip instance

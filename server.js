@@ -14,6 +14,41 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const OVERRIDES_FILE = path.join(DATA_DIR, 'receipts_overrides.json');
+const TRIP_FILES_FILE = path.join(DATA_DIR, 'trip_files.json');
+
+function loadTripFiles() {
+  try {
+    if (fs.existsSync(TRIP_FILES_FILE)) {
+      const data = fs.readFileSync(TRIP_FILES_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('Error loading trip files:', e);
+  }
+  return {};
+}
+
+function saveTripFiles(files) {
+  try {
+    fs.writeFileSync(TRIP_FILES_FILE, JSON.stringify(files, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving trip files:', e);
+  }
+}
+
+function mergeSettingsWithTripFiles(settings) {
+  if (!settings || typeof settings !== 'object') return settings;
+  const files = loadTripFiles();
+  return {
+    ...settings,
+    tripInfographicId: files.tripInfographicId !== undefined ? files.tripInfographicId : (settings.tripInfographicId || ''),
+    tripInfographicName: files.tripInfographicName !== undefined ? files.tripInfographicName : (settings.tripInfographicName || ''),
+    tripInfographicUrl: files.tripInfographicUrl !== undefined ? files.tripInfographicUrl : (settings.tripInfographicUrl || ''),
+    tripInfoDocId: files.tripInfoDocId !== undefined ? files.tripInfoDocId : (settings.tripInfoDocId || ''),
+    tripInfoDocName: files.tripInfoDocName !== undefined ? files.tripInfoDocName : (settings.tripInfoDocName || ''),
+    tripInfoDocUrl: files.tripInfoDocUrl !== undefined ? files.tripInfoDocUrl : (settings.tripInfoDocUrl || '')
+  };
+}
 
 function loadReceiptOverrides() {
   try {
@@ -73,6 +108,14 @@ const activeRequests = new Map();
 function invalidateReceiptsCache() {
   for (const key of cache.keys()) {
     if (key.startsWith('fetchReceipts')) {
+      cache.delete(key);
+    }
+  }
+}
+
+function invalidateSettingsCache() {
+  for (const key of cache.keys()) {
+    if (key.startsWith('getSettings')) {
       cache.delete(key);
     }
   }
@@ -139,10 +182,9 @@ app.post('/api/upload-file', async (req, res) => {
 });
 
 app.post('/api', async (req, res) => {
-  const { action, payload, API_URL } = req.body;
-  
+  let { action, payload, API_URL } = req.body;
   if (!API_URL) {
-    return res.status(400).json({ status: 'error', message: 'API_URL not provided' });
+    API_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
   }
 
   // Handle syncReceipts locally + pass to GAS
@@ -241,6 +283,39 @@ app.post('/api', async (req, res) => {
     return res.json({ status: 'success', receipts: merged, receiptId: newId });
   }
 
+  // Handle setTripFile locally + forward to GAS
+  if (action === 'setTripFile') {
+    invalidateSettingsCache();
+    const p = payload || {};
+    const tripFiles = loadTripFiles();
+    if (p.fileType === 'infographic') {
+      tripFiles.tripInfographicId = p.fileId || '';
+      tripFiles.tripInfographicName = p.fileName || '';
+      tripFiles.tripInfographicUrl = p.fileUrl || '';
+    } else if (p.fileType === 'infoDoc') {
+      tripFiles.tripInfoDocId = p.fileId || '';
+      tripFiles.tripInfoDocName = p.fileName || '';
+      tripFiles.tripInfoDocUrl = p.fileUrl || '';
+    }
+    saveTripFiles(tripFiles);
+
+    let gasSettings = {};
+    try {
+      const fetchResponse = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'setTripFile', ...(payload || {}) }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow'
+      });
+      gasSettings = await fetchResponse.json();
+    } catch (e) {
+      console.warn('GAS setTripFile warning:', e.message);
+    }
+
+    const merged = mergeSettingsWithTripFiles(gasSettings.status === 'success' ? gasSettings : { status: 'success' });
+    return res.json(merged);
+  }
+
   const cacheKey = action + JSON.stringify(payload || {});
   
   if (CACHEABLE_ACTIONS.includes(action)) {
@@ -255,6 +330,12 @@ app.post('/api', async (req, res) => {
              parsed.receipts = mergeReceiptsWithOverrides(parsed.receipts, loadReceiptOverrides());
              return res.json(parsed);
            }
+         } catch (e) {}
+       }
+       if (action === 'getSettings') {
+         try {
+           const parsed = JSON.parse(responseData);
+           return res.json(mergeSettingsWithTripFiles(parsed));
          } catch (e) {}
        }
        return res.send(responseData);
@@ -274,6 +355,12 @@ app.post('/api', async (req, res) => {
             parsed.receipts = mergeReceiptsWithOverrides(parsed.receipts, loadReceiptOverrides());
             return res.json(parsed);
           }
+        } catch (e) {}
+      }
+      if (action === 'getSettings') {
+        try {
+          const parsed = JSON.parse(text);
+          return res.json(mergeSettingsWithTripFiles(parsed));
         } catch (e) {}
       }
       return res.send(text);
@@ -320,6 +407,15 @@ app.post('/api', async (req, res) => {
         }
       } catch (e) {
         return res.json({ status: 'success', receipts: mergeReceiptsWithOverrides([], loadReceiptOverrides()) });
+      }
+    }
+
+    if (action === 'getSettings') {
+      try {
+        const parsed = JSON.parse(text);
+        return res.json(mergeSettingsWithTripFiles(parsed));
+      } catch (e) {
+        return res.json(mergeSettingsWithTripFiles({ status: 'success' }));
       }
     }
 
