@@ -204,15 +204,17 @@ function renderProfileFullView() {
     if (appSettings.committee) {
       appSettings.committee.forEach((c) => {
         if (c.phone)
-          cListHtml += `<a href="https://wa.me/65${c.phone}" target="_blank" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold px-2 py-1 rounded shadow-md text-xs border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Chat with ${c.name}</a>`;
+          cListHtml += `<a href="https://wa.me/65${c.phone}" target="_blank" class="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold px-2 py-0.5 rounded shadow-xs text-xs border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">Chat with ${c.name}</a>`;
       });
     }
     topBannersHtml += `
- <div class="bg-yellow-50/50 dark:bg-yellow-900/10 border-2 border-yellow-200 dark:border-yellow-800/50 text-yellow-800 dark:text-yellow-400 p-3 rounded-lg shadow-md">
-     <p class="font-bold mb-0.5 text-xs">🔒 Editing is currently Locked.</p>
-     <p class="text-xs mb-2">To request changes to your details, please contact a Committee Member:</p>
-     <div class="flex flex-wrap gap-1.5">${cListHtml}</div>
- </div>`;
+  <div class="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/60 text-amber-900 dark:text-amber-300 px-3 py-1.5 rounded-lg shadow-xs flex flex-wrap items-center justify-between gap-1.5 text-xs">
+      <div class="flex items-center gap-1.5">
+        <span>🔒</span>
+        <span class="font-bold">Editing is locked. To request changes:</span>
+      </div>
+      <div class="flex flex-wrap gap-1">${cListHtml}</div>
+  </div>`;
   }
 
   // 2. Profiles Grid
@@ -247,33 +249,28 @@ function renderProfileFullView() {
         : m.role === "CAREGIVER"
           ? "text-purple-600 dark:text-purple-400"
           : "text-orange-600 dark:text-orange-400";
-    let headerLabel =
-      i === 0
-        ? `<div class="flex items-center justify-between flex-wrap gap-2 mb-2.5">
-             <div class="flex items-center gap-2">
-               <span class="text-base font-black bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full uppercase tracking-widest inline-block shadow-md">Profile</span>
-               <button type="button" onclick="openTripInfoDoc()" class="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0" title="Open Trip Info Document">
-                 <svg class="w-3.5 h-3.5 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-                 <span>Trip Info</span>
-               </button>
-             </div>
-           </div>`
-        : '<span class="text-xs font-black bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full uppercase tracking-widest mb-2 inline-block shadow-md">Family Member</span>';
 
     profilesHtml += `
-   <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md relative mb-4" id="profCard_${i}">
-     ${headerLabel}
-     <div class="flex justify-between items-start border-b-2 border-gray-100 dark:border-gray-800 pb-2 mb-3">
-       <div class="flex items-center flex-wrap gap-1.5">
-         <span class="font-extrabold text-base md:text-lg px-2 py-0.5 rounded shadow-md border ${dynColor} leading-tight">${m.fullName}</span> 
-         <span class="text-xs md:text-sm font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
+   <div class="bg-white dark:bg-gray-900 p-3 md:p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 shadow-xs relative mb-3" id="profCard_${i}">
+     <div class="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-2 mb-2.5 flex-wrap gap-2">
+       <div class="flex items-center flex-wrap gap-1.5 min-w-0">
+         <span class="font-extrabold text-base md:text-lg px-2 py-0.5 rounded shadow-xs border ${dynColor} leading-tight">${m.fullName}</span> 
+         <span class="text-[11px] md:text-xs font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 leading-tight rounded border border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
+         ${i > 0 ? '<span class="text-[10px] font-black bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full uppercase tracking-wider">Family Member</span>' : ''}
        </div>
-       ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>` : ""}
+       <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+         ${i === 0 ? `
+         <button type="button" onclick="openTripInfoDoc()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-xs active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0" title="Open Trip Info Document">
+           <svg class="w-3.5 h-3.5 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+           <span>Trip Info</span>
+         </button>
+         ` : ''}
+         ${appSettings.allowEdits ? `<button onclick="enableEditMode(${i})" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none shrink-0 border border-gray-200 dark:border-gray-700 shadow-xs">Edit</button>` : ""}
+       </div>
      </div>
      
-     
-     <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || "-"}</p></div>
+     <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs md:text-sm text-gray-800 dark:text-gray-200">
+       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Short Name</p><p class="font-bold text-sm text-gray-900 dark:text-white truncate">${m.shortName || "-"}</p></div>
        
        ${(() => {
          let logRoom = "None";
@@ -451,29 +448,29 @@ function renderProfileFullView() {
          }
 
          return `
-              <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p><div class="font-black text-lg text-purple-600 dark:text-purple-400 flex flex-wrap items-center w-full">${logPairing}</div></div>
-              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p><p class="font-black text-lg text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
-              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
-              <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
+              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Pairing</p><div class="font-bold text-sm text-purple-600 dark:text-purple-400 flex flex-wrap items-center w-full">${logPairing}</div></div>
+              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Room</p><p class="font-bold text-sm text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
+              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Group</p><p class="font-bold text-sm text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
+              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Bus</p><p class="font-bold text-sm text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
            `;
        })()}
 
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-red-600 dark:text-red-400">${m.diet || "None"}</p></div>
-       ${m.role === "TRAINEE" ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-red-600 dark:text-red-400">${m.medical || "None"}</p></div>` : ""}
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${m.diet || "None"}</p></div>
+       ${m.role === "TRAINEE" ? `<div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-sm text-red-600 dark:text-red-400">${m.medical || "None"}</p></div>` : ""}
        
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${m.email || "N/A"}">${m.email || "N/A"}</span></div></div>
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold text-xs flex flex-wrap items-center gap-x-2 gap-y-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-300 dark:text-gray-600">|</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate" title="${m.email || "N/A"}">${m.email || "N/A"}</span></div></div>
        
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${formatDDMmmYYYY(m.dob)}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || "None"}</span></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? "font-bold text-red-600 dark:text-red-400" : "font-semibold"}">${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : "-"}${expiryHighlight ? ' <span title="Expiring within 6 months of trip" class="text-sm">⚠️</span>' : ""}</p></div>
-       <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase text-xs">${m.nric}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold text-xs">${formatDDMmmYYYY(m.dob)}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold text-xs">${m.gender} | ${m.nationality}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-xs ${dynColor}">${m.group || "None"}</span></div>
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold text-xs">${m.address}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase text-xs">${m.passportNo}</p></div>
+       <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="${expiryHighlight ? "font-bold text-red-600 dark:text-red-400" : "font-semibold"} text-xs">${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : "-"}${expiryHighlight ? ' <span title="Expiring within 6 months of trip">⚠️</span>' : ""}</p></div>
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold text-xs flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
        
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Sleeping Arrangement Request</p><p class="font-semibold text-green-600 dark:text-green-400">${m.sleeping || "No special request"}</p></div>
-       <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${m.otherPoints || "None"}</p></div>
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Sleeping Arrangement Request</p><p class="font-semibold text-xs text-green-600 dark:text-green-400">${m.sleeping || "No special request"}</p></div>
+       <div class="col-span-2 border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold text-xs">${m.otherPoints || "None"}</p></div>
      </div>
    </div>
    <form id="profEdit_${i}" onsubmit="event.preventDefault(); saveProfileEdit(${i}, this.querySelector('button[type=submit]'));" class="hidden-force bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl border border-primary dark:border-green-500 space-y-3 shadow-[0_4px_15px_-5px_rgba(22,163,74,0.2)]">
@@ -550,19 +547,7 @@ function renderProfileFullView() {
 `;
 
   let personalDetailsHeader = `
-    <div id="section-my-profile" class="pb-28">
-      <div class="flex items-center justify-between flex-wrap gap-2 pb-2 mb-3 border-b-2 border-gray-200 dark:border-gray-800">
-        <div class="flex items-center gap-3">
-          <h2 class="text-xl md:text-2xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
-            <svg class="w-6 h-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-            Profile
-          </h2>
-          <button type="button" onclick="openTripInfoDoc()" class="inline-flex items-center gap-1.5 px-3 py-1 text-xs md:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md active:scale-95 transition-all cursor-pointer border border-emerald-500 shrink-0" title="Open Trip Info Document">
-            <svg class="w-4 h-4 text-emerald-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-            <span>Trip Info</span>
-          </button>
-        </div>
-      </div>
+    <div id="section-my-profile" class="pb-24">
   `;
 
   let myGroupHtml = "";

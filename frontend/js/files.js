@@ -617,32 +617,15 @@ function renderDriveContents(folders, files) {
       iconHtml = `<svg class="w-5 h-5 text-gray-500 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm6 1.5L18.5 9H12V3.5z"/></svg>`;
     }
 
-    const isInfographic = Boolean(
-      (appSettings && appSettings.tripInfographicId && f.id === appSettings.tripInfographicId) ||
-      (appSettings && appSettings.tripInfographicName && f.name === appSettings.tripInfographicName)
-    );
-    const isInfoDoc = Boolean(
-      (appSettings && appSettings.tripInfoDocId && f.id === appSettings.tripInfoDocId) ||
-      (appSettings && appSettings.tripInfoDocName && f.name === appSettings.tripInfoDocName)
-    );
-
-    let badgesHtml = "";
-    if (isInfographic) {
-      badgesHtml += `<span class="inline-flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800 shrink-0 shadow-sm"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg> Infographic</span>`;
-    }
-    if (isInfoDoc) {
-      badgesHtml += `<span class="inline-flex items-center gap-1 bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0 shadow-sm"><svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg> Trip Info Doc</span>`;
-    }
-
     const shortcutBadge = f.isShortcut
       ? `<div class="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full shadow-md p-0.5"><svg class="w-3 h-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg></div>`
       : "";
     const nameHtml = f.isShortcut
-      ? `<div class="flex flex-col min-w-0"><div class="flex items-center gap-1.5 flex-wrap"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>${badgesHtml}</div><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
-      : `<div class="flex items-center gap-1.5 min-w-0 flex-wrap"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>${badgesHtml}</div>`;
+      ? `<div class="flex flex-col min-w-0"><span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span><span class="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest font-black">Shortcut</span></div>`
+      : `<span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>`;
 
     html += `
- <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 ${isInfographic ? 'border-indigo-300 dark:border-indigo-700 bg-indigo-50/20' : (isInfoDoc ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/20' : 'border-gray-200 dark:border-gray-700')} shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
+ <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
     <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', false, '${safeName}')">
     </div>
@@ -654,12 +637,6 @@ function renderDriveContents(folders, files) {
         ${nameHtml}
     </div>
     <div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-        <button onclick="actionSetTripFile('infographic', '${f.id}', '${safeName}', '${f.url}')" class="p-2 ${isInfographic ? 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/60 font-black' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-gray-700'} rounded-md transition focus:outline-none shrink-0" title="${isInfographic ? 'Currently Set as Landing Infographic' : 'Set as Landing Page Infographic'}">
-           <svg class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
-        </button>
-        <button onclick="actionSetTripFile('infoDoc', '${f.id}', '${safeName}', '${f.url}')" class="p-2 ${isInfoDoc ? 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/60 font-black' : 'text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-gray-700'} rounded-md transition focus:outline-none shrink-0" title="${isInfoDoc ? 'Currently Set as Profile Trip Info Doc' : 'Set as Profile Trip Info Doc'}">
-           <svg class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
-        </button>
         <button onclick="actionSingleCopy('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Copy File">
            ${copyIcon}
         </button>
