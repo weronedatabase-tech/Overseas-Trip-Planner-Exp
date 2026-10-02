@@ -696,7 +696,7 @@ function updatePinnedTripFilesUI() {
     <!-- Info Doc Pill -->
     <div class="flex items-center gap-1.5 flex-1 min-w-[210px] bg-white dark:bg-gray-800 border ${docSet ? 'border-emerald-300 dark:border-emerald-700/80 bg-emerald-50/20' : 'border-gray-200 dark:border-gray-700'} rounded-lg px-2 py-0.5 md:py-1 shadow-xs transition">
       <span class="inline-flex items-center gap-1 text-[11px] font-black ${docSet ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-500 dark:text-gray-400'} uppercase tracking-tight shrink-0">
-        <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+        <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
         Trip Info
       </span>
       <span class="text-gray-300 dark:text-gray-600 text-xs">|</span>
