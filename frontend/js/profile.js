@@ -284,7 +284,7 @@ function renderProfileFullView() {
      </div>
      
      <div class="grid grid-cols-2 gap-x-3 gap-y-2 text-xs md:text-sm text-gray-800 dark:text-gray-200">
-       <div><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Short Name</p><p class="font-bold text-sm text-gray-900 dark:text-white truncate">${m.shortName || "-"}</p></div>
+       <div class="col-span-2 md:col-span-1"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Short Name</p><p class="font-bold text-sm text-gray-900 dark:text-white truncate">${m.shortName || "-"}</p></div>
        
        ${(() => {
          let logRoom = "None";
@@ -462,8 +462,8 @@ function renderProfileFullView() {
          }
 
          return `
-              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Pairing</p><div class="font-bold text-sm text-purple-600 dark:text-purple-400 flex flex-wrap items-center w-full">${logPairing}</div></div>
-              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Room</p><p class="font-bold text-sm text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p></div>
+              <div class="col-span-2 md:col-span-1 border-t md:border-t-0 border-gray-100 dark:border-gray-800/80 pt-1.5 md:pt-0"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Pairing</p><div class="font-bold text-sm text-purple-600 dark:text-purple-400 flex flex-wrap items-center w-full">${logPairing}</div></div>
+              <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Room</p>${logRoom && logRoom !== "None" ? `<button type="button" onclick="window.showRoomOccupantsModal('${m.nric}')" class="font-bold text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 text-left group cursor-pointer focus:outline-none transition active:scale-95 w-full" title="Tap to see who is in ${logRoom}"><span class="truncate underline decoration-blue-300 dark:decoration-blue-700 decoration-1 underline-offset-2">${logRoom}</span><span class="text-xs text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform shrink-0">👥</span></button>` : `<p class="font-bold text-sm text-gray-400 dark:text-gray-500 truncate w-full" title="None">None</p>`}</div>
               <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Group</p><p class="font-bold text-sm text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
               <div class="border-t border-gray-100 dark:border-gray-800/80 pt-1.5"><p class="font-bold text-gray-400 dark:text-gray-500 text-[11px] uppercase tracking-wider mb-0.5">Bus</p><p class="font-bold text-sm text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
            `;
@@ -727,7 +727,7 @@ function renderProfileFullView() {
                 <div class="flex flex-col gap-1 mt-2">
                     <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-utensils w-4 text-center mt-0.5 text-amber-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.diet || "None"}</span></div>
                     <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-bus w-4 text-center mt-0.5 text-teal-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.bus || "None"}</span></div>
-                    <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-bed w-4 text-center mt-0.5 text-indigo-500"></i> <span class="text-gray-700 dark:text-gray-300 leading-tight">${member.roomAllocated || member.room || "None"}</span></div>
+                    <div class="text-[11px] font-bold text-gray-500 dark:text-gray-400 flex items-start gap-1.5"><i class="fa-solid fa-bed w-4 text-center mt-0.5 text-indigo-500"></i> ${member.roomAllocated && member.roomAllocated !== "None" ? `<span onclick="event.stopPropagation(); window.showRoomOccupantsModal('${member.nric}', '${(member.roomAllocated || member.room || '').replace(/'/g, "\\'")}')" class="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1" title="Tap to see who else is in this room"><span class="leading-tight">${member.roomAllocated || member.room}</span><span class="text-[10px]">👥</span></span>` : `<span class="text-gray-700 dark:text-gray-300 leading-tight">${member.roomAllocated || member.room || "None"}</span>`}</div>
                     ${medicalHtml}
                     ${pairedVolunteersStr}
                 </div>
@@ -1187,9 +1187,23 @@ window.showPairingDetails = async function (nric) {
 
     if (globalLogistics && globalLogistics.rooms) {
       const r = globalLogistics.rooms.find(
-        (r) => r.occupants && r.occupants.includes(member.nric),
+        (r) =>
+          !r.isDeleted &&
+          r.occupants &&
+          r.occupants.some(
+            (occ) =>
+              String(occ).trim().toUpperCase() ===
+              String(member.nric).trim().toUpperCase(),
+          ),
       );
       if (r) room = r.name;
+    }
+    if (room === "None") {
+      room =
+        member.roomAllocated ||
+        member.room ||
+        (lp && (lp.roomAllocated || lp.room)) ||
+        "None";
     }
 
     if (lp) {
@@ -1262,7 +1276,7 @@ window.showPairingDetails = async function (nric) {
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Room</p>
-                        <p class="font-black text-blue-600 dark:text-blue-400">${room}</p>
+                        ${room && room !== "None" ? `<button type="button" onclick="window.showRoomOccupantsModal('${member.nric}', '${room.replace(/'/g, "\\'")}')" class="font-black text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline flex items-center gap-1.5 text-left cursor-pointer focus:outline-none transition active:scale-95" title="Tap to see who else is in ${room}"><span class="truncate underline decoration-blue-300 dark:decoration-blue-700 decoration-1 underline-offset-2">${room}</span><span class="text-xs text-blue-500 dark:text-blue-400">👥</span></button>` : `<p class="font-black text-blue-600 dark:text-blue-400">${room}</p>`}
                     </div>
                     <div>
                         <p class="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Bus</p>
@@ -1328,6 +1342,311 @@ window.showPairingDetails = async function (nric) {
     `;
   document.body.insertAdjacentHTML("beforeend", html);
 };
+
+window.showRoomOccupantsModal = async function (nric, fallbackRoomName) {
+  const existingModal = document.getElementById("roomOccupantsModal");
+  if (existingModal) existingModal.remove();
+
+  if (!globalLogistics || !globalLogistics.rooms || !globalLogistics.participants) {
+    if (typeof apiCall === "function") {
+      try {
+        const res = await apiCall("fetchLogistics");
+        if (res && res.status === "success") {
+          globalLogistics = res;
+        }
+      } catch (e) {
+        console.warn("fetchLogistics failed in showRoomOccupantsModal:", e);
+      }
+    }
+  }
+
+  if (!globalLogistics || !globalLogistics.rooms || !globalLogistics.participants) {
+    if (typeof showToast === "function") {
+      showToast("Unable to load room details at this time.", true);
+    } else {
+      alert("Unable to load room details at this time.");
+    }
+    return;
+  }
+
+  if (typeof window.applyCaregiverLabels === "function") {
+    window.applyCaregiverLabels(globalLogistics.participants);
+  }
+
+  const cleanNric = String(nric || "").trim().toUpperCase();
+
+  let room = globalLogistics.rooms.find(
+    (r) =>
+      !r.isDeleted &&
+      r.occupants &&
+      r.occupants.some((occ) => String(occ).trim().toUpperCase() === cleanNric)
+  );
+
+  if (!room && fallbackRoomName && fallbackRoomName !== "None") {
+    const cleanRoomName = String(fallbackRoomName).trim().toUpperCase();
+    room = globalLogistics.rooms.find(
+      (r) =>
+        !r.isDeleted &&
+        (String(r.name).trim().toUpperCase() === cleanRoomName ||
+          String(r.id).trim().toUpperCase() === cleanRoomName)
+    );
+  }
+
+  if (!room) {
+    const participant = globalLogistics.participants.find(
+      (p) => String(p.nric).trim().toUpperCase() === cleanNric
+    );
+    const assigned = participant
+      ? participant.roomAllocated || participant.room
+      : null;
+    if (assigned && assigned !== "None") {
+      const cleanAssigned = String(assigned).trim().toUpperCase();
+      room = globalLogistics.rooms.find(
+        (r) =>
+          !r.isDeleted &&
+          (String(r.name).trim().toUpperCase() === cleanAssigned ||
+            String(r.id).trim().toUpperCase() === cleanAssigned)
+      );
+    }
+  }
+
+  if (!room) {
+    if (typeof showToast === "function") {
+      showToast("No room assigned yet.", true);
+    } else {
+      alert("No room assigned yet.");
+    }
+    return;
+  }
+
+  const getCaregiverTraineeShortName = (occ) => {
+    if (occ.caregiverFor) return occ.caregiverFor;
+    if (occ.relatedTrainee) {
+      let parts = String(occ.relatedTrainee).split("|").filter(Boolean);
+      let mapped = parts.map((n) => {
+        let raw = n.trim();
+        const match = raw.match(/\((.*?)\)/);
+        if (match && match[1]) return match[1].trim();
+        const tr = globalLogistics.participants.find(
+          (t) =>
+            t.role === "TRAINEE" &&
+            (String(t.fullName || t.name || "").toLowerCase() === raw.toLowerCase() ||
+              String(t.shortName || "").toLowerCase() === raw.toLowerCase())
+        );
+        if (tr && tr.shortName) return tr.shortName;
+        return raw.replace(/\s*\(.*?\)\s*/g, "").trim();
+      });
+      return mapped.join(", ");
+    }
+    const myPoc = occ.pocNric || occ.nric;
+    const trainees = globalLogistics.participants.filter(
+      (t) => t.role === "TRAINEE" && (t.pocNric || t.nric) === myPoc
+    );
+    if (trainees.length > 0) {
+      return trainees.map((t) => t.shortName || t.fullName || t.name).join(", ");
+    }
+    return "";
+  };
+
+  let occupantNrics = room.occupants ? [...room.occupants] : [];
+  if (
+    cleanNric &&
+    !occupantNrics.some((occ) => String(occ).trim().toUpperCase() === cleanNric)
+  ) {
+    const p = globalLogistics.participants.find(
+      (x) => String(x.nric).trim().toUpperCase() === cleanNric
+    );
+    if (
+      p &&
+      (p.roomAllocated === room.name ||
+        p.room === room.name ||
+        (fallbackRoomName &&
+          (fallbackRoomName === room.name || fallbackRoomName === room.id)))
+    ) {
+      occupantNrics.push(cleanNric);
+    }
+  }
+
+  const occupants = occupantNrics.map((occNric) => {
+    const raw = String(occNric).trim().toUpperCase();
+    const p = globalLogistics.participants.find(
+      (x) => String(x.nric).trim().toUpperCase() === raw
+    );
+    if (p) return p;
+    if (typeof loadedFamily !== "undefined" && Array.isArray(loadedFamily)) {
+      const fam = loadedFamily.find((x) => String(x.nric).trim().toUpperCase() === raw);
+      if (fam) return fam;
+    }
+    if (
+      typeof currentUser !== "undefined" &&
+      currentUser &&
+      String(currentUser.nric).trim().toUpperCase() === raw
+    ) {
+      return currentUser;
+    }
+    return {
+      nric: raw,
+      fullName: raw,
+      name: raw,
+      shortName: raw,
+      role: "UNKNOWN",
+    };
+  });
+
+  occupants.sort((a, b) => {
+    const aIsCurrent = String(a.nric).trim().toUpperCase() === cleanNric;
+    const bIsCurrent = String(b.nric).trim().toUpperCase() === cleanNric;
+    if (aIsCurrent && !bIsCurrent) return -1;
+    if (!aIsCurrent && bIsCurrent) return 1;
+
+    const roleOrder = { TRAINEE: 1, CAREGIVER: 2, VOLUNTEER: 3 };
+    const rA = roleOrder[String(a.role || "").toUpperCase()] || 4;
+    const rB = roleOrder[String(b.role || "").toUpperCase()] || 4;
+    if (rA !== rB) return rA - rB;
+
+    return String(a.shortName || a.fullName || a.name || "").localeCompare(
+      String(b.shortName || b.fullName || b.name || "")
+    );
+  });
+
+  const roleMap = {
+    VOLUNTEER: "vol",
+    CAREGIVER: "car",
+    TRAINEE: "trn",
+  };
+
+  const occupantsListHtml = occupants
+    .map((occ) => {
+      const isViewer =
+        currentUser &&
+        String(occ.nric).trim().toUpperCase() ===
+          String(currentUser.nric).trim().toUpperCase();
+      const isTarget = String(occ.nric).trim().toUpperCase() === cleanNric;
+      const isTraineeOfVol = isTarget && !isViewer;
+
+      const roleUpper = String(occ.role || "").toUpperCase();
+      const rTag = roleMap[roleUpper] || roleUpper.substring(0, 3).toLowerCase();
+
+      const rBadgeColor =
+        roleUpper === "TRAINEE"
+          ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-950/60 border-green-300 dark:border-green-800"
+          : roleUpper === "CAREGIVER"
+            ? "text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800"
+            : "text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-950/60 border-orange-300 dark:border-orange-800";
+
+      const avatarBg =
+        roleUpper === "TRAINEE"
+          ? "bg-green-100 text-green-700 dark:bg-green-900/60 dark:text-green-300 border border-green-200 dark:border-green-800"
+          : roleUpper === "CAREGIVER"
+            ? "bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+            : "bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300 border border-orange-200 dark:border-orange-800";
+
+      const shortName = occ.shortName || occ.name || occ.fullName || occ.nric;
+      const fullName = occ.fullName || occ.name || "";
+      const initials = (shortName || "?").substring(0, 2).toUpperCase();
+
+      let caregiverTraineeHtml = "";
+      if (roleUpper === "CAREGIVER") {
+        const traineeShortName = getCaregiverTraineeShortName(occ);
+        if (traineeShortName) {
+          caregiverTraineeHtml = `<span class="font-bold text-purple-600 dark:text-purple-400 text-xs md:text-sm leading-none">[${traineeShortName.toUpperCase()}]</span>`;
+        }
+      }
+
+      const contactHtml =
+        occ.contact && typeof window.renderPhoneLink === "function"
+          ? window.renderPhoneLink(occ.contact)
+          : occ.contact || "";
+
+      return `
+        <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 transition-colors ${
+          isViewer ? "ring-2 ring-blue-500/40 bg-blue-50/20 dark:bg-blue-950/20" : isTraineeOfVol ? "ring-2 ring-emerald-500/40 bg-emerald-50/20 dark:bg-emerald-950/20" : ""
+        }">
+          <div class="flex items-center gap-3 min-w-0 flex-1">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${avatarBg}">
+              ${initials}
+            </div>
+            <div class="min-w-0 flex flex-col gap-0.5">
+              <div class="flex items-center flex-wrap gap-1.5 leading-tight">
+                <span class="font-extrabold text-sm md:text-base text-gray-900 dark:text-white truncate">${shortName}</span>
+                <span class="text-[10px] md:text-xs uppercase font-black px-1.5 py-0.5 rounded border leading-none shadow-xs ${rBadgeColor}">${rTag}</span>
+                ${caregiverTraineeHtml}
+              </div>
+              <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                ${fullName && fullName !== shortName ? `<span class="truncate">${fullName}</span>` : ""}
+                ${contactHtml && contactHtml !== "-" ? `<span class="font-mono text-gray-600 dark:text-gray-300 font-semibold">${contactHtml}</span>` : ""}
+              </div>
+            </div>
+          </div>
+          ${isViewer ? `<span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100/70 dark:bg-blue-900/50 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800 shrink-0 ml-2">You</span>` : isTraineeOfVol ? `<span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0 ml-2">Paired Trainee</span>` : ""}
+        </div>
+      `;
+    })
+    .join("");
+
+  const targetPerson = globalLogistics.participants.find(
+    (p) => String(p.nric).trim().toUpperCase() === cleanNric
+  );
+  const targetName = targetPerson
+    ? targetPerson.shortName || targetPerson.name || targetPerson.fullName
+    : "";
+  const isViewingSelf =
+    currentUser &&
+    cleanNric === String(currentUser.nric).trim().toUpperCase();
+  const subtitleContext =
+    targetName && !isViewingSelf ? ` • ${targetName}'s Room` : "";
+
+  const modalHtml = `
+    <div class="fixed inset-0 bg-black/60 z-[120] flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in" id="roomOccupantsModal" onclick="if(event.target === this) closeRoomOccupantsModal()">
+      <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-sm md:max-w-md w-full border-2 border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[85vh] animate-slide-up">
+        <!-- Header -->
+        <div class="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 shrink-0">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base shrink-0 shadow-xs">
+              🛏️
+            </span>
+            <div class="min-w-0">
+              <h3 class="font-black text-base md:text-lg text-gray-900 dark:text-white truncate">${room.name}</h3>
+              <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">${occupants.length} Occupant${occupants.length === 1 ? "" : "s"}${room.capacity ? ` • Capacity: ${room.capacity}` : ""}${subtitleContext}</p>
+            </div>
+          </div>
+          <button onclick="closeRoomOccupantsModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded-lg focus:outline-none transition-colors text-xl leading-none font-bold cursor-pointer" aria-label="Close">
+            &times;
+          </button>
+        </div>
+
+        <!-- Occupants List -->
+        <div class="p-3.5 md:p-4 overflow-y-auto custom-scrollbar space-y-2.5">
+          ${occupantsListHtml || '<div class="text-center py-6 text-gray-400 text-xs">No occupants listed for this room.</div>'}
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shrink-0 flex justify-end">
+          <button onclick="closeRoomOccupantsModal()" class="w-full sm:w-auto px-5 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs md:text-sm font-bold rounded-xl transition active:scale-95 cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  document.removeEventListener("keydown", handleRoomModalEscape);
+  document.addEventListener("keydown", handleRoomModalEscape);
+};
+
+window.closeRoomOccupantsModal = function () {
+  const modal = document.getElementById("roomOccupantsModal");
+  if (modal) modal.remove();
+  document.removeEventListener("keydown", handleRoomModalEscape);
+};
+
+function handleRoomModalEscape(e) {
+  if (e.key === "Escape") {
+    window.closeRoomOccupantsModal();
+  }
+}
 
 window.switchProfileTab = function (tab) {
   const btnProfile = document.getElementById("nav-btn-profile");
