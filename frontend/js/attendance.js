@@ -178,11 +178,17 @@ async function renderAttendanceChecklist() {
       const busGroup = document.createElement("optgroup");
       busGroup.label = "Buses";
       Array.from(buses)
-        .sort()
+        .sort((a, b) =>
+          a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+        )
         .forEach((b) => {
-          busGroup.innerHTML += `<option value="BUS::${b}">${b}</option>`;
+          const trimmed = b.trim();
+          const busLabel = /^bus\s*/i.test(trimmed)
+            ? trimmed
+            : `Bus ${trimmed}`;
+          busGroup.innerHTML += `<option value="BUS::${b}">${busLabel}</option>`;
         });
-      if(asgnSel) asgnSel.appendChild(busGroup);
+      if (asgnSel) asgnSel.appendChild(busGroup);
     }
   }
 
