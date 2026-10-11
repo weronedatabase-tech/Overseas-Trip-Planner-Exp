@@ -85,6 +85,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.tagName === "BUTTON" || e.target.closest("button"))
       lastLocalChange = Date.now();
   });
+  document.addEventListener(
+    "scroll",
+    () => {
+      lastLocalChange = Date.now();
+    },
+    { capture: true, passive: true },
+  );
 
   // Setup Long Press for Participant Quick View
   setupGlobalLongPress();

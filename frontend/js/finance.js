@@ -26,6 +26,49 @@ let finSearchQuery = "";
 let receiptSearchQuery = "";
 let receiptCategoryFilter = "all";
 
+const financeScrollPositions = {
+  finalized: 0,
+  options: 0,
+  receipts: 0,
+  fees: 0,
+};
+const financeCategoryScrollPositions = new Map();
+
+function setupFinanceScrollListeners() {
+  ["finalized", "options", "receipts", "fees"].forEach((id) => {
+    const el = document.getElementById(`fin-tab-${id}`);
+    if (el) {
+      el.addEventListener(
+        "scroll",
+        () => {
+          financeScrollPositions[id] = el.scrollTop;
+          lastLocalChange = Date.now();
+        },
+        { passive: true },
+      );
+    }
+  });
+
+  const tabContainer = document.getElementById("tab-finance");
+  if (tabContainer) {
+    tabContainer.addEventListener(
+      "scroll",
+      (e) => {
+        if (
+          e.target &&
+          e.target.classList &&
+          e.target.classList.contains("fin-cat-container")
+        ) {
+          const optId = e.target.dataset.optId;
+          if (optId)
+            financeCategoryScrollPositions.set(optId, e.target.scrollTop);
+        }
+      },
+      { capture: true, passive: true },
+    );
+  }
+}
+
 let finDndState = {
   active: false,
   row: null,
@@ -135,6 +178,8 @@ async function buildFinanceUI() {
 <div id="fin-tab-receipts" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
 <div id="fin-tab-fees" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
 `;
+
+  setupFinanceScrollListeners();
 
   const overlay = document.getElementById("finLoadingOverlay");
   if (overlay) overlay.classList.remove("hidden-force");
@@ -249,6 +294,9 @@ async function buildFinanceUI() {
 function switchFinanceSubTab(tabId) {
   ["finalized", "options", "receipts", "fees"].forEach((id) => {
     const el = document.getElementById(`fin-tab-${id}`);
+    if (el && !el.classList.contains("hidden-force")) {
+      financeScrollPositions[id] = el.scrollTop;
+    }
     if (el) el.classList.add("hidden-force");
     const btn = document.getElementById(`subTab-fin-${id}`);
     if (btn) {
@@ -273,6 +321,9 @@ function switchFinanceSubTab(tabId) {
   }
 
   renderAllFinanceTabs();
+  if (targetEl) {
+    targetEl.scrollTop = financeScrollPositions[tabId] || 0;
+  }
 }
 window.switchFinanceSubTab = switchFinanceSubTab;
 window.switchFinanceTab = switchFinanceSubTab;
@@ -509,18 +560,48 @@ function startFinancePolling() {
 
       let hasChanges = false;
 
-      if (recRes.receipts) {
+      if (recRes && Array.isArray(recRes.receipts)) {
         const incoming = recRes.receipts;
-        globalReceipts = incoming.map((r) => {
-          if (pendingReceiptUpdates.has(r.id)) {
-            return { ...r, ...pendingReceiptUpdates.get(r.id) };
-          }
-          if (locallyDeletedReceiptIds.has(r.id)) {
-            return { ...r, isDeleted: true };
-          }
-          return r;
-        });
-        hasChanges = true;
+        const isReceiptsChanged =
+          incoming.length !== globalReceipts.length ||
+          incoming.some((r) => {
+            const cur = globalReceipts.find((g) => g.id === r.id);
+            if (!cur) return true;
+            return (
+              (cur.ts || 0) !== (r.ts || 0) ||
+              cur.amount !== r.amount ||
+              cur.sgdAmount !== r.sgdAmount ||
+              cur.currency !== r.currency ||
+              Boolean(cur.isReimbursed) !== Boolean(r.isReimbursed) ||
+              Boolean(cur.isDeleted) !== Boolean(r.isDeleted) ||
+              cur.uploaderNric !== r.uploaderNric ||
+              cur.paidByNric !== r.paidByNric ||
+              cur.category !== r.category ||
+              cur.fileUrl !== r.fileUrl ||
+              cur.remarks !== r.remarks
+            );
+          });
+
+        if (isReceiptsChanged) {
+          globalReceipts = incoming.map((r) => {
+            if (pendingReceiptUpdates.has(r.id)) {
+              return { ...r, ...pendingReceiptUpdates.get(r.id) };
+            }
+            if (locallyDeletedReceiptIds.has(r.id)) {
+              return { ...r, isDeleted: true };
+            }
+            return r;
+          });
+          hasChanges = true;
+        }
+      }
+
+      if (finRes && finRes.rates) {
+        const ratesStr = JSON.stringify(finRes.rates);
+        if (ratesStr !== JSON.stringify(globalFinanceRates)) {
+          globalFinanceRates = finRes.rates;
+          hasChanges = true;
+        }
       }
 
       if (finRes.data) {
@@ -667,14 +748,20 @@ function renderFinalizedFinances() {
   const cont = document.getElementById("fin-tab-finalized");
   if (!cont || cont.classList.contains("hidden-force")) return;
 
+  const prevScrollTop = cont.scrollTop || financeScrollPositions.finalized || 0;
+  const prevScrollLeft = cont.scrollLeft || 0;
+
   if (!financeConfig.finalOptionId) {
-    if (cont)
+    if (cont) {
       cont.innerHTML = `
     <div id="finalized-empty-state" class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
     </div>`;
+      cont.scrollTop = prevScrollTop;
+      cont.scrollLeft = prevScrollLeft;
+    }
     return;
   }
 
@@ -682,13 +769,16 @@ function renderFinalizedFinances() {
     (o) => o.id === financeConfig.finalOptionId && !o.isDeleted,
   );
   if (!opt) {
-    if (cont)
+    if (cont) {
       cont.innerHTML = `
     <div id="finalized-empty-state" class="flex flex-col items-center justify-center p-12 text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-700">
         <svg class="w-16 h-16 mb-4 opacity-50 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         <p class="font-bold text-base text-gray-700 dark:text-gray-300">No Finalized Option Selected</p>
         <p class="text-xs mt-2 text-center max-w-sm">Navigate to the <b>Trip Options</b> tab and click "Mark as Finalized" on the budget option you want to proceed with.</p>
     </div>`;
+      cont.scrollTop = prevScrollTop;
+      cont.scrollLeft = prevScrollLeft;
+    }
     return;
   }
 
@@ -1008,6 +1098,10 @@ function renderFinalizedFinances() {
     </div>
 </div>
 `;
+  if (cont) {
+    cont.scrollTop = prevScrollTop;
+    cont.scrollLeft = prevScrollLeft;
+  }
 }
 
 // ==========================================
@@ -1016,6 +1110,13 @@ function renderFinalizedFinances() {
 function renderFinanceOptions() {
   const cont = document.getElementById("fin-tab-options");
   if (!cont || cont.classList.contains("hidden-force")) return;
+
+  const prevScrollTop = cont.scrollTop || financeScrollPositions.options || 0;
+  const prevScrollLeft = cont.scrollLeft || 0;
+
+  cont.querySelectorAll(".fin-cat-container[data-opt-id]").forEach((el) => {
+    financeCategoryScrollPositions.set(el.dataset.optId, el.scrollTop);
+  });
 
   const autoPax = globalLogistics?.participants?.length || 0;
 
@@ -1169,7 +1270,16 @@ function renderFinanceOptions() {
     });
   }
   html += "</div>";
-  if (cont) cont.innerHTML = globalSettingsHtml + html;
+  if (cont) {
+    cont.innerHTML = globalSettingsHtml + html;
+    cont.scrollTop = prevScrollTop;
+    cont.scrollLeft = prevScrollLeft;
+    cont.querySelectorAll(".fin-cat-container[data-opt-id]").forEach((el) => {
+      if (financeCategoryScrollPositions.has(el.dataset.optId)) {
+        el.scrollTop = financeCategoryScrollPositions.get(el.dataset.optId);
+      }
+    });
+  }
 }
 
 function openFinanceRatesModal() {
@@ -1944,6 +2054,9 @@ function renderReceiptsBrowser() {
   const cont = document.getElementById("fin-tab-receipts");
   if (!cont || cont.classList.contains("hidden-force")) return;
 
+  const prevScrollTop = cont.scrollTop || financeScrollPositions.receipts || 0;
+  const prevScrollLeft = cont.scrollLeft || 0;
+
   const activeReceipts = getDeduplicatedActiveReceipts(globalReceipts);
 
   let optMap = {};
@@ -2489,6 +2602,10 @@ function renderReceiptsBrowser() {
   });
 
   listContainer.innerHTML = rowsHtml;
+  if (cont) {
+    cont.scrollTop = prevScrollTop;
+    cont.scrollLeft = prevScrollLeft;
+  }
 }
 
 window.fuzzyMatchText = fuzzyMatchText;
@@ -3003,6 +3120,9 @@ function renderFeeTracker() {
   if (!cont || cont.classList.contains("hidden-force")) return;
   if (!globalLogistics || !globalLogistics.participants) return;
 
+  const prevScrollTop = cont.scrollTop || financeScrollPositions.fees || 0;
+  const prevScrollLeft = cont.scrollLeft || 0;
+
   const groups = {};
   globalLogistics.participants.forEach((p) => {
     let targetPoc = p.pocNric;
@@ -3198,6 +3318,10 @@ function renderFeeTracker() {
     ${cardsHtml || '<div class="col-span-full text-center py-6 text-gray-400 text-xs font-bold uppercase tracking-widest">No families match search.</div>'}
 </div>
 `;
+  if (cont) {
+    cont.scrollTop = prevScrollTop;
+    cont.scrollLeft = prevScrollLeft;
+  }
 }
 
 window.updateDeviationLocal = function (poc, size) {
