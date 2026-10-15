@@ -3298,7 +3298,7 @@ function renderFeeTracker(targetScrollPoc = null) {
             : m.role === "CAREGIVER"
               ? "text-purple-600 dark:text-purple-400"
               : "text-orange-600 dark:text-orange-400";
-        return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-[11px] mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0, 3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.name}</span></span>`;
+        return `<span class="inline-flex items-center gap-1 whitespace-nowrap min-w-0 max-w-full"><span class="${roleColor} font-black text-[11px] mr-0.5 border border-current px-1 py-0.2 rounded shrink-0">${m.role.substring(0, 3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200 truncate" title="${m.shortName || m.name}">${m.shortName || m.name}</span></span>`;
       })
       .join("");
 
@@ -3313,13 +3313,11 @@ function renderFeeTracker(targetScrollPoc = null) {
 
     cardsHtml += `
     <div id="${cardId}" data-poc="${c.poc}" class="fee-participant-card flex flex-col p-3 rounded-xl border ${paidClass} shadow-md transition-all duration-300 relative overflow-hidden h-full">
-        <div class="flex justify-between items-start gap-3 mb-3">
-            <div class="flex flex-col flex-1 min-w-0">
-                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span class="text-[11px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700">Size: ${c.size}</span>
-                    ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-emerald-950 dark:text-emerald-100 bg-emerald-300 dark:bg-emerald-700 px-2 py-0.5 rounded border-2 border-emerald-500 dark:border-emerald-400 shadow-sm">PAID</span>` : ""}
-                </div>
-                <div class="leading-tight">${membersHtml}</div>
+        <!-- Top bar: Size, Paid badge and Action buttons -->
+        <div class="flex justify-between items-center gap-2 mb-2 pb-1.5 border-b border-gray-100 dark:border-gray-800/80">
+            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+                <span class="text-[11px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700 shrink-0">Size: ${c.size}</span>
+                ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-emerald-950 dark:text-emerald-100 bg-emerald-300 dark:bg-emerald-700 px-2 py-0.5 rounded border-2 border-emerald-500 dark:border-emerald-400 shadow-sm shrink-0">PAID</span>` : ""}
             </div>
             
             <div class="flex items-center gap-1.5 shrink-0">
@@ -3339,6 +3337,11 @@ function renderFeeTracker(targetScrollPoc = null) {
                     </div>
                 </button>
             </div>
+        </div>
+
+        <!-- Members full-width display to prevent names from breaking across multiple lines -->
+        <div class="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 mb-2.5 min-w-0">
+            ${membersHtml}
         </div>
         
         ${(() => {
@@ -3808,27 +3811,22 @@ window.openAdminFeeScreenshotModal = function (pocNric, overwriteReceiptId = nul
         const payerName = payerObj ? (payerObj.shortName || payerObj.fullName) : (rec.uploaderName || rec.paidByNric || "Family Member");
 
         return `
-          <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between gap-2.5">
-            <div class="flex items-center gap-2.5 min-w-0 flex-1">
-              <a href="${rec.fileUrl || '#'}" target="_blank" class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 hover:scale-105 transition shadow-xs" title="View Full Screenshot">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-              </a>
-              <div class="min-w-0 flex-1 truncate">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-black text-xs text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                  <span class="text-[10px] text-gray-400 font-medium">${dateStr}</span>
-                </div>
-                <p class="text-xs text-gray-700 dark:text-gray-300 truncate mt-0.5">
-                  <span class="font-bold text-gray-500 dark:text-gray-400">By:</span> ${payerName}
-                  ${rec.remarks ? `<span class="ml-1 text-gray-500">• ${rec.remarks}</span>` : ""}
-                </p>
+          <div class="px-3 py-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1 truncate">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-black text-xs text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                <span class="text-[10px] text-gray-400 font-medium">${dateStr}</span>
               </div>
+              <p class="text-xs text-gray-700 dark:text-gray-300 truncate mt-0.5">
+                <span class="font-bold text-gray-500 dark:text-gray-400">By:</span> ${payerName}
+                ${rec.remarks ? `<span class="ml-1 text-gray-400">• ${rec.remarks}</span>` : ""}
+              </p>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
-              <a href="${rec.fileUrl || '#'}" target="_blank" class="px-2 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded border border-purple-200 dark:border-purple-800 transition" title="View Full File">
+              <a href="${rec.fileUrl || '#'}" target="_blank" class="px-2.5 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded border border-purple-200 dark:border-purple-800 transition" title="View Full File">
                 View
               </a>
-              <button type="button" onclick="switchToOverwriteMode('${rec.id}')" class="px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800 transition cursor-pointer" title="Replace this specific screenshot">
+              <button type="button" onclick="switchToOverwriteMode('${rec.id}')" class="px-2.5 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800 transition cursor-pointer" title="Replace this specific screenshot">
                 Overwrite
               </button>
               <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${pocNric}')" class="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg transition cursor-pointer" title="Delete screenshot">
@@ -3868,6 +3866,9 @@ window.closeAdminFeeScreenshotModal = function () {
 window.switchToUploadNewMode = function () {
   const overwriteInput = document.getElementById("adminFeeOverwriteReceiptId");
   if (overwriteInput) overwriteInput.value = "";
+
+  const modeBanner = document.getElementById("adminFeeModeBanner");
+  if (modeBanner) modeBanner.classList.add("hidden-force");
 
   const modeIcon = document.getElementById("adminFeeModeIcon");
   const modeText = document.getElementById("adminFeeModeText");
@@ -3916,6 +3917,9 @@ window.switchToOverwriteMode = function (receiptId) {
 
   const overwriteInput = document.getElementById("adminFeeOverwriteReceiptId");
   if (overwriteInput) overwriteInput.value = receiptId;
+
+  const modeBanner = document.getElementById("adminFeeModeBanner");
+  if (modeBanner) modeBanner.classList.remove("hidden-force");
 
   const modeIcon = document.getElementById("adminFeeModeIcon");
   const modeText = document.getElementById("adminFeeModeText");
