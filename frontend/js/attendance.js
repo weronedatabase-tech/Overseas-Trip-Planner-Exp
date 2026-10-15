@@ -70,7 +70,12 @@ function buildAttendanceUI() {
 }
 
 async function promptNewJuncture() {
-  const name = prompt("Enter new juncture name (e.g. Day 2: Morning):");
+  const name = await appPrompt(
+    "Enter new juncture name (e.g. Day 2: Morning):",
+    "",
+    "New Juncture",
+    "Juncture Name",
+  );
   if (!name || !name.trim()) return;
 
   const overlay = document.getElementById("attLoadingOverlay");

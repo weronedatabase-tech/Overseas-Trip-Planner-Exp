@@ -1233,7 +1233,7 @@ function renderFinanceOptions() {
                         <div class="fin-cat-row flex flex-col w-full bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition shadow-md" data-field-id="${f.id}">
                             <div class="flex items-center gap-2 w-full mb-1">
                                 <div class="fin-drag-handle cursor-grab active:cursor-grabbing p-1 shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition" onmousedown="startFinDrag(event)" ontouchstart="startFinDrag(event)"><svg class="w-5 h-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" /></svg></div>
-                                <button onclick="removeFinanceCategory('${opt.id}', '${f.id}')" class="text-red-400 hover:text-red-600 p-1 shrink-0 transition" title="Delete Category"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                                <button onclick="removeFinanceCategory('${opt.id}', '${f.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-1 rounded shrink-0 transition cursor-pointer" title="Delete Category"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button>
                                 <input type="text" value="${f.name}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'name', this.value)" class="flex-1 min-w-[80px] bg-transparent text-sm font-bold text-gray-900 dark:text-gray-100 outline-none px-1 border-b border-transparent focus:border-primary transition" placeholder="Category Name">
                             </div>
                             <div class="flex items-center flex-wrap gap-2 pl-[42px] w-full">
@@ -1524,8 +1524,17 @@ function duplicateFinanceOption(id) {
   renderFinanceOptions();
 }
 
-function removeFinanceOption(id) {
-  if (!confirm("Are you sure you want to remove this option?")) return;
+async function removeFinanceOption(id) {
+  if (
+    !(await appConfirm(
+      "Are you sure you want to remove this budget option?",
+      "Remove Budget Option",
+      "Remove",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
   const opt = financeOptions.find((o) => o.id === id);
   if (opt) {
     opt.isDeleted = true;
@@ -3100,6 +3109,7 @@ async function saveEditedReceipt(e) {
 // ==========================================
 function handleFeeSearch() {
   const input = document.getElementById("feeSearchInput");
+  if (!input) return;
   finSearchQuery = input.value;
   const start = input.selectionStart;
   const end = input.selectionEnd;
@@ -3114,8 +3124,73 @@ function handleFeeSearch() {
     } catch (e) {}
   }
 }
+window.handleFeeSearch = handleFeeSearch;
 
-function renderFeeTracker() {
+window.scrollToFeeCard = function (poc, highlight = true) {
+  if (!poc) return;
+  const cont = document.getElementById("fin-tab-fees");
+  if (!cont) return;
+
+  const safeId = "fee-card-" + String(poc).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const card =
+    document.getElementById(safeId) ||
+    cont.querySelector(`[data-poc="${CSS.escape(poc)}"]`);
+  if (!card) return;
+
+  // Make sure tab is visible
+  if (cont.classList.contains("hidden-force") && typeof switchFinanceSubTab === "function") {
+    switchFinanceSubTab("fees");
+  }
+
+  try {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (e) {
+    const cardRect = card.getBoundingClientRect();
+    const contRect = cont.getBoundingClientRect();
+    cont.scrollTop +=
+      cardRect.top -
+      contRect.top -
+      (contRect.height / 2 - cardRect.height / 2);
+  }
+
+  if (financeScrollPositions) {
+    financeScrollPositions.fees = cont.scrollTop;
+  }
+
+  if (highlight) {
+    card.classList.remove(
+      "ring-4",
+      "ring-purple-500",
+      "dark:ring-purple-400",
+      "ring-offset-2",
+      "scale-[1.01]",
+      "shadow-2xl"
+    );
+    void card.offsetWidth;
+    card.classList.add(
+      "ring-4",
+      "ring-purple-500",
+      "dark:ring-purple-400",
+      "ring-offset-2",
+      "scale-[1.01]",
+      "shadow-2xl",
+      "transition-all",
+      "duration-500"
+    );
+    setTimeout(() => {
+      card.classList.remove(
+        "ring-4",
+        "ring-purple-500",
+        "dark:ring-purple-400",
+        "ring-offset-2",
+        "scale-[1.01]",
+        "shadow-2xl"
+      );
+    }, 2800);
+  }
+};
+
+function renderFeeTracker(targetScrollPoc = null) {
   const cont = document.getElementById("fin-tab-fees");
   if (!cont || cont.classList.contains("hidden-force")) return;
   if (!globalLogistics || !globalLogistics.participants) return;
@@ -3130,6 +3205,36 @@ function renderFeeTracker() {
     if (!groups[targetPoc]) groups[targetPoc] = [];
     groups[targetPoc].push(p);
   });
+
+  // If a targetScrollPoc is specified and finSearchQuery currently filters it out,
+  // clear search query so the target card is rendered into the DOM
+  if (targetScrollPoc && finSearchQuery) {
+    const searchLower = finSearchQuery.toLowerCase().trim();
+    const members = groups[targetScrollPoc] || [];
+    const _hash = targetScrollPoc
+      .split("")
+      .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+    const orderNo =
+      targetScrollPoc.substring(0, 4).toUpperCase() +
+      "-" +
+      Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
+    const matches =
+      members.some((m) => {
+        const dName = String(m.shortName || "").toLowerCase();
+        const fullName = String(m.fullName || m.name || "").toLowerCase();
+        return (
+          dName.includes(searchLower) ||
+          fullName.includes(searchLower) ||
+          m.nric.toLowerCase().includes(searchLower)
+        );
+      }) || orderNo.toLowerCase().includes(searchLower);
+
+    if (!matches) {
+      finSearchQuery = "";
+      const sInput = document.getElementById("feeSearchInput");
+      if (sInput) sInput.value = "";
+    }
+  }
 
   const baseFee = financeConfig.perPersonFee || 0;
   let totalExpected = 0;
@@ -3204,13 +3309,15 @@ function renderFeeTracker() {
       ? "text-green-600 dark:text-green-400 bg-green-200 dark:bg-green-900"
       : "text-transparent bg-gray-100 dark:bg-gray-700";
 
+    const cardId = `fee-card-${c.poc.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+
     cardsHtml += `
-    <div class="flex flex-col p-3 rounded-xl border ${paidClass} shadow-md transition relative overflow-hidden h-full">
+    <div id="${cardId}" data-poc="${c.poc}" class="fee-participant-card flex flex-col p-3 rounded-xl border ${paidClass} shadow-md transition-all duration-300 relative overflow-hidden h-full">
         <div class="flex justify-between items-start gap-3 mb-3">
             <div class="flex flex-col flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span class="text-[11px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700">Size: ${c.size}</span>
-                    ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-green-700 bg-green-200 dark:bg-green-900 px-1.5 py-0.5 rounded border-2 border-green-300 dark:border-green-700">Paid</span>` : ""}
+                    ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-emerald-950 dark:text-emerald-100 bg-emerald-300 dark:bg-emerald-700 px-2 py-0.5 rounded border-2 border-emerald-500 dark:border-emerald-400 shadow-sm">PAID</span>` : ""}
                 </div>
                 <div class="leading-tight">${membersHtml}</div>
             </div>
@@ -3250,18 +3357,7 @@ function renderFeeTracker() {
           const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
 
           if (feeReceipts.length === 0) {
-            return `
-                <div class="mt-2 pt-2 border-t-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <span class="text-[11px] text-gray-400 italic flex items-center gap-1">
-                        <svg class="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        No screenshots
-                    </span>
-                    <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}')" class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded transition flex items-center gap-1 shadow-xs cursor-pointer">
-                        <svg class="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                        Upload Screenshot
-                    </button>
-                </div>
-            `;
+            return "";
           }
 
           let itemsHtml = feeReceipts.map((rec, idx) => {
@@ -3281,7 +3377,7 @@ function renderFeeTracker() {
                   <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}', '${rec.id}')" class="text-[10px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 transition cursor-pointer" title="Overwrite / replace this screenshot">
                     Replace
                   </button>
-                  <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${c.poc}')" class="text-gray-400 hover:text-red-500 p-0.5 rounded transition cursor-pointer" title="Delete this screenshot">
+                  <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${c.poc}')" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-1 rounded transition cursor-pointer" title="Delete this screenshot">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                   </button>
                 </div>
@@ -3295,10 +3391,6 @@ function renderFeeTracker() {
                 <span class="text-[11px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-400">
                   Screenshots (${feeReceipts.length}) • <span class="font-mono font-bold">$${totalDoc.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 </span>
-                <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}')" class="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 cursor-pointer" title="Add another payment or refund screenshot">
-                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                  + Add
-                </button>
               </div>
               <div class="space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-0.5">
                 ${itemsHtml}
@@ -3330,6 +3422,15 @@ function renderFeeTracker() {
 
   if (cont)
     cont.innerHTML = `
+<!-- STICKY SEARCH BAR: Always visible at top of Fee Tracker -->
+<div class="sticky top-0 z-30 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md pt-0.5 pb-2 -mt-2 -mx-2 px-2 md:-mt-4 md:-mx-4 md:px-4 border-b border-gray-200/80 dark:border-gray-800/80 mb-3 shadow-xs">
+    <div class="relative flex items-center">
+        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, "&quot;")}" placeholder="Fuzzy search families (name, NRIC, order #)..." class="w-full py-2 pl-9 pr-9 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+        <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <button onclick="clearSearch('feeSearchInput', 'handleFeeSearch')" class="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none cursor-pointer ${finSearchQuery ? '' : 'hidden-force'}" title="Clear search"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+    </div>
+</div>
+
 <div class="bg-white dark:bg-gray-900 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 p-2 mb-3 flex flex-col gap-2">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <div class="flex flex-wrap items-center gap-2 md:gap-3">
@@ -3362,19 +3463,17 @@ function renderFeeTracker() {
             </div>
         </div>
     </div>
-    
-    <div class="relative">
-        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, "&quot;")}" placeholder="Fuzzy search families..." class="w-full py-1.5 pl-7 pr-7 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md transition">
-        <svg class="w-3.5 h-3.5 absolute left-2.5 top-2 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-        <button onclick="clearSearch('feeSearchInput', 'handleFeeSearch')" class="absolute right-1.5 top-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-    </div>
 </div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
     ${cardsHtml || '<div class="col-span-full text-center py-6 text-gray-400 text-xs font-bold uppercase tracking-widest">No families match search.</div>'}
 </div>
 `;
-  if (cont) {
+  if (targetScrollPoc) {
+    setTimeout(() => {
+      scrollToFeeCard(targetScrollPoc, true);
+    }, 60);
+  } else if (cont) {
     cont.scrollTop = prevScrollTop;
     cont.scrollLeft = prevScrollLeft;
   }
@@ -3732,7 +3831,7 @@ window.openAdminFeeScreenshotModal = function (pocNric, overwriteReceiptId = nul
               <button type="button" onclick="switchToOverwriteMode('${rec.id}')" class="px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800 transition cursor-pointer" title="Replace this specific screenshot">
                 Overwrite
               </button>
-              <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${pocNric}')" class="p-1 text-gray-400 hover:text-red-500 transition cursor-pointer" title="Delete screenshot">
+              <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${pocNric}')" class="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg transition cursor-pointer" title="Delete screenshot">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
               </button>
             </div>
@@ -4014,9 +4113,13 @@ window.submitAdminFeeScreenshot = async function (e) {
     }
 
     closeAdminFeeScreenshotModal();
-    renderFeeTracker();
+    renderFeeTracker(pocNric);
     renderReceiptsBrowser();
     renderFinalizedFinances();
+
+    setTimeout(() => {
+      scrollToFeeCard(pocNric, true);
+    }, 120);
 
     if (typeof showToast === "function") {
       showToast(overwriteReceiptId ? "Screenshot overwritten successfully!" : "Screenshot uploaded successfully!");
@@ -4037,7 +4140,16 @@ window.submitAdminFeeScreenshot = async function (e) {
 };
 
 window.deleteAdminFeeScreenshot = async function (receiptId, pocNric) {
-  if (!confirm("Are you sure you want to remove this payment screenshot?")) return;
+  if (
+    !(await appConfirm(
+      "Are you sure you want to remove this payment screenshot?",
+      "Delete Screenshot",
+      "Delete",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
 
   const rec = globalReceipts.find((r) => r.id === receiptId);
   if (!rec) return;
@@ -4047,9 +4159,13 @@ window.deleteAdminFeeScreenshot = async function (receiptId, pocNric) {
   locallyDeletedReceiptIds.add(receiptId);
   pendingReceiptUpdates.set(receiptId, rec);
 
-  renderFeeTracker();
+  renderFeeTracker(pocNric);
   renderReceiptsBrowser();
   renderFinalizedFinances();
+
+  setTimeout(() => {
+    scrollToFeeCard(pocNric, true);
+  }, 120);
 
   // If the modal is currently open, refresh it
   const modal = document.getElementById("adminFeeScreenshotModal");

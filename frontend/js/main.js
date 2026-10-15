@@ -421,7 +421,7 @@ async function showParticipantSummaryModal(nric) {
           </div>
           <div class="flex gap-2">
             <button onclick="document.getElementById('gpm-view').classList.add('hidden-force'); document.getElementById('gpm-edit').classList.remove('hidden-force'); if(typeof setupNationalityDropdown === 'function') setupNationalityDropdown('gpmNat');" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>
-            <button onclick="deleteParticipant('${m.nric}')" class="text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none border border-transparent hover:border-red-200 dark:hover:border-gray-700 shadow-md">Delete</button>
+            <button onclick="deleteParticipant('${m.nric}')" class="text-red-600 dark:text-red-400 text-xs font-bold bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded transition focus:outline-none border border-red-200 dark:border-red-900/50 shadow-md">Delete</button>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
@@ -613,9 +613,13 @@ async function submitAdminProfileEdit(btn) {
 
 async function deleteParticipant(nric) {
   if (
-    !confirm(
+    !(await appConfirm(
       "Are you sure you want to delete this participant? They will be moved to the Archived Participants tab.",
-    )
+      "Delete Participant",
+      "Delete",
+      "Cancel",
+      true,
+    ))
   )
     return;
   const btn = document.querySelector("#gpm-view button.text-red-600");
@@ -1207,9 +1211,13 @@ function toBase64(file) {
 }
 async function deleteAdminParticipant(nric) {
   if (
-    !confirm(
+    !(await appConfirm(
       "Are you sure you want to delete this participant? Their details will be moved to a separate sheet.",
-    )
+      "Delete Participant",
+      "Delete",
+      "Cancel",
+      true,
+    ))
   )
     return;
   try {

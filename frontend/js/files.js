@@ -170,7 +170,16 @@ function bulkMoveSelected() {
   setDriveClipboard("move", Array.from(selectedDriveItems.values()));
 }
 async function bulkDeleteSelected() {
-  if (!confirm(`Move ${selectedDriveItems.size} item(s) to Trash?`)) return;
+  if (
+    !(await appConfirm(
+      `Move ${selectedDriveItems.size} item(s) to Trash?`,
+      "Delete Selected Items",
+      "Move to Trash",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
   const items = Array.from(selectedDriveItems.values());
   clearDriveSelection();
   const current = currentDrivePath[currentDrivePath.length - 1] || {
@@ -188,9 +197,13 @@ function actionSingleMove(id, isFolder, name) {
 
 async function promptDeleteDriveItem(id, isFolder, name) {
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to delete the ${isFolder ? "folder" : "file"} "${name}"?\nThis will move it to the Drive Trash.`,
-    )
+      `Delete ${isFolder ? "Folder" : "File"}`,
+      "Delete",
+      "Cancel",
+      true,
+    ))
   )
     return;
   const current = currentDrivePath[currentDrivePath.length - 1] || {
@@ -232,9 +245,11 @@ async function pasteFromDriveClipboard() {
     const item = driveClipboard.items[0];
     const defaultName =
       driveClipboard.action === "copy" ? `Copy of ${item.name}` : item.name;
-    singleNewName = prompt(
+    singleNewName = await appPrompt(
       `${driveClipboard.action === "copy" ? "Pasting" : "Moving"} "${item.name}".\nEnter name:`,
       defaultName,
+      `${driveClipboard.action === "copy" ? "Copy" : "Move"} Item`,
+      "File/Folder name",
     );
     if (!singleNewName || !singleNewName.trim()) return;
   }
@@ -284,7 +299,12 @@ async function executeBulkAction(
 }
 
 async function promptCreateFolder() {
-  const folderName = prompt("Enter new folder name:");
+  const folderName = await appPrompt(
+    "Enter new folder name:",
+    "",
+    "New Folder",
+    "Folder Name",
+  );
   if (!folderName || !folderName.trim()) return;
 
   const current = currentDrivePath[currentDrivePath.length - 1] || {
@@ -318,9 +338,11 @@ async function promptCreateGoogleDoc(docType) {
     sheet: "Google Sheet",
     slide: "Google Slide",
   };
-  const fileName = prompt(
+  const fileName = await appPrompt(
     `Enter name for new ${labels[docType]}:`,
     `Untitled ${labels[docType]}`,
+    `Create ${labels[docType]}`,
+    "Document Name",
   );
   if (!fileName || !fileName.trim()) return;
 
@@ -424,9 +446,11 @@ async function handleFileSelect(event) {
 }
 
 async function promptRenameDriveItem(id, isFolder, oldName) {
-  const newName = prompt(
+  const newName = await appPrompt(
     `Enter new name for the ${isFolder ? "folder" : "file"}:`,
     oldName,
+    `Rename ${isFolder ? "Folder" : "File"}`,
+    "Name",
   );
   if (!newName || !newName.trim() || newName.trim() === oldName) return;
 
@@ -581,7 +605,7 @@ function renderDriveContents(folders, files) {
         <button onclick="promptRenameDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename Folder">
            ${pencilIcon}
         </button>
-        <button onclick="promptDeleteDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Delete Folder">
+        <button onclick="promptDeleteDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 rounded-md transition focus:outline-none shrink-0" title="Delete Folder">
            ${trashIcon}
         </button>
     </div>
@@ -646,7 +670,7 @@ function renderDriveContents(folders, files) {
         <button onclick="promptRenameDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Rename File">
            ${pencilIcon}
         </button>
-        <button onclick="promptDeleteDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Delete File">
+        <button onclick="promptDeleteDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 rounded-md transition focus:outline-none shrink-0" title="Delete File">
            ${trashIcon}
         </button>
     </div>
@@ -689,7 +713,7 @@ function updatePinnedTripFilesUI() {
           ${infoSet ? 'Change' : 'Choose'}
         </button>
         ${infoSet && (infoUrl || infoId) ? `<button onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
-        ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-1 py-0.5 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition" title="Remove as Landing Infographic">&times;</button>` : ''}
+        ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Landing Infographic">&times;</button>` : ''}
       </div>
     </div>
 
@@ -708,7 +732,7 @@ function updatePinnedTripFilesUI() {
           ${docSet ? 'Change' : 'Choose'}
         </button>
         ${docSet && (docUrl || docId) ? `<button onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
-        ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-1 py-0.5 text-xs text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition" title="Remove as Profile Trip Info Doc">&times;</button>` : ''}
+        ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Profile Trip Info Doc">&times;</button>` : ''}
       </div>
     </div>
   </div>
@@ -722,7 +746,16 @@ async function actionSetTripFile(fileType, fileId, fileName, fileUrl) {
     ? `Set "${fileName}" as the Trip Infographic?\n\n• The file's view rights in Google Drive will be set to 'Anyone with link able to view'.\n• It will appear directly as an image on the landing page.`
     : `Set "${fileName}" as the Trip Info Doc?\n\n• The file's view rights in Google Drive will be set to 'Anyone with link able to view'.\n• It will be accessible from all participants' profiles via the "Trip Info" button.`;
 
-  if (!confirm(message)) return;
+  if (
+    !(await appConfirm(
+      message,
+      `Set ${title}`,
+      `Set ${title}`,
+      "Cancel",
+      false,
+    ))
+  )
+    return;
 
   const overlay = document.getElementById("driveLoadingOverlay");
   const loadText = document.getElementById("driveLoadingText");
@@ -764,7 +797,16 @@ async function actionSetTripFile(fileType, fileId, fileName, fileUrl) {
 async function actionClearTripFile(fileType) {
   const isInfographic = fileType === "infographic";
   const title = isInfographic ? "Landing Page Infographic" : "Participant Trip Info Doc";
-  if (!confirm(`Are you sure you want to clear the ${title}?`)) return;
+  if (
+    !(await appConfirm(
+      `Are you sure you want to clear the ${title}?`,
+      `Clear ${title}`,
+      "Clear",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
 
   const overlay = document.getElementById("driveLoadingOverlay");
   const loadText = document.getElementById("driveLoadingText");

@@ -304,9 +304,23 @@ window.appPrompt = function (
   });
 };
 
-// Polyfill window.alert
+// Polyfill window.alert, window.confirm, window.prompt with app UI dialogs
 window.alert = function (msg) {
-  return window.appAlert(msg);
+  if (typeof window.appAlert === "function") {
+    return window.appAlert(msg);
+  }
+};
+window.confirm = function (msg) {
+  if (typeof window.appConfirm === "function") {
+    return window.appConfirm(msg);
+  }
+  return true;
+};
+window.prompt = function (msg, defaultValue = "") {
+  if (typeof window.appPrompt === "function") {
+    return window.appPrompt(msg, defaultValue);
+  }
+  return defaultValue || "";
 };
 
 window.cleanTrailingComma = function (input) {

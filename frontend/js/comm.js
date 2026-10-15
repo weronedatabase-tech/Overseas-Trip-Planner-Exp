@@ -1699,8 +1699,13 @@ function setCommAttBtnState(state) {
   }
 }
 
-function promptNewCommJuncture() {
-  const name = prompt("Enter new juncture name (e.g. Morning Assembly):");
+async function promptNewCommJuncture() {
+  const name = await appPrompt(
+    "Enter new juncture name (e.g. Morning Assembly):",
+    "",
+    "New Juncture",
+    "Juncture Name",
+  );
   if (!name || !name.trim()) return;
 
   lastCommAttLocalChange = Date.now();
@@ -1720,21 +1725,31 @@ function promptNewCommJuncture() {
       renderCommAttJunctures();
       showFlashMessage("commGlobalStatus", "Juncture added.", "success");
     } else {
-      alert(res.message);
+      if (typeof appAlert === "function") appAlert(res.message, "Error");
+      else alert(res.message);
     }
   });
 }
 
-function promptDeleteCommJuncture() {
+async function promptDeleteCommJuncture() {
   const juncture = document.getElementById("commAttJunctureSelect").value;
   if (!juncture) return;
 
   if (juncture === "Meeting") {
-    alert("The default 'Meeting' juncture cannot be deleted.");
+    if (typeof appAlert === "function") await appAlert("The default 'Meeting' juncture cannot be deleted.", "Notice");
+    else alert("The default 'Meeting' juncture cannot be deleted.");
     return;
   }
 
-  if (!confirm(`Are you sure you want to delete the juncture "${juncture}"?`))
+  if (
+    !(await appConfirm(
+      `Are you sure you want to delete the juncture "${juncture}"?`,
+      "Delete Juncture",
+      "Delete",
+      "Cancel",
+      true,
+    ))
+  )
     return;
 
   lastCommAttLocalChange = Date.now();
@@ -1978,20 +1993,25 @@ function addBusOption() {
   renderBusLists();
 }
 
-function removeBusOption() {
+async function removeBusOption() {
   const juncture = busState.currentJuncture;
   const filterBus = document.getElementById("busFilterSelect").value;
 
   if (!juncture) return;
   if (filterBus === "ALL") {
-    alert("Please select a specific bus from the dropdown to remove.");
+    if (typeof appAlert === "function") await appAlert("Please select a specific bus from the dropdown to remove.", "Notice");
+    else alert("Please select a specific bus from the dropdown to remove.");
     return;
   }
 
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to remove ${filterBus}? All trainees assigned to this bus will be unassigned.`,
-    )
+      "Remove Bus",
+      "Remove Bus",
+      "Cancel",
+      true,
+    ))
   ) {
     return;
   }
@@ -2390,8 +2410,13 @@ function setBusSyncBtnState(state) {
   setCommAttBtnState(state);
 }
 
-function promptNewBusJuncture() {
-  const name = prompt("Enter new custom bus location:");
+async function promptNewBusJuncture() {
+  const name = await appPrompt(
+    "Enter new custom bus location:",
+    "",
+    "New Bus Location",
+    "Location Name",
+  );
   if (!name || !name.trim()) return;
 
   lastCommAttLocalChange = Date.now();
@@ -2409,19 +2434,24 @@ function promptNewBusJuncture() {
       busState.currentJuncture = name.trim();
       renderBusJunctures();
     } else {
-      alert(res.message);
+      if (typeof appAlert === "function") appAlert(res.message, "Error");
+      else alert(res.message);
     }
   });
 }
 
-function promptDeleteBusJuncture() {
+async function promptDeleteBusJuncture() {
   const juncture = busState.currentJuncture;
   if (!juncture) return;
 
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to delete the bus tracking for "${juncture}"?`,
-    )
+      "Delete Bus Tracking",
+      "Delete",
+      "Cancel",
+      true,
+    ))
   )
     return;
 

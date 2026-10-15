@@ -77,12 +77,16 @@ function changeGroupingSearch() {
 // GROUP DELETION LOGIC
 // ==========================================
 
-window.deleteGroup = function (g, event) {
+window.deleteGroup = async function (g, event) {
   if (event) event.stopPropagation();
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to delete Group ${g}? All trainees will be unassigned and ICs removed.`,
-    )
+      "Delete Group",
+      "Delete Group",
+      "Cancel",
+      true,
+    ))
   )
     return false;
 
@@ -271,7 +275,7 @@ ${volBadge}
 <div class="${headerBg} px-3 py-2 rounded-t-lg font-black flex justify-between items-center text-xs md:text-sm uppercase tracking-wide border-b-2 ${borderCol} relative">
 <div class="flex items-center gap-2">
    <span>${title}</span>
-   ${!isUnassigned ? `<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-transparent hover:bg-red-500 text-red-500 hover:text-white dark:hover:bg-red-600 rounded shadow-none hover:shadow-md transition-colors opacity-70 hover:opacity-100" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ""}
+   ${!isUnassigned ? `<button onclick="window.deleteGroup('${g}', event)" class="flex items-center justify-center w-6 h-6 bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/50 hover:bg-red-600 hover:text-white rounded shadow-none hover:shadow-md transition-colors" title="Delete Group"><i class="fa-solid fa-trash text-xs"></i></button>` : ""}
 </div>
 <span class="bg-white/60 dark:bg-black/50 px-2.5 py-0.5 rounded-full text-[10px] shadow-inner">${colTrainees.length}</span>
 </div>
@@ -316,7 +320,7 @@ function openQuickGroupModal(traineeName) {
         grid.innerHTML += `
 <div class="relative group/btn">
   <button onclick="handleGroupSelection('${g}')" class="w-full bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 border-2 border-gray-300 dark:border-zinc-700 py-2 md:py-3 rounded-lg text-sm font-bold hover:bg-orange-100 hover:text-orange-700 dark:hover:bg-orange-900/30 dark:hover:text-orange-400 transition-colors shadow-md focus:outline-none">Grp ${g}</button>
-  <button onclick="if(window.deleteGroup('${g}', event)) closeQuickGroupModal()" class="absolute -top-1.5 -right-1.5 bg-gray-200 dark:bg-zinc-700 text-gray-500 dark:text-gray-400 hover:bg-red-500 hover:text-white dark:hover:bg-red-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md border-2 border-gray-300 dark:border-zinc-600 transition-colors z-10"><i class="fa-solid fa-xmark"></i></button>
+  <button onclick="window.deleteGroup('${g}', event).then((res) => { if(res !== false) closeQuickGroupModal(); })" class="absolute -top-1.5 -right-1.5 bg-red-100 dark:bg-red-900/60 text-red-600 dark:text-red-300 hover:bg-red-600 hover:text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-md border-2 border-red-300 dark:border-red-700 transition-colors z-10" title="Delete Group"><i class="fa-solid fa-xmark"></i></button>
 </div>`;
       });
   }
@@ -453,9 +457,14 @@ function handleGroupSelection(targetGroupRaw) {
   closeQuickGroupModal();
 }
 
-function handleNewGroupSelection() {
+async function handleNewGroupSelection() {
   if (!currentGroupingTrainee) return;
-  const g = prompt("Enter new Group Name or Number:");
+  const g = await appPrompt(
+    "Enter new Group Name or Number:",
+    "",
+    "New Group",
+    "Group Name or Number",
+  );
   if (g && g.trim()) {
     const cleanName = g.trim();
     if (!activeGroups.includes(cleanName)) {

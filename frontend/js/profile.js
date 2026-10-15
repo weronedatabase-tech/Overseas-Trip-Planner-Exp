@@ -616,7 +616,7 @@ function renderProfileFullView() {
         </div>
         
         <div class="flex items-center border-t-2 border-gray-100 dark:border-gray-800 mt-4 pt-3">
-            <button onclick="promptDeleteIcJuncture()" class="text-xs text-red-500 hover:text-red-700 transition font-bold"><i class="fa-solid fa-trash mr-1"></i> Delete Juncture</button>
+            <button onclick="promptDeleteIcJuncture()" class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 rounded-lg shadow-xs transition cursor-pointer"><i class="fa-solid fa-trash text-xs"></i> Delete Juncture</button>
         </div>
     </div>`;
   }
@@ -1030,7 +1030,16 @@ window.cancelProfileReceiptOverwrite = function (suffix = "") {
 };
 
 window.deleteProfileReceipt = async function (receiptId) {
-  if (!confirm("Are you sure you want to remove this payment screenshot?")) return;
+  if (
+    !(await appConfirm(
+      "Are you sure you want to remove this payment screenshot?",
+      "Delete Screenshot",
+      "Delete",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
 
   try {
     const res = await apiCall("syncReceipts", {
@@ -1103,7 +1112,7 @@ function generateMyReceiptsHtml() {
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
               Overwrite
             </button>
-            <button type="button" onclick="deleteProfileReceipt('${rec.id}')" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer" title="Delete this screenshot">
+            <button type="button" onclick="deleteProfileReceipt('${rec.id}')" class="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg transition cursor-pointer" title="Delete this screenshot">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
           </div>
@@ -2182,8 +2191,13 @@ window.triggerIcPulseFeedback = function (nric, isChecked) {
 };
 
 window.promptAddIcJuncture = async function () {
-  const name = prompt("Enter new juncture name (e.g. Breakfast, Gathering):");
-  if (!name) return;
+  const name = await appPrompt(
+    "Enter new juncture name (e.g. Breakfast, Gathering):",
+    "",
+    "New Juncture",
+    "Juncture Name",
+  );
+  if (!name || !name.trim()) return;
 
   showToast("Creating juncture...");
   try {
@@ -2214,15 +2228,19 @@ window.promptDeleteIcJuncture = async function () {
   const select = document.getElementById("icJunctureSelect");
   const val = select.value;
   if (!val || !val.startsWith("[IC] ")) {
-    alert("You can only delete your custom junctures.");
+    await appAlert("You can only delete your custom junctures.", "Cannot Delete");
     return;
   }
   const realName = val.substring(5);
 
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to delete the custom juncture '${realName}'?`,
-    )
+      "Delete Juncture",
+      "Delete",
+      "Cancel",
+      true,
+    ))
   )
     return;
 
