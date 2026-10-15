@@ -31,6 +31,284 @@ function showToast(msg, isError = false) {
 }
 window.showToast = showToast;
 
+// ==========================================
+// APP-UI BASED MODAL SYSTEM (REPLACING NATIVE ALERTS / CONFIRMS / PROMPTS)
+// ==========================================
+function getOrCreateAppDialogContainer() {
+  let modal = document.getElementById("appGlobalDialogModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "appGlobalDialogModal";
+    modal.className =
+      "fixed inset-0 bg-black/60 z-[200] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity";
+    modal.innerHTML = `
+      <div id="appDialogCard" class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md shadow-2xl border-2 border-gray-200 dark:border-gray-700 m-auto animate-slide-up flex flex-col overflow-hidden">
+        <div class="p-5 flex items-start gap-3.5">
+          <div id="appDialogIconWrapper" class="p-2.5 rounded-xl shrink-0 mt-0.5"></div>
+          <div class="flex-1 min-w-0">
+            <h3 id="appDialogTitle" class="text-base font-black text-gray-900 dark:text-white leading-tight"></h3>
+            <div id="appDialogBody" class="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed whitespace-pre-wrap break-words"></div>
+            <div id="appDialogInputWrapper" class="mt-3 hidden-force">
+              <input type="text" id="appDialogInput" class="w-full text-xs font-semibold p-2.5 rounded-lg border-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm" />
+            </div>
+          </div>
+        </div>
+        <div id="appDialogFooter" class="p-3 bg-gray-50 dark:bg-gray-900/60 border-t-2 border-gray-100 dark:border-gray-800 flex items-center justify-end gap-2 shrink-0">
+          <button type="button" id="appDialogCancelBtn" class="px-4 py-2 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none cursor-pointer">
+            Cancel
+          </button>
+          <button type="button" id="appDialogConfirmBtn" class="px-5 py-2 rounded-lg text-xs font-bold text-white shadow-md transition focus:outline-none cursor-pointer flex items-center justify-center">
+            Confirm
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  return modal;
+}
+
+window.appAlert = function (message, title = "Notice") {
+  return new Promise((resolve) => {
+    const modal = getOrCreateAppDialogContainer();
+    const titleEl = document.getElementById("appDialogTitle");
+    const bodyEl = document.getElementById("appDialogBody");
+    const iconEl = document.getElementById("appDialogIconWrapper");
+    const inputWrapper = document.getElementById("appDialogInputWrapper");
+    const cancelBtn = document.getElementById("appDialogCancelBtn");
+    const confirmBtn = document.getElementById("appDialogConfirmBtn");
+
+    titleEl.textContent = title;
+    bodyEl.textContent = String(message || "");
+    inputWrapper.classList.add("hidden-force");
+    cancelBtn.classList.add("hidden-force");
+
+    const isError =
+      title.toLowerCase().includes("error") ||
+      title.toLowerCase().includes("failed") ||
+      String(message).toLowerCase().includes("error") ||
+      String(message).toLowerCase().includes("failed");
+
+    iconEl.className = isError
+      ? "p-2.5 rounded-xl shrink-0 mt-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+      : "p-2.5 rounded-xl shrink-0 mt-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400";
+    iconEl.innerHTML = isError
+      ? `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>`
+      : `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+    confirmBtn.className =
+      "px-5 py-2 rounded-lg text-xs font-bold text-white shadow-md transition focus:outline-none cursor-pointer bg-primary hover:opacity-90";
+    confirmBtn.textContent = "Got it";
+
+    const closeHandler = () => {
+      cleanup();
+      modal.classList.add("hidden-force");
+      resolve();
+    };
+
+    const keyHandler = (e) => {
+      if (e.key === "Enter" || e.key === "Escape") {
+        e.preventDefault();
+        closeHandler();
+      }
+    };
+
+    const clickOutsideHandler = (e) => {
+      if (e.target === modal) {
+        closeHandler();
+      }
+    };
+
+    function cleanup() {
+      confirmBtn.removeEventListener("click", closeHandler);
+      document.removeEventListener("keydown", keyHandler);
+      modal.removeEventListener("click", clickOutsideHandler);
+    }
+
+    confirmBtn.addEventListener("click", closeHandler);
+    document.addEventListener("keydown", keyHandler);
+    modal.addEventListener("click", clickOutsideHandler);
+
+    modal.classList.remove("hidden-force");
+    confirmBtn.focus();
+  });
+};
+
+window.appConfirm = function (
+  message,
+  title = "Confirm Action",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  isDestructive = null,
+) {
+  return new Promise((resolve) => {
+    const modal = getOrCreateAppDialogContainer();
+    const titleEl = document.getElementById("appDialogTitle");
+    const bodyEl = document.getElementById("appDialogBody");
+    const iconEl = document.getElementById("appDialogIconWrapper");
+    const inputWrapper = document.getElementById("appDialogInputWrapper");
+    const cancelBtn = document.getElementById("appDialogCancelBtn");
+    const confirmBtn = document.getElementById("appDialogConfirmBtn");
+
+    titleEl.textContent = title;
+    bodyEl.textContent = String(message || "");
+    inputWrapper.classList.add("hidden-force");
+    cancelBtn.classList.remove("hidden-force");
+    cancelBtn.textContent = cancelText;
+
+    const lowerMsg = (message + " " + title).toLowerCase();
+    const destructive =
+      isDestructive !== null
+        ? isDestructive
+        : lowerMsg.includes("delete") ||
+          lowerMsg.includes("remove") ||
+          lowerMsg.includes("clear") ||
+          lowerMsg.includes("unassign") ||
+          lowerMsg.includes("wipe") ||
+          lowerMsg.includes("reset") ||
+          lowerMsg.includes("archive");
+
+    iconEl.className = destructive
+      ? "p-2.5 rounded-xl shrink-0 mt-0.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+      : "p-2.5 rounded-xl shrink-0 mt-0.5 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400";
+    iconEl.innerHTML = destructive
+      ? `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`
+      : `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`;
+
+    confirmBtn.className = destructive
+      ? "px-5 py-2 rounded-lg text-xs font-bold text-white shadow-md transition focus:outline-none cursor-pointer bg-red-600 hover:bg-red-700"
+      : "px-5 py-2 rounded-lg text-xs font-bold text-white shadow-md transition focus:outline-none cursor-pointer bg-primary hover:opacity-90";
+    confirmBtn.textContent = confirmText;
+
+    const onConfirm = () => {
+      cleanup();
+      modal.classList.add("hidden-force");
+      resolve(true);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      modal.classList.add("hidden-force");
+      resolve(false);
+    };
+
+    const keyHandler = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        onConfirm();
+      }
+    };
+
+    const clickOutsideHandler = (e) => {
+      if (e.target === modal) {
+        onCancel();
+      }
+    };
+
+    function cleanup() {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", keyHandler);
+      modal.removeEventListener("click", clickOutsideHandler);
+    }
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    document.addEventListener("keydown", keyHandler);
+    modal.addEventListener("click", clickOutsideHandler);
+
+    modal.classList.remove("hidden-force");
+    confirmBtn.focus();
+  });
+};
+
+window.appPrompt = function (
+  message,
+  defaultValue = "",
+  title = "Input Required",
+  placeholder = "",
+) {
+  return new Promise((resolve) => {
+    const modal = getOrCreateAppDialogContainer();
+    const titleEl = document.getElementById("appDialogTitle");
+    const bodyEl = document.getElementById("appDialogBody");
+    const iconEl = document.getElementById("appDialogIconWrapper");
+    const inputWrapper = document.getElementById("appDialogInputWrapper");
+    const input = document.getElementById("appDialogInput");
+    const cancelBtn = document.getElementById("appDialogCancelBtn");
+    const confirmBtn = document.getElementById("appDialogConfirmBtn");
+
+    titleEl.textContent = title;
+    bodyEl.textContent = String(message || "");
+    inputWrapper.classList.remove("hidden-force");
+    input.value = defaultValue || "";
+    input.placeholder = placeholder || "";
+    cancelBtn.classList.remove("hidden-force");
+    cancelBtn.textContent = "Cancel";
+
+    iconEl.className =
+      "p-2.5 rounded-xl shrink-0 mt-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400";
+    iconEl.innerHTML = `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`;
+
+    confirmBtn.className =
+      "px-5 py-2 rounded-lg text-xs font-bold text-white shadow-md transition focus:outline-none cursor-pointer bg-primary hover:opacity-90";
+    confirmBtn.textContent = "Submit";
+
+    const onConfirm = () => {
+      const val = input.value;
+      cleanup();
+      modal.classList.add("hidden-force");
+      resolve(val);
+    };
+
+    const onCancel = () => {
+      cleanup();
+      modal.classList.add("hidden-force");
+      resolve(null);
+    };
+
+    const keyHandler = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        onConfirm();
+      }
+    };
+
+    const clickOutsideHandler = (e) => {
+      if (e.target === modal) {
+        onCancel();
+      }
+    };
+
+    function cleanup() {
+      confirmBtn.removeEventListener("click", onConfirm);
+      cancelBtn.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", keyHandler);
+      modal.removeEventListener("click", clickOutsideHandler);
+    }
+
+    confirmBtn.addEventListener("click", onConfirm);
+    cancelBtn.addEventListener("click", onCancel);
+    document.addEventListener("keydown", keyHandler);
+    modal.addEventListener("click", clickOutsideHandler);
+
+    modal.classList.remove("hidden-force");
+    input.focus();
+    input.select();
+  });
+};
+
+// Polyfill window.alert
+window.alert = function (msg) {
+  return window.appAlert(msg);
+};
+
 window.cleanTrailingComma = function (input) {
   setTimeout(() => {
     if (document.activeElement === input) return;

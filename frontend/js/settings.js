@@ -158,7 +158,7 @@ function buildSettingsUI() {
   <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 main-admin-only ${currentUser && currentUser.nric === "ADMIN" ? "" : "hidden-force"}">
   <div class="flex justify-between items-center mb-0.5">
   <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight">Drive Access Management</h3>
-  <button onclick="massRemoveDriveAccessBtn(this)" class="text-xs md:text-xs text-red-600 dark:text-red-400 font-bold bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded px-2 py-1 shadow-md hover:bg-red-50 dark:hover:bg-gray-700 transition flex items-center focus:outline-none shrink-0"><span class="btn-text">Remove All</span><div class="btn-spinner spinner-red hidden-force ml-1.5 !w-3 !h-3 border-2"></div></button>
+  <button onclick="massRemoveDriveAccessBtn(this)" class="text-xs md:text-xs text-red-600 dark:text-red-400 font-bold bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded px-2.5 py-1 shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition flex items-center focus:outline-none shrink-0"><span class="btn-text">Remove All</span><div class="btn-spinner spinner-red hidden-force ml-1.5 !w-3 !h-3 border-2"></div></button>
   </div>
   <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-3 leading-tight">Grant specific users access to the underlying Google Drive trip folder. You can paste multiple emails separated by commas or newlines.</p>
 
@@ -460,7 +460,7 @@ function renderGroupList(list) {
     list.forEach((g) => {
       const safeGroup = g.replace(/'/g, "\\'");
       const dynColor = getProjectColor(g);
-      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="flex items-center space-x-2.5"><button onclick="openColorPicker('${safeGroup}')" class="w-5 h-5 rounded-full border cursor-pointer shadow-md ${dynColor}" title="Change Color"></button><span class="font-bold text-xs text-gray-900 dark:text-white">${g}</span></div><button onclick="removeProjectGroup('${safeGroup}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
+      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="flex items-center space-x-2.5"><button onclick="openColorPicker('${safeGroup}')" class="w-5 h-5 rounded-full border cursor-pointer shadow-md ${dynColor}" title="Change Color"></button><span class="font-bold text-xs text-gray-900 dark:text-white">${g}</span></div><button onclick="removeProjectGroup('${safeGroup}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
     });
 }
 
@@ -511,9 +511,13 @@ async function massRemoveDriveAccessBtn(btn) {
   if (emails.length === 0) return showToast("No users to remove.", true);
 
   if (
-    !confirm(
+    !(await appConfirm(
       `Are you sure you want to revoke access for ALL ${emails.length} users?`,
-    )
+      "Revoke All Drive Access",
+      "Revoke All",
+      "Cancel",
+      true,
+    ))
   )
     return;
 
@@ -576,7 +580,7 @@ function renderDriveAccessList(listObj) {
       <span class="font-bold text-xs text-gray-900 dark:text-white truncate" title="${email}">${email}</span>
       <span class="ml-2 text-[10px] font-black px-1.5 py-0.5 rounded border uppercase tracking-widest ${badgeClass} shrink-0">${role}</span>
     </div>
-    <button onclick="removeDriveAccessBtn('${email}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button>
+    <button onclick="removeDriveAccessBtn('${email}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button>
     </li>`;
   });
 }
@@ -619,7 +623,12 @@ async function removeJuncture(name, btn) {
 }
 
 async function editJuncture(oldName) {
-  const newName = prompt(`Edit Juncture Name:`, oldName);
+  const newName = await appPrompt(
+    "Edit Juncture Name:",
+    oldName,
+    "Edit Juncture",
+    "Juncture Name",
+  );
   if (!newName || newName.trim() === "" || newName.trim() === oldName) return;
   try {
     const res = await apiCall("modifyJunctures", {
@@ -646,7 +655,7 @@ function renderJunctureList(list) {
   if (list)
     list.forEach((j) => {
       const safeName = j.replace(/'/g, "\\'");
-      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><span class="font-bold text-xs text-gray-900 dark:text-white truncate mr-2">${j}</span><div class="flex space-x-1.5 shrink-0"><button onclick="editJuncture('${safeName}')" title="Edit" class="text-green-600 dark:text-green-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md flex items-center justify-center focus:outline-none hover:bg-green-50 dark:hover:bg-gray-700 transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button><button onclick="removeJuncture('${safeName}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></div></li>`;
+      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><span class="font-bold text-xs text-gray-900 dark:text-white truncate mr-2">${j}</span><div class="flex space-x-1.5 shrink-0"><button onclick="editJuncture('${safeName}')" title="Edit" class="text-green-600 dark:text-green-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md flex items-center justify-center focus:outline-none hover:bg-green-50 dark:hover:bg-gray-700 transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button><button onclick="removeJuncture('${safeName}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded shadow-md flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></div></li>`;
     });
 }
 
@@ -702,7 +711,7 @@ function renderCommList(list) {
         : "";
   if (list)
     list.forEach((m) => {
-      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${m.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${m.nric} | ${renderPhoneLink(m.phone)}</div></div><button onclick="removeCommittee('${m.nric}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
+      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${m.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${m.nric} | ${renderPhoneLink(m.phone)}</div></div><button onclick="removeCommittee('${m.nric}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
     });
 }
 
@@ -751,15 +760,19 @@ function renderHelplineList(list) {
         : "";
   if (list)
     list.forEach((h) => {
-      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${h.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${renderPhoneLink(h.phone)}</div></div><button onclick="removeHelpline('${h.id}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded flex items-center justify-center hover:bg-red-50 dark:hover:bg-gray-700 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
+      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><div class="min-w-0 pr-2"><p class="font-bold text-xs text-gray-900 dark:text-white truncate">${h.name}</p><div class="text-[11px] text-gray-500 dark:text-gray-400 font-mono font-bold mt-0.5 flex items-center gap-1">${renderPhoneLink(h.phone)}</div></div><button onclick="removeHelpline('${h.id}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none shadow-md shrink-0"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></li>`;
     });
 }
 
 async function archiveSystem(btn) {
   if (
-    !confirm(
+    !(await appConfirm(
       "⚠️ ARE YOU SURE?\n\nThis archives the database and completely resets the system.",
-    )
+      "Archive & Reset System",
+      "Archive & Reset",
+      "Cancel",
+      true,
+    ))
   )
     return;
   showToast("Archiving...", false);

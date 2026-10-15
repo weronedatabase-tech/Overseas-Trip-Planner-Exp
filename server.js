@@ -234,6 +234,20 @@ app.post('/api', async (req, res) => {
       }
     }
 
+    if (p.overwriteReceiptId) {
+      if (overrides[p.overwriteReceiptId]) {
+        overrides[p.overwriteReceiptId].isDeleted = true;
+        overrides[p.overwriteReceiptId].ts = Date.now();
+      } else {
+        overrides[p.overwriteReceiptId] = {
+          id: p.overwriteReceiptId,
+          isDeleted: true,
+          ts: Date.now()
+        };
+      }
+      saveReceiptOverrides(overrides);
+    }
+
     let gasReceipts = [];
     let gasSuccess = false;
     try {
@@ -253,8 +267,13 @@ app.post('/api', async (req, res) => {
     }
 
     if (gasSuccess) {
-      // Receipt was created in GAS with its authoritative ID.
-      // Do not store duplicate in overrides.
+      // If the latest created receipt in gasReceipts doesn't have a valid fileUrl, fallback to localFileUrl
+      if (localFileUrl && gasReceipts.length > 0) {
+        const latest = gasReceipts[gasReceipts.length - 1];
+        if (latest && !latest.fileUrl && latest.categoryId === p.categoryId) {
+          latest.fileUrl = localFileUrl;
+        }
+      }
       const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
       return res.json({ status: 'success', receipts: merged });
     }

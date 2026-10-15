@@ -705,15 +705,17 @@ function setRoomSyncButtonState(state) {
   }
 }
 
-function addRoom() {
-  const prefix = prompt(
+async function addRoom() {
+  const prefix = await appPrompt(
     "Enter Room Base Name (e.g. 'Room', 'Tent', 'Block A'):",
     "Room",
+    "Add Room",
+    "Room Base Name",
   );
   if (!prefix || !prefix.trim()) return;
-  const capStr = prompt("Enter Capacity per room:", "2");
+  const capStr = await appPrompt("Enter Capacity per room:", "2", "Room Capacity", "Capacity");
   const capacity = parseInt(capStr) || 2;
-  const qtyStr = prompt("Quantity of this room type to create:", "1");
+  const qtyStr = await appPrompt("Quantity of this room type to create:", "1", "Room Quantity", "Quantity");
   const qty = parseInt(qtyStr) || 1;
 
   if (!globalLogistics.rooms) globalLogistics.rooms = [];
@@ -742,12 +744,12 @@ function addRoom() {
   showToast(`Created ${qty} room(s).`);
 }
 
-function promptEditRoom(id) {
+async function promptEditRoom(id) {
   const room = globalLogistics.rooms.find((r) => r.id === id);
   if (!room) return;
-  const name = prompt("Edit Room Name:", room.name);
+  const name = await appPrompt("Edit Room Name:", room.name, "Edit Room Name", "Room Name");
   if (!name || !name.trim()) return;
-  const capStr = prompt("Edit Room Capacity:", room.capacity);
+  const capStr = await appPrompt("Edit Room Capacity:", String(room.capacity), "Edit Room Capacity", "Capacity");
   const capacity = parseInt(capStr) || room.capacity;
 
   room.name = name.trim();
@@ -757,11 +759,15 @@ function promptEditRoom(id) {
   renderRooms();
 }
 
-function deleteRoom(id) {
+async function deleteRoom(id) {
   if (
-    !confirm(
+    !(await appConfirm(
       "Are you sure you want to delete this room? Users inside will be unassigned.",
-    )
+      "Delete Room",
+      "Delete Room",
+      "Cancel",
+      true,
+    ))
   )
     return;
   const room = globalLogistics.rooms.find((r) => r.id === id);
@@ -774,11 +780,15 @@ function deleteRoom(id) {
   }
 }
 
-function deleteAllRooms() {
+async function deleteAllRooms() {
   if (
-    !confirm(
+    !(await appConfirm(
       "⚠️ DANGER: This will delete ALL rooms and unassign everyone. Are you sure you want to proceed?",
-    )
+      "Delete All Rooms",
+      "Delete All",
+      "Cancel",
+      true,
+    ))
   )
     return;
   let changed = false;
@@ -797,8 +807,16 @@ function deleteAllRooms() {
   }
 }
 
-function resetRoomAssignments() {
-  if (!confirm("Are you sure you want to unassign everyone from all rooms?"))
+async function resetRoomAssignments() {
+  if (
+    !(await appConfirm(
+      "Are you sure you want to unassign everyone from all rooms?",
+      "Reset Room Assignments",
+      "Unassign Everyone",
+      "Cancel",
+      true,
+    ))
+  )
     return;
   let changed = false;
   globalLogistics.rooms.forEach((r) => {
@@ -815,11 +833,15 @@ function resetRoomAssignments() {
   }
 }
 
-function autoAssignRooms() {
+async function autoAssignRooms() {
   if (
-    !confirm(
+    !(await appConfirm(
       "This will automatically assign unassigned participants into EXISTING rooms based on their connections. Continue?",
-    )
+      "Auto-Assign Rooms",
+      "Auto-Assign",
+      "Cancel",
+      false,
+    ))
   )
     return;
   const activeRooms = globalLogistics.rooms.filter((r) => !r.isDeleted);
@@ -1718,7 +1740,15 @@ window.handleGroupDrop = async function (nric, groupName) {
       "This participant is currently the Group IC of Group " +
       (p.logisticsGroup || "Unknown") +
       ".\n\nMoving them to a different group will unassign them as Group IC.\n\nDo you want to proceed and unassign them?";
-    if (!confirm(confirmMsg)) {
+    if (
+      !(await appConfirm(
+        confirmMsg,
+        "Unassign Group IC",
+        "Proceed & Unassign",
+        "Cancel",
+        true,
+      ))
+    ) {
       return; // Cancel
     }
 
@@ -1878,8 +1908,17 @@ function autoBus() {
   triggerBusSync();
 }
 
-function resetGroupAssignments() {
-  if (!confirm("Clear all group assignments?")) return;
+async function resetGroupAssignments() {
+  if (
+    !(await appConfirm(
+      "Clear all group assignments?",
+      "Clear Group Assignments",
+      "Clear All",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
   globalLogistics.participants.forEach((p) => {
     if (p.logisticsGroup) {
       p.logisticsGroup = "";
@@ -1890,8 +1929,17 @@ function resetGroupAssignments() {
   triggerGroupSync();
 }
 
-function resetBusAssignments() {
-  if (!confirm("Clear all bus assignments?")) return;
+async function resetBusAssignments() {
+  if (
+    !(await appConfirm(
+      "Clear all bus assignments?",
+      "Clear Bus Assignments",
+      "Clear All",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
   globalLogistics.participants.forEach((p) => {
     if (p.bus) {
       p.bus = "";
@@ -2447,7 +2495,7 @@ function renderRooms() {
             <div class="flex items-center gap-1 shrink-0 w-full lg:w-auto justify-end">
                 <button onclick="openRoomAddSheet('${room.id}')" class="text-[11px] bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 font-bold px-1.5 py-0.5 rounded hover:bg-green-100 transition focus:outline-none" ${isFull ? 'disabled style="opacity:0.5;"' : ""}>+ Add</button>
                 <button onclick="promptEditRoom('${room.id}')" class="text-gray-400 hover:text-primary transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                <button onclick="deleteRoom('${room.id}')" class="text-red-500 hover:text-red-600 transition p-0.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
+                <button onclick="deleteRoom('${room.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 transition p-1 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 hover:bg-red-100 dark:hover:bg-red-900/60 rounded shadow-md" title="Delete Room"><svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
             </div>
         </div>
         <div class="p-1.5 min-h-[40px] flex flex-col pointer-events-auto bg-transparent gap-1.5 w-full">
@@ -2868,7 +2916,7 @@ function renderGroupBusOptions() {
                 <div class="font-bold text-gray-900 dark:text-white text-sm">${activeAssignType === "group" ? "Group " : activeAssignType === "bus" ? "Bus " : "Room "}${nameStr}</div>
                 ${icHtml}
             </div>
-            <button onclick="${activeAssignType === "room" ? `deleteRoom('${idVal}')` : `removeGroupBusFromPopup('${idVal}')`}" class="text-red-500 hover:text-red-600 p-2 -mr-2"><i class="fa-solid fa-trash text-sm"></i></button>
+            <button onclick="${activeAssignType === "room" ? `deleteRoom('${idVal}')` : `removeGroupBusFromPopup('${idVal}')`}" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-2 rounded-lg transition" title="Delete"><i class="fa-solid fa-trash text-sm"></i></button>
         </div>`;
   });
 
@@ -2908,14 +2956,19 @@ function selectGroupBusOption(value) {
   closeSelectionSheet();
 }
 
-function addGroupBusFromPopup() {
+async function addGroupBusFromPopup() {
   if (activeAssignType === "room") {
-    addRoom();
+    await addRoom();
     renderGroupBusOptions();
     return;
   }
   const typeName = activeAssignType === "group" ? "Group" : "Bus";
-  const name = prompt(`Enter new ${typeName} name:`);
+  const name = await appPrompt(
+    `Enter new ${typeName} name:`,
+    "",
+    `Add ${typeName}`,
+    `${typeName} Name`,
+  );
   if (!name || !name.trim()) return;
   const val = name.trim();
 
@@ -2938,9 +2991,18 @@ function addGroupBusFromPopup() {
   else renderBuses();
 }
 
-function removeGroupBusFromPopup(val) {
+async function removeGroupBusFromPopup(val) {
   const typeName = activeAssignType === "group" ? "Group" : "Bus";
-  if (!confirm(`Are you sure you want to remove ${typeName} ${val}?`)) return;
+  if (
+    !(await appConfirm(
+      `Are you sure you want to remove ${typeName} ${val}?`,
+      `Remove ${typeName}`,
+      "Remove",
+      "Cancel",
+      true,
+    ))
+  )
+    return;
 
   if (activeAssignType === "group") {
     globalLogistics.participants.forEach((p) => {
@@ -3376,12 +3438,17 @@ window.assignToBusFromSheet = function (nric, bName) {
   closeSelectionSheet();
 };
 
-window.promptEditGroup = function (oldName) {
-  const newName = prompt("Edit Group Name:", oldName);
+window.promptEditGroup = async function (oldName) {
+  const newName = await appPrompt(
+    "Edit Group Name:",
+    oldName,
+    "Edit Group Name",
+    "Group Name",
+  );
   if (!newName || !newName.trim() || newName.trim() === oldName) return;
   const val = newName.trim();
   if (activeGroupsList.includes(val)) {
-    alert("A group with this name already exists.");
+    await appAlert("A group with this name already exists.", "Duplicate Group");
     return;
   }
 
@@ -3401,12 +3468,17 @@ window.promptEditGroup = function (oldName) {
   if (pendingGroupUpdates.size > 0) triggerGroupSync();
 };
 
-window.promptEditBus = function (oldName) {
-  const newName = prompt("Edit Bus Name:", oldName);
+window.promptEditBus = async function (oldName) {
+  const newName = await appPrompt(
+    "Edit Bus Name:",
+    oldName,
+    "Edit Bus Name",
+    "Bus Name",
+  );
   if (!newName || !newName.trim() || newName.trim() === oldName) return;
   const val = newName.trim();
   if (activeBusesList.includes(val)) {
-    alert("A bus with this name already exists.");
+    await appAlert("A bus with this name already exists.", "Duplicate Bus");
     return;
   }
 

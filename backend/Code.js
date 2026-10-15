@@ -1156,12 +1156,11 @@ const lock = LockService.getScriptLock();
 try {
 lock.waitLock(15000);
 
-if (payload.categoryId === "Fees Payment Screenshot") {
+if (payload.categoryId === "Fees Payment Screenshot" && payload.overwriteReceiptId) {
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    const matchNric = payload.familyNrics ? payload.familyNrics.includes(row[2]) : row[2] === payload.uploaderNric;
-    if (row[7] === "Fees Payment Screenshot" && matchNric && row[10] !== true) {
+    if (String(row[0]).trim() === String(payload.overwriteReceiptId).trim() && row[10] !== true) {
       // Mark old row as deleted
       sheet.getRange(i + 1, 11).setValue(true);
       // Attempt to trash old file in Drive

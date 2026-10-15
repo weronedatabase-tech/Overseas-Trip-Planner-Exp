@@ -3215,13 +3215,18 @@ function renderFeeTracker() {
                 <div class="leading-tight">${membersHtml}</div>
             </div>
             
-            <div class="flex items-center gap-2 shrink-0">
-                <button onclick="showContactPaymentPopup('${c.poc}')" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:border-primary transition shadow-md focus:outline-none" title="Payment QR & Contact">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}')" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:border-purple-500 transition shadow-md focus:outline-none cursor-pointer" title="Upload / Overwrite Payment Screenshots">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                </button>
+                <button type="button" onclick="showContactPaymentPopup('${c.poc}')" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary hover:border-primary transition shadow-md focus:outline-none cursor-pointer" title="Payment QR & Contact">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm14 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                     </svg>
                 </button>
-                <button onclick="toggleFeeReceived('${c.poc}', ${!c.isPaid})" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0 transition shadow-md hover:scale-110 focus:outline-none ${c.isPaid ? "border-green-500 ring-2 ring-green-400 ring-offset-1 dark:ring-offset-gray-900" : ""}">
+                <button type="button" onclick="toggleFeeReceived('${c.poc}', ${!c.isPaid})" class="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center shrink-0 transition shadow-md hover:scale-110 focus:outline-none cursor-pointer ${c.isPaid ? "border-green-500 ring-2 ring-green-400 ring-offset-1 dark:ring-offset-gray-900" : ""}" title="${c.isPaid ? "Mark as Unpaid" : "Mark as Paid"}">
                     <div class="w-6 h-6 rounded-full flex items-center justify-center transition-colors ${checkColor}">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                     </div>
@@ -3230,25 +3235,76 @@ function renderFeeTracker() {
         </div>
         
         ${(() => {
+          const memberNrics = c.members.map((m) => m.nric);
+          if (!memberNrics.includes(c.poc)) memberNrics.push(c.poc);
+
           const feeReceipts = globalReceipts
             .filter(
               (r) =>
                 !r.isDeleted &&
                 r.categoryId === "Fees Payment Screenshot" &&
-                (r.uploaderNric === c.poc || r.paidByNric === c.poc),
+                (memberNrics.includes(r.uploaderNric) || memberNrics.includes(r.paidByNric)),
             )
-            .sort((a, b) => b.ts - a.ts);
-          if (feeReceipts.length > 0 && feeReceipts[0].fileUrl) {
+            .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+          const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
+
+          if (feeReceipts.length === 0) {
             return `
-                <div class="mt-2 pt-2 border-t-2 border-gray-100 dark:border-gray-800">
-                    <a href="${feeReceipts[0].fileUrl}" target="_blank" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 w-max">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
-                        View Uploaded Screenshot
-                    </a>
+                <div class="mt-2 pt-2 border-t-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <span class="text-[11px] text-gray-400 italic flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        No screenshots
+                    </span>
+                    <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}')" class="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded transition flex items-center gap-1 shadow-xs cursor-pointer">
+                        <svg class="w-3 h-3 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                        Upload Screenshot
+                    </button>
                 </div>
-                `;
+            `;
           }
-          return "";
+
+          let itemsHtml = feeReceipts.map((rec, idx) => {
+            const dateStr = rec.ts ? new Date(rec.ts).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "";
+            const amtStr = (parseFloat(rec.sgdAmount || rec.amount) || 0).toLocaleString("en-US", { minimumFractionDigits: 2 });
+            return `
+              <div class="flex items-center justify-between gap-1.5 py-1 px-1.5 bg-gray-50/80 dark:bg-gray-900/50 rounded border border-gray-100 dark:border-gray-800/80 text-xs">
+                <div class="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                  <a href="${rec.fileUrl || '#'}" target="_blank" class="font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 truncate" title="View screenshot: ${rec.remarks || 'Payment'}">
+                    <svg class="w-3.5 h-3.5 shrink-0 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+                    <span class="truncate">${rec.remarks || `Screenshot #${idx + 1}`}</span>
+                  </a>
+                  <span class="text-[11px] font-mono font-bold text-gray-700 dark:text-gray-300 shrink-0">$${amtStr}</span>
+                  ${dateStr ? `<span class="text-[10px] text-gray-400 shrink-0">(${dateStr})</span>` : ""}
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}', '${rec.id}')" class="text-[10px] font-bold text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800 transition cursor-pointer" title="Overwrite / replace this screenshot">
+                    Replace
+                  </button>
+                  <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${c.poc}')" class="text-gray-400 hover:text-red-500 p-0.5 rounded transition cursor-pointer" title="Delete this screenshot">
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join("");
+
+          return `
+            <div class="mt-2 pt-2 border-t-2 border-gray-100 dark:border-gray-800 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-400">
+                  Screenshots (${feeReceipts.length}) • <span class="font-mono font-bold">$${totalDoc.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                </span>
+                <button type="button" onclick="openAdminFeeScreenshotModal('${c.poc}')" class="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 cursor-pointer" title="Add another payment or refund screenshot">
+                  <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                  + Add
+                </button>
+              </div>
+              <div class="space-y-1 max-h-36 overflow-y-auto custom-scrollbar pr-0.5">
+                ${itemsHtml}
+              </div>
+            </div>
+          `;
         })()}
 
         <div class="grid grid-cols-2 gap-2 p-2 bg-gray-50/50 dark:bg-gray-900/50 rounded-lg border-2 border-gray-100 dark:border-gray-800 mt-auto">
@@ -3487,6 +3543,56 @@ window.showContactPaymentPopup = function (pocNric) {
     qrHtml = `<div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2 text-center text-xs font-bold text-gray-400">PayNow number not configured.</div>`;
   }
 
+  const memberNrics = members.map((m) => m.nric);
+  if (!memberNrics.includes(pocNric)) memberNrics.push(pocNric);
+
+  const feeReceipts = globalReceipts
+    .filter(
+      (r) =>
+        !r.isDeleted &&
+        r.categoryId === "Fees Payment Screenshot" &&
+        (memberNrics.includes(r.uploaderNric) || memberNrics.includes(r.paidByNric)),
+    )
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
+
+  let screenshotsSummaryHtml = `
+    <div class="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 mb-2 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+          Screenshots (${feeReceipts.length})
+        </span>
+        <button type="button" onclick="document.getElementById('adminPaymentContactModal').classList.add('hidden-force'); openAdminFeeScreenshotModal('${pocNric}')" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Manage / Upload
+        </button>
+      </div>
+  `;
+
+  if (feeReceipts.length === 0) {
+    screenshotsSummaryHtml += `<p class="text-xs text-gray-400 italic">No screenshots uploaded yet.</p>`;
+  } else {
+    screenshotsSummaryHtml += `
+      <div class="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+        ${feeReceipts.map((rec, idx) => `
+          <div class="flex items-center justify-between text-xs py-1 border-b border-gray-100 dark:border-gray-800 last:border-b-0">
+            <a href="${rec.fileUrl || '#'}" target="_blank" class="text-purple-600 dark:text-purple-400 font-bold hover:underline flex items-center gap-1 truncate max-w-[170px]" title="View screenshot">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+              <span class="truncate">${rec.remarks || `Screenshot #${idx + 1}`}</span>
+            </a>
+            <span class="font-mono font-bold text-gray-700 dark:text-gray-300">$${(parseFloat(rec.sgdAmount || rec.amount) || 0).toFixed(2)}</span>
+          </div>
+        `).join("")}
+      </div>
+      <div class="pt-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 flex justify-between border-t border-gray-200 dark:border-gray-700">
+        <span>Total Documented:</span>
+        <span class="font-mono text-purple-600 dark:text-purple-400">$${totalDoc.toFixed(2)}</span>
+      </div>
+    `;
+  }
+  screenshotsSummaryHtml += `</div>`;
+
   const modalCont = document.getElementById("apcm-content");
   if (modalCont) {
     modalCont.innerHTML = `
@@ -3499,10 +3605,463 @@ window.showContactPaymentPopup = function (pocNric) {
             <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Expected</span>
             <span class="text-base font-black text-green-700 dark:text-green-400">$${finalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
         </div>
+        ${screenshotsSummaryHtml}
         ${qrHtml}
     `;
   }
   modal.classList.remove("hidden-force");
+};
+
+// ==========================================
+// ADMIN FEE SCREENSHOT MODAL ENGINE
+// ==========================================
+window.openAdminFeeScreenshotModal = function (pocNric, overwriteReceiptId = null) {
+  if (!pocNric || !globalLogistics || !globalLogistics.participants) return;
+
+  const modal = document.getElementById("adminFeeScreenshotModal");
+  if (!modal) return;
+
+  const members = globalLogistics.participants.filter(
+    (p) => p.pocNric === pocNric,
+  );
+  if (!members.length) return;
+
+  const pocMember = members.find((m) => m.nric === pocNric) || members[0];
+  const size = members.length;
+  const baseFee = financeConfig.perPersonFee || 0;
+  const dev = financeConfig.feeDeviations?.[pocNric]?.amount || 0;
+  const finalExpected = size * baseFee + dev;
+
+  const memberNrics = members.map((m) => m.nric);
+  if (!memberNrics.includes(pocNric)) memberNrics.push(pocNric);
+
+  const feeReceipts = globalReceipts
+    .filter(
+      (r) =>
+        !r.isDeleted &&
+        r.categoryId === "Fees Payment Screenshot" &&
+        (memberNrics.includes(r.uploaderNric) || memberNrics.includes(r.paidByNric)),
+    )
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
+
+  document.getElementById("adminFeePocNric").value = pocNric;
+
+  const subtitleEl = document.getElementById("adminFeeModalSubtitle");
+  if (subtitleEl) {
+    subtitleEl.textContent = `${pocMember.shortName || pocMember.fullName} • ${size} ${size === 1 ? "individual" : "family members"}`;
+  }
+
+  const expBadge = document.getElementById("adminFeeExpectedBadge");
+  if (expBadge) {
+    expBadge.textContent = `Expected: SGD ${finalExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  }
+
+  const docBadge = document.getElementById("adminFeeDocumentedBadge");
+  if (docBadge) {
+    docBadge.textContent = `Documented: SGD ${totalDoc.toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
+  }
+
+  const membersListEl = document.getElementById("adminFeeMembersList");
+  if (membersListEl) {
+    membersListEl.innerHTML = members
+      .map((m) => {
+        const roleColor =
+          m.role === "TRAINEE"
+            ? "text-green-600 dark:text-green-400"
+            : m.role === "CAREGIVER"
+              ? "text-purple-600 dark:text-purple-400"
+              : "text-orange-600 dark:text-orange-400";
+        return `<span class="inline-block mr-2 mb-1"><span class="${roleColor} font-black text-[11px] mr-1 border border-current px-1 py-0.2 rounded">${m.role.substring(0, 3)}</span><span class="font-bold text-gray-800 dark:text-gray-200">${m.fullName || m.shortName}</span></span>`;
+      })
+      .join("");
+  }
+
+  // Populate Payer dropdown
+  const payerSelect = document.getElementById("adminFeePayerSelect");
+  if (payerSelect) {
+    let opts = "";
+    members.forEach((m) => {
+      opts += `<option value="${m.nric}">${m.fullName || m.shortName} (${m.role})</option>`;
+    });
+    payerSelect.innerHTML = opts;
+    payerSelect.value = pocNric;
+  }
+
+  // Render existing screenshots list
+  const countLabel = document.getElementById("adminFeeCountLabel");
+  if (countLabel) countLabel.textContent = feeReceipts.length;
+
+  const listEl = document.getElementById("adminFeeScreenshotsList");
+  const switchAddBtn = document.getElementById("adminFeeSwitchAddModeBtn");
+
+  if (listEl) {
+    if (feeReceipts.length === 0) {
+      listEl.innerHTML = `<p class="text-xs text-gray-400 italic p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-center">No screenshots uploaded yet. Use the form below to upload payment proof.</p>`;
+      if (switchAddBtn) switchAddBtn.classList.add("hidden-force");
+    } else {
+      if (switchAddBtn) switchAddBtn.classList.remove("hidden-force");
+      listEl.innerHTML = feeReceipts.map((rec, idx) => {
+        const dateStr = rec.ts ? new Date(rec.ts).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+        const amtVal = parseFloat(rec.sgdAmount || rec.amount) || 0;
+        const payerObj = members.find((m) => m.nric === rec.paidByNric || m.nric === rec.uploaderNric);
+        const payerName = payerObj ? (payerObj.shortName || payerObj.fullName) : (rec.uploaderName || rec.paidByNric || "Family Member");
+
+        return `
+          <div class="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2.5 min-w-0 flex-1">
+              <a href="${rec.fileUrl || '#'}" target="_blank" class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 hover:scale-105 transition shadow-xs" title="View Full Screenshot">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              </a>
+              <div class="min-w-0 flex-1 truncate">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-black text-xs text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <span class="text-[10px] text-gray-400 font-medium">${dateStr}</span>
+                </div>
+                <p class="text-xs text-gray-700 dark:text-gray-300 truncate mt-0.5">
+                  <span class="font-bold text-gray-500 dark:text-gray-400">By:</span> ${payerName}
+                  ${rec.remarks ? `<span class="ml-1 text-gray-500">• ${rec.remarks}</span>` : ""}
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <a href="${rec.fileUrl || '#'}" target="_blank" class="px-2 py-1 text-xs font-bold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded border border-purple-200 dark:border-purple-800 transition" title="View Full File">
+                View
+              </a>
+              <button type="button" onclick="switchToOverwriteMode('${rec.id}')" class="px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded border border-blue-200 dark:border-blue-800 transition cursor-pointer" title="Replace this specific screenshot">
+                Overwrite
+              </button>
+              <button type="button" onclick="deleteAdminFeeScreenshot('${rec.id}', '${pocNric}')" class="p-1 text-gray-400 hover:text-red-500 transition cursor-pointer" title="Delete screenshot">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+
+  // Set mode (overwrite or upload new)
+  if (overwriteReceiptId) {
+    switchToOverwriteMode(overwriteReceiptId);
+  } else {
+    switchToUploadNewMode();
+  }
+
+  clearAdminFeeSelectedFile();
+
+  const errEl = document.getElementById("adminFeeModalError");
+  if (errEl) {
+    errEl.textContent = "";
+    errEl.classList.add("hidden-force");
+  }
+
+  modal.classList.remove("hidden-force");
+};
+
+window.closeAdminFeeScreenshotModal = function () {
+  const modal = document.getElementById("adminFeeScreenshotModal");
+  if (modal) modal.classList.add("hidden-force");
+  clearAdminFeeSelectedFile();
+};
+
+window.switchToUploadNewMode = function () {
+  const overwriteInput = document.getElementById("adminFeeOverwriteReceiptId");
+  if (overwriteInput) overwriteInput.value = "";
+
+  const modeIcon = document.getElementById("adminFeeModeIcon");
+  const modeText = document.getElementById("adminFeeModeText");
+  const cancelBtn = document.getElementById("adminFeeCancelOverwriteBtn");
+  const submitBtnText = document.getElementById("adminFeeSubmitBtnText");
+
+  if (modeIcon) modeIcon.textContent = "➕";
+  if (modeText) modeText.textContent = "Upload New Screenshot (Partial / Multiple Payment / Refund)";
+  if (cancelBtn) cancelBtn.classList.add("hidden-force");
+  if (submitBtnText) submitBtnText.textContent = "Upload Screenshot";
+
+  // Calculate remaining balance to suggest amount
+  const pocNric = document.getElementById("adminFeePocNric")?.value;
+  if (pocNric && globalLogistics && globalLogistics.participants) {
+    const members = globalLogistics.participants.filter((p) => p.pocNric === pocNric);
+    const size = members.length;
+    const baseFee = financeConfig.perPersonFee || 0;
+    const dev = financeConfig.feeDeviations?.[pocNric]?.amount || 0;
+    const finalExpected = size * baseFee + dev;
+
+    const memberNrics = members.map((m) => m.nric);
+    if (!memberNrics.includes(pocNric)) memberNrics.push(pocNric);
+
+    const feeReceipts = globalReceipts.filter(
+      (r) =>
+        !r.isDeleted &&
+        r.categoryId === "Fees Payment Screenshot" &&
+        (memberNrics.includes(r.uploaderNric) || memberNrics.includes(r.paidByNric)),
+    );
+    const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
+    const remaining = Math.max(0, finalExpected - totalDoc);
+
+    const amtInput = document.getElementById("adminFeeAmount");
+    if (amtInput) {
+      amtInput.value = remaining > 0 ? remaining.toFixed(2) : (finalExpected > 0 ? finalExpected.toFixed(2) : "0.00");
+    }
+  }
+
+  const remarksInput = document.getElementById("adminFeeRemarks");
+  if (remarksInput) remarksInput.value = "";
+};
+
+window.switchToOverwriteMode = function (receiptId) {
+  const rec = globalReceipts.find((r) => r.id === receiptId);
+  if (!rec) return;
+
+  const overwriteInput = document.getElementById("adminFeeOverwriteReceiptId");
+  if (overwriteInput) overwriteInput.value = receiptId;
+
+  const modeIcon = document.getElementById("adminFeeModeIcon");
+  const modeText = document.getElementById("adminFeeModeText");
+  const cancelBtn = document.getElementById("adminFeeCancelOverwriteBtn");
+  const submitBtnText = document.getElementById("adminFeeSubmitBtnText");
+
+  const dateStr = rec.ts ? new Date(rec.ts).toLocaleDateString("en-GB") : "";
+  const amtVal = (parseFloat(rec.sgdAmount || rec.amount) || 0).toFixed(2);
+
+  if (modeIcon) modeIcon.textContent = "🔄";
+  if (modeText) modeText.textContent = `Overwriting Screenshot ($${amtVal} on ${dateStr})`;
+  if (cancelBtn) cancelBtn.classList.remove("hidden-force");
+  if (submitBtnText) submitBtnText.textContent = "Save Replacement Screenshot";
+
+  const amtInput = document.getElementById("adminFeeAmount");
+  if (amtInput) amtInput.value = amtVal;
+
+  const remarksInput = document.getElementById("adminFeeRemarks");
+  if (remarksInput) remarksInput.value = rec.remarks || "";
+
+  const payerSelect = document.getElementById("adminFeePayerSelect");
+  if (payerSelect && rec.paidByNric) payerSelect.value = rec.paidByNric;
+
+  // Smooth scroll form into view
+  const formEl = document.getElementById("adminFeeScreenshotForm");
+  if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+
+window.handleAdminFeeFileSelect = function (input) {
+  if (!input || !input.files || !input.files[0]) return;
+  const file = input.files[0];
+
+  const promptEl = document.getElementById("adminFeeUploadPrompt");
+  const previewEl = document.getElementById("adminFeeFilePreview");
+  const imgPreview = document.getElementById("adminFeeImgPreview");
+  const pdfPreview = document.getElementById("adminFeePdfPreview");
+  const nameEl = document.getElementById("adminFeeSelectedName");
+  const sizeEl = document.getElementById("adminFeeSelectedSize");
+  const errEl = document.getElementById("adminFeeModalError");
+
+  if (errEl) errEl.classList.add("hidden-force");
+
+  if (file.size > 8 * 1024 * 1024) {
+    if (errEl) {
+      errEl.textContent = "File size exceeds 8MB limit. Please select a smaller file.";
+      errEl.classList.remove("hidden-force");
+    }
+    input.value = "";
+    return;
+  }
+
+  if (promptEl) promptEl.classList.add("hidden-force");
+  if (previewEl) previewEl.classList.remove("hidden-force");
+  if (nameEl) nameEl.textContent = file.name;
+  if (sizeEl) sizeEl.textContent = `(${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+
+  if (file.type.startsWith("image/")) {
+    if (pdfPreview) pdfPreview.classList.add("hidden-force");
+    if (imgPreview) {
+      imgPreview.src = URL.createObjectURL(file);
+      imgPreview.classList.remove("hidden-force");
+    }
+  } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+    if (imgPreview) imgPreview.classList.add("hidden-force");
+    if (pdfPreview) {
+      const pdfName = document.getElementById("adminFeePdfName");
+      if (pdfName) pdfName.textContent = file.name;
+      pdfPreview.classList.remove("hidden-force");
+    }
+  } else {
+    if (imgPreview) imgPreview.classList.add("hidden-force");
+    if (pdfPreview) pdfPreview.classList.add("hidden-force");
+  }
+};
+
+window.clearAdminFeeSelectedFile = function () {
+  const fileInput = document.getElementById("adminFeeFileInput");
+  if (fileInput) fileInput.value = "";
+  const promptEl = document.getElementById("adminFeeUploadPrompt");
+  const previewEl = document.getElementById("adminFeeFilePreview");
+  const imgPreview = document.getElementById("adminFeeImgPreview");
+  const pdfPreview = document.getElementById("adminFeePdfPreview");
+
+  if (promptEl) promptEl.classList.remove("hidden-force");
+  if (previewEl) previewEl.classList.add("hidden-force");
+  if (imgPreview) {
+    imgPreview.src = "";
+    imgPreview.classList.add("hidden-force");
+  }
+  if (pdfPreview) pdfPreview.classList.add("hidden-force");
+};
+
+window.submitAdminFeeScreenshot = async function (e) {
+  e.preventDefault();
+
+  const pocNric = document.getElementById("adminFeePocNric").value.trim();
+  const overwriteReceiptId = document.getElementById("adminFeeOverwriteReceiptId").value.trim();
+  const fileInput = document.getElementById("adminFeeFileInput");
+  const errEl = document.getElementById("adminFeeModalError");
+  const submitBtn = document.getElementById("adminFeeSubmitBtn");
+
+  if (errEl) errEl.classList.add("hidden-force");
+
+  if (!fileInput || !fileInput.files || !fileInput.files[0]) {
+    if (errEl) {
+      errEl.textContent = "Please select a screenshot or receipt file to upload.";
+      errEl.classList.remove("hidden-force");
+    }
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const members = globalLogistics?.participants?.filter((p) => p.pocNric === pocNric) || [];
+  const payerNric = document.getElementById("adminFeePayerSelect").value || pocNric;
+  const payerMember = members.find((m) => m.nric === payerNric) || members[0] || { nric: payerNric, fullName: payerNric };
+  const amount = parseFloat(document.getElementById("adminFeeAmount").value) || 0;
+  const remarks = document.getElementById("adminFeeRemarks").value.trim();
+  const shouldMarkPaid = document.getElementById("adminFeeMarkPaidCheckbox").checked;
+
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `
+      <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span>Uploading...</span>
+    `;
+  }
+
+  try {
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const res = reader.result;
+        const commaIdx = res.indexOf(",");
+        resolve(commaIdx !== -1 ? res.substring(commaIdx + 1) : res);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // If overwriting a specific receipt, mark old receipt deleted locally
+    if (overwriteReceiptId) {
+      const oldRec = globalReceipts.find((r) => r.id === overwriteReceiptId);
+      if (oldRec) {
+        oldRec.isDeleted = true;
+        oldRec.ts = Date.now();
+        locallyDeletedReceiptIds.add(overwriteReceiptId);
+        pendingReceiptUpdates.set(overwriteReceiptId, oldRec);
+      }
+    }
+
+    const memberNrics = members.map((m) => m.nric);
+    if (!memberNrics.includes(pocNric)) memberNrics.push(pocNric);
+
+    const _hash = pocNric.split("").reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+    const orderNo = pocNric.substring(0, 4).toUpperCase() + "-" + Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
+    const shortName = (payerMember.shortName || payerMember.fullName || payerNric).replace(/[^a-zA-Z0-9]/g, "_");
+    const ext = file.name.split(".").pop() || "png";
+    const finalFileName = `${shortName}_${orderNo}_${Date.now()}.${ext}`;
+
+    const payload = {
+      uploaderNric: payerNric,
+      uploaderName: payerMember.fullName || payerMember.shortName || "",
+      paidByNric: payerNric,
+      categoryId: "Fees Payment Screenshot",
+      currency: "SGD",
+      amount: amount,
+      rate: 1,
+      sgdAmount: amount,
+      familyNrics: memberNrics,
+      remarks: remarks || "Payment to Admin",
+      fileName: finalFileName,
+      mimeType: file.type || "image/jpeg",
+      fileData: base64Data,
+      overwriteReceiptId: overwriteReceiptId || undefined,
+    };
+
+    const res = await apiCall("uploadReceipt", { payload: payload });
+
+    if (res && Array.isArray(res.receipts)) {
+      globalReceipts = res.receipts.map((r) => {
+        if (locallyDeletedReceiptIds.has(r.id)) {
+          return { ...r, isDeleted: true };
+        }
+        return r;
+      });
+    }
+
+    if (shouldMarkPaid) {
+      if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+      financeConfig.feesReceived[pocNric] = true;
+      queueFinanceUpdate();
+    }
+
+    closeAdminFeeScreenshotModal();
+    renderFeeTracker();
+    renderReceiptsBrowser();
+    renderFinalizedFinances();
+
+    if (typeof showToast === "function") {
+      showToast(overwriteReceiptId ? "Screenshot overwritten successfully!" : "Screenshot uploaded successfully!");
+    }
+  } catch (err) {
+    console.error("Error uploading fee screenshot:", err);
+    if (errEl) {
+      errEl.textContent = "Upload failed: " + (err.message || err);
+      errEl.classList.remove("hidden-force");
+    }
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      const submitText = document.getElementById("adminFeeSubmitBtnText");
+      submitBtn.innerHTML = `<span id="adminFeeSubmitBtnText">${submitText ? submitText.textContent : "Upload Screenshot"}</span>`;
+    }
+  }
+};
+
+window.deleteAdminFeeScreenshot = async function (receiptId, pocNric) {
+  if (!confirm("Are you sure you want to remove this payment screenshot?")) return;
+
+  const rec = globalReceipts.find((r) => r.id === receiptId);
+  if (!rec) return;
+
+  rec.isDeleted = true;
+  rec.ts = Date.now();
+  locallyDeletedReceiptIds.add(receiptId);
+  pendingReceiptUpdates.set(receiptId, rec);
+
+  renderFeeTracker();
+  renderReceiptsBrowser();
+  renderFinalizedFinances();
+
+  // If the modal is currently open, refresh it
+  const modal = document.getElementById("adminFeeScreenshotModal");
+  if (modal && !modal.classList.contains("hidden-force")) {
+    openAdminFeeScreenshotModal(pocNric);
+  }
+
+  await executeReceiptSync();
+
+  if (typeof showToast === "function") {
+    showToast("Payment screenshot removed.");
+  }
 };
 
 window.renderFinalizedFinances = renderFinalizedFinances;

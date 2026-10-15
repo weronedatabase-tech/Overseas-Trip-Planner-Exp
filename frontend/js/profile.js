@@ -828,23 +828,62 @@ function generatePaymentPortalHtml() {
 `;
 }
 
-function generateReceiptFormHtml() {
-  return `<form id="uploadReceiptForm" onsubmit="submitReceipt(event)" class="flex flex-col gap-4 flex-1">
-   <div id="recError" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-2 rounded-lg text-xs mb-2 font-bold hidden-force"></div>
-   <div id="recSuccess" class="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 p-2 rounded-lg text-xs mb-2 font-bold hidden-force"></div>
-   
-   <div>
-       <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Screenshot File (Max 4MB)</label>
-       <input type="file" id="recFile" required accept="image/*,.pdf" class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-gray-100 file:text-gray-700 dark:file:bg-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-600">
-       <p class="text-[10px] text-gray-400 mt-1 italic">Note: Re-uploading will automatically overwrite any previously submitted screenshot.</p>
+function generateReceiptFormHtml(suffix = "") {
+  let targetNric = loadedFamily[0]?.pocNric || currentUser.nric;
+  const size = loadedFamily.length;
+  const baseFee = finConfig?.perPersonFee || 0;
+  const dev = finConfig?.feeDeviations?.[targetNric]?.amount || 0;
+  const finalExpected = size * baseFee + dev;
+
+  const feeReceipts = (myReceipts || []).filter(
+    (r) => !r.isDeleted && r.categoryId === "Fees Payment Screenshot",
+  );
+  const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
+  const suggestedAmt = Math.max(0, finalExpected - totalDoc);
+  const defaultAmt = suggestedAmt > 0 ? suggestedAmt.toFixed(2) : (finalExpected > 0 ? finalExpected.toFixed(2) : "0.00");
+
+  return `<form id="uploadReceiptForm${suffix}" onsubmit="submitReceipt(event, '${suffix}')" class="flex flex-col gap-3 flex-1">
+   <input type="hidden" id="recOverwriteId${suffix}" value="" />
+   <div id="recError${suffix}" class="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 p-2 rounded-lg text-xs font-bold hidden-force"></div>
+   <div id="recSuccess${suffix}" class="bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400 p-2 rounded-lg text-xs font-bold hidden-force"></div>
+
+   <!-- Mode indicator banner when replacing an existing screenshot -->
+   <div id="recOverwriteBanner${suffix}" class="p-2.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center justify-between hidden-force">
+     <div class="flex items-center gap-1.5 truncate">
+       <span>🔄</span>
+       <span id="recOverwriteText${suffix}" class="truncate">Overwriting Selected Screenshot</span>
+     </div>
+     <button type="button" onclick="cancelProfileReceiptOverwrite('${suffix}')" class="text-[11px] underline font-bold hover:text-blue-900 dark:hover:text-blue-100 shrink-0 ml-1 cursor-pointer">
+       Cancel
+     </button>
    </div>
+
+   <!-- Amount input -->
    <div>
-       <label class="block text-xs font-bold mb-1 text-gray-500 dark:text-gray-400 uppercase tracking-wider">Remarks (Optional)</label>
-       <input type="text" id="recRemarks" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary shadow-md" placeholder="Any details...">
+       <label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-300 uppercase tracking-wider">Amount Transferred (SGD) <span class="text-red-500">*</span></label>
+       <div class="relative">
+         <span class="absolute left-3 top-2.5 text-xs font-bold text-gray-400">SGD $</span>
+         <input type="number" step="0.01" id="recAmount${suffix}" required value="${defaultAmt}" placeholder="0.00" class="w-full pl-14 p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-bold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 shadow-sm">
+       </div>
+       <p class="text-[10px] text-gray-400 mt-0.5">Enter the exact amount for this partial payment, full payment, or refund</p>
    </div>
-   <div class="mt-auto pt-3">
-       <button type="submit" class="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-lg shadow-md hover:bg-purple-700 transition flex justify-center items-center focus:outline-none">
-          <span class="btn-text">Upload Confirmation</span><div class="btn-spinner spinner-white hidden-force ml-2 !w-3 !h-3 border-2"></div>
+
+   <!-- File input -->
+   <div>
+       <label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-300 uppercase tracking-wider">Screenshot File (Max 8MB) <span class="text-red-500">*</span></label>
+       <input type="file" id="recFile${suffix}" required accept="image/*,.pdf" class="w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 dark:file:bg-purple-900/30 dark:file:text-purple-300 hover:file:bg-purple-100 cursor-pointer">
+       <p class="text-[10px] text-gray-400 mt-0.5">Supports JPG, PNG, WEBP, or PDF</p>
+   </div>
+
+   <!-- Remarks input -->
+   <div>
+       <label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-300 uppercase tracking-wider">Remarks / Purpose (Optional)</label>
+       <input type="text" id="recRemarks${suffix}" class="w-full p-2.5 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-purple-500 shadow-sm" placeholder="e.g. Deposit $50, Balance $100, Refund $20...">
+   </div>
+
+   <div class="mt-auto pt-2">
+       <button type="submit" id="recSubmitBtn${suffix}" class="w-full bg-purple-600 text-white text-xs font-bold py-2.5 rounded-lg shadow-md hover:bg-purple-700 transition flex justify-center items-center focus:outline-none cursor-pointer">
+          <span class="btn-text" id="recSubmitBtnText${suffix}">Upload Screenshot</span><div class="btn-spinner spinner-white hidden-force ml-2 !w-3 !h-3 border-2"></div>
        </button>
    </div>
 </form>`;
@@ -855,56 +894,49 @@ async function submitReceipt(e, suffix = "") {
   const btn = e.target.querySelector('button[type="submit"]');
   const err = document.getElementById("recError" + suffix);
   const succ = document.getElementById("recSuccess" + suffix);
-  err.classList.add("hidden-force");
-  succ.classList.add("hidden-force");
+  if (err) err.classList.add("hidden-force");
+  if (succ) succ.classList.add("hidden-force");
 
-  const remarks = document.getElementById("recRemarks" + suffix).value.trim();
+  const remarks = (document.getElementById("recRemarks" + suffix)?.value || "").trim();
   const fileInput = document.getElementById("recFile" + suffix);
+  const overwriteReceiptId = document.getElementById("recOverwriteId" + suffix)?.value?.trim() || undefined;
 
-  if (!fileInput.files.length) {
-    err.textContent = "Please select a file.";
-    return err.classList.remove("hidden-force");
+  if (!fileInput || !fileInput.files.length) {
+    if (err) {
+      err.textContent = "Please select a file to upload.";
+      err.classList.remove("hidden-force");
+    }
+    return;
   }
   const file = fileInput.files[0];
-  if (file.size > 4 * 1024 * 1024) {
-    err.textContent = "File exceeds 4MB limit.";
-    return err.classList.remove("hidden-force");
+  if (file.size > 8 * 1024 * 1024) {
+    if (err) {
+      err.textContent = "File exceeds 8MB limit. Please select a smaller file.";
+      err.classList.remove("hidden-force");
+    }
+    return;
+  }
+
+  const amtInput = document.getElementById("recAmount" + suffix);
+  const amountVal = amtInput ? parseFloat(amtInput.value) : 0;
+  if (isNaN(amountVal) || amountVal < 0) {
+    if (err) {
+      err.textContent = "Please enter a valid transfer amount.";
+      err.classList.remove("hidden-force");
+    }
+    return;
   }
 
   setBtnLoading(btn, true);
   try {
     const base64 = await toBase64(file);
 
-    let targetNric = loadedFamily[0].pocNric;
-    const size = loadedFamily.length;
-    const baseFee = finConfig.perPersonFee || 0;
-    const dev = finConfig.feeDeviations?.[targetNric]?.amount || 0;
-    const finalExpected = size * baseFee + dev;
-
-    const recNricInput = document.getElementById("recNric");
-    const recNameInput = document.getElementById("recName");
-    const recCatInput = document.getElementById("recCategory");
-
-    const finalUploaderNric = recNricInput
-      ? recNricInput.value.trim()
-      : currentUser.nric;
-    const finalUploaderName = recNameInput ? recNameInput.value.trim() : "";
-
-    const familyMember = loadedFamily.find((m) => m.nric === finalUploaderNric);
-    let shortName = finalUploaderName;
-    if (!shortName) {
-      shortName =
-        familyMember?.shortName ||
-        familyMember?.fullName ||
-        currentUser.name ||
-        finalUploaderNric;
-    }
+    let targetNric = loadedFamily[0]?.pocNric || currentUser.nric;
+    const finalUploaderNric = currentUser.nric;
+    const finalUploaderName = currentUser.fullName || currentUser.shortName || currentUser.name || "";
 
     const ext = file.name.split(".").pop() || "png";
-    const _targetForHash =
-      typeof loadedFamily !== "undefined" && loadedFamily.length > 0
-        ? loadedFamily[0].pocNric
-        : finalUploaderNric;
+    const _targetForHash = targetNric;
     const _upHash = _targetForHash
       .split("")
       .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
@@ -913,35 +945,28 @@ async function submitReceipt(e, suffix = "") {
       _targetForHash.substring(0, 4).toUpperCase() +
         "-" +
         Math.abs(_upHash).toString(10).slice(-4).padStart(4, "0");
-    const finalFileName = `${shortName}_${orderRefToUse}.${ext}`;
+    const safeShort = (currentUser.shortName || currentUser.fullName || finalUploaderNric).replace(/[^a-zA-Z0-9]/g, "_");
+    const finalFileName = `${safeShort}_${orderRefToUse}_${Date.now()}.${ext}`;
 
     const payload = {
       uploaderNric: finalUploaderNric,
       uploaderName: finalUploaderName,
-      categoryId: recCatInput ? recCatInput.value : "Fees Payment Screenshot",
-      currency: document.getElementById("recCurrency")
-        ? document.getElementById("recCurrency").value
-        : "SGD",
-      amount: document.getElementById("recAmount")
-        ? parseFloat(document.getElementById("recAmount").value)
-        : finalExpected,
-      rate: document.getElementById("recRate")
-        ? parseFloat(document.getElementById("recRate").value)
-        : 1,
-      sgdAmount: document.getElementById("recSgd")
-        ? parseFloat(document.getElementById("recSgd").value)
-        : finalExpected,
-      // categoryId is already set above
-      paidByNric: recNricInput ? recNricInput.value.trim() : currentUser.nric,
+      categoryId: "Fees Payment Screenshot",
+      currency: "SGD",
+      amount: amountVal,
+      rate: 1,
+      sgdAmount: amountVal,
+      paidByNric: currentUser.nric,
       familyNrics: loadedFamily.map((f) => f.nric),
       remarks: remarks,
       fileName: finalFileName,
-      mimeType: file.type,
+      mimeType: file.type || "image/jpeg",
       fileData: base64.split(",")[1],
+      overwriteReceiptId: overwriteReceiptId,
     };
 
     const res = await apiCall("uploadReceipt", { payload: payload });
-    if (res.receipts) {
+    if (res && res.receipts) {
       const familyNrics = loadedFamily.map((f) => f.nric);
       if (!familyNrics.includes(currentUser.nric))
         familyNrics.push(currentUser.nric);
@@ -949,19 +974,88 @@ async function submitReceipt(e, suffix = "") {
         (r) =>
           (familyNrics.includes(r.uploaderNric) ||
             familyNrics.includes(r.paidByNric)) &&
-          !r.isDeleted,
+          !r.isDeleted &&
+          r.id !== overwriteReceiptId,
       );
       renderMyReceiptsContainer();
     }
-    showToast("Receipt uploaded successfully!");
+
+    showToast(overwriteReceiptId ? "Screenshot overwritten successfully!" : "Screenshot uploaded successfully!");
     const frm = document.getElementById("uploadReceiptForm" + suffix);
     if (frm) frm.reset();
+    cancelProfileReceiptOverwrite(suffix);
   } catch (e) {
+    if (err) {
+      err.textContent = e.message || "Upload failed.";
+      err.classList.remove("hidden-force");
+    }
     showToast(e.message, true);
   } finally {
     setBtnLoading(btn, false);
   }
 }
+
+window.prepareProfileReceiptOverwrite = function (receiptId, suffix = "") {
+  const rec = (myReceipts || []).find((r) => r.id === receiptId);
+  if (!rec) return;
+
+  const overwriteIdInput = document.getElementById("recOverwriteId" + suffix);
+  const banner = document.getElementById("recOverwriteBanner" + suffix);
+  const bannerText = document.getElementById("recOverwriteText" + suffix);
+  const submitText = document.getElementById("recSubmitBtnText" + suffix);
+  const amtInput = document.getElementById("recAmount" + suffix);
+  const remarksInput = document.getElementById("recRemarks" + suffix);
+
+  if (overwriteIdInput) overwriteIdInput.value = receiptId;
+  if (banner) banner.classList.remove("hidden-force");
+  const amtVal = parseFloat(rec.sgdAmount || rec.amount || 0).toFixed(2);
+  const dateStr = rec.ts ? new Date(rec.ts).toLocaleDateString("en-GB") : "";
+  if (bannerText) bannerText.textContent = `Overwriting: $${amtVal} on ${dateStr}`;
+  if (submitText) submitText.textContent = "Save Replacement Screenshot";
+  if (amtInput) amtInput.value = amtVal;
+  if (remarksInput) remarksInput.value = rec.remarks || "";
+
+  const formEl = document.getElementById("uploadReceiptForm" + suffix);
+  if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+
+window.cancelProfileReceiptOverwrite = function (suffix = "") {
+  const overwriteIdInput = document.getElementById("recOverwriteId" + suffix);
+  const banner = document.getElementById("recOverwriteBanner" + suffix);
+  const submitText = document.getElementById("recSubmitBtnText" + suffix);
+
+  if (overwriteIdInput) overwriteIdInput.value = "";
+  if (banner) banner.classList.add("hidden-force");
+  if (submitText) submitText.textContent = "Upload Screenshot";
+};
+
+window.deleteProfileReceipt = async function (receiptId) {
+  if (!confirm("Are you sure you want to remove this payment screenshot?")) return;
+
+  try {
+    const res = await apiCall("syncReceipts", {
+      updates: [{ id: receiptId, isDeleted: true, ts: Date.now() }],
+    });
+    if (res && res.receipts) {
+      const familyNrics = loadedFamily.map((f) => f.nric);
+      if (!familyNrics.includes(currentUser.nric))
+        familyNrics.push(currentUser.nric);
+      myReceipts = res.receipts.filter(
+        (r) =>
+          (familyNrics.includes(r.uploaderNric) ||
+            familyNrics.includes(r.paidByNric)) &&
+          !r.isDeleted &&
+          r.id !== receiptId,
+      );
+    } else {
+      myReceipts = (myReceipts || []).filter((r) => r.id !== receiptId);
+    }
+    renderMyReceiptsContainer();
+    showToast("Screenshot removed.");
+  } catch (e) {
+    showToast("Failed to remove screenshot: " + (e.message || e), true);
+  }
+};
 
 function renderMyReceiptsContainer() {
   const cont = document.getElementById("myReceiptsContainer");
@@ -969,49 +1063,89 @@ function renderMyReceiptsContainer() {
 }
 
 function generateMyReceiptsHtml() {
-  const feeReceipts = myReceipts
+  const feeReceipts = (myReceipts || [])
     .filter((r) => !r.isDeleted && r.categoryId === "Fees Payment Screenshot")
-    .sort((a, b) => b.ts - a.ts);
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  let targetNric = loadedFamily[0]?.pocNric || currentUser.nric;
+  const size = loadedFamily.length;
+  const baseFee = finConfig?.perPersonFee || 0;
+  const dev = finConfig?.feeDeviations?.[targetNric]?.amount || 0;
+  const finalExpected = size * baseFee + dev;
+  const totalDoc = feeReceipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount || r.amount) || 0), 0);
 
   if (feeReceipts.length === 0) {
-    return `<div class="p-6 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">Trip Fees Payment Confirmation Screenshot NOT Uploaded</div>`;
+    return `<div class="p-6 text-center text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50 dark:bg-gray-800/40 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+      <svg class="w-10 h-10 mx-auto text-gray-300 dark:text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
+      No payment confirmation screenshots uploaded yet.
+    </div>`;
   }
 
-  const feeReceipt = feeReceipts[0];
-  const timeStr = new Date(feeReceipt.ts).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const dateStr =
-    (typeof formatDDMmmYYYY === "function"
-      ? formatDDMmmYYYY(feeReceipt.ts)
-      : "") +
-    " " +
-    timeStr;
+  const receiptsListHtml = feeReceipts.map((rec, idx) => {
+    const timeStr = rec.ts ? new Date(rec.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+    const dateStr = rec.ts ? ((typeof formatDDMmmYYYY === "function" ? formatDDMmmYYYY(rec.ts) : "") + " " + timeStr) : "";
+    const amtVal = parseFloat(rec.sgdAmount || rec.amount) || 0;
+
+    return `
+      <div class="bg-gray-50 dark:bg-gray-800/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="font-black text-sm text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              <span class="text-[11px] font-semibold text-gray-400 bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600">${dateStr}</span>
+            </div>
+            ${rec.remarks ? `<p class="text-xs text-gray-600 dark:text-gray-300 mt-1 italic">"${rec.remarks}"</p>` : ""}
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="prepareProfileReceiptOverwrite('${rec.id}')" class="px-2.5 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 rounded-lg border border-blue-200 dark:border-blue-800 transition cursor-pointer flex items-center gap-1" title="Replace this specific screenshot">
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              Overwrite
+            </button>
+            <button type="button" onclick="deleteProfileReceipt('${rec.id}')" class="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition cursor-pointer" title="Delete this screenshot">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        </div>
+
+        ${rec.fileUrl ? `
+          <div class="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+            <a href="${rec.fileUrl}" target="_blank" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1.5 truncate">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+              <span class="truncate">View Uploaded Document / Screenshot</span>
+            </a>
+            <a href="${rec.fileUrl}" target="_blank" class="text-[11px] font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white flex items-center gap-0.5 shrink-0 ml-2">
+              <span>Open</span>
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            </a>
+          </div>
+        ` : `<span class="text-xs text-red-500">File link unavailable</span>`}
+      </div>
+    `;
+  }).join("");
 
   return `
-   <div class="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-gray-100 dark:border-gray-800 text-center">
-       <svg class="w-12 h-12 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-       </svg>
-       <h4 class="text-lg font-black text-gray-900 dark:text-white mb-1">Screenshot Uploaded</h4>
-       <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Uploaded on ${dateStr}</p>
-       ${
-         feeReceipt.fileUrl
-           ? `<div class="mt-4 w-full max-w-lg mx-auto aspect-[3/4] relative overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md bg-gray-100 dark:bg-gray-900">
-               <iframe src="${feeReceipt.fileUrl.replace(/\/view.*/, "/preview")}" class="absolute top-0 left-0 w-full h-full border-0"></iframe>
-           </div>`
-           : `<span class="text-xs font-bold text-red-500">Link unavailable</span>`
-       }
-       <button onclick="document.getElementById('reuploadFormContainer').classList.toggle('hidden-force')" class="mt-6 text-xs text-primary font-bold hover:underline flex items-center gap-1">
-           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-           Incorrect file? Re-upload screenshot
-       </button>
-       <div id="reuploadFormContainer" class="hidden-force mt-4 w-full max-w-lg mx-auto bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 text-left">
-           ${generateReceiptFormHtml("_re")}
-       </div>
-   </div>
-`;
+    <div class="space-y-3">
+      <!-- Status Summary Header -->
+      <div class="p-3 bg-purple-50/70 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800/60 flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <span class="text-xs font-black uppercase tracking-wider text-purple-900 dark:text-purple-200">
+            ${feeReceipts.length} ${feeReceipts.length === 1 ? "Screenshot Documented" : "Screenshots Documented"}
+          </span>
+          <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">Partial payments, multiple transfers, and refund records</p>
+        </div>
+        <div class="text-right">
+          <span class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Total Documented</span>
+          <span class="text-sm font-black text-purple-700 dark:text-purple-300 font-mono">$${totalDoc.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+        </div>
+      </div>
+
+      <div class="space-y-2.5">
+        ${receiptsListHtml}
+      </div>
+    </div>
+  `;
 }
 
 function enableEditMode(i) {
