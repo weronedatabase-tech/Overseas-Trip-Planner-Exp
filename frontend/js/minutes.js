@@ -227,45 +227,46 @@ async function executeMinutesSync() {
   }
 }
 
+window.pollMinutesNow = async function () {
+  const tab = document.getElementById("tab-minutes");
+  if (
+    !tab ||
+    tab.classList.contains("hidden-force") ||
+    isMinutesSyncing ||
+    pendingMinutesUpdates.size > 0
+  )
+    return;
+
+  const fetchStartTime = Date.now();
+
+  try {
+    const res = await apiCall("fetchMinutes");
+    if (lastLocalChange > fetchStartTime) return;
+
+    if (res.minutes) {
+      let hasRemoteChanges = false;
+      res.minutes.forEach((sNote) => {
+        const lNote = minutesMap.get(sNote.id);
+        if (
+          !lNote ||
+          (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))
+        ) {
+          minutesMap.set(sNote.id, sNote);
+          updateNoteDOM(sNote);
+          hasRemoteChanges = true;
+        }
+      });
+
+      if (hasRemoteChanges && pendingMinutesUpdates.size === 0) {
+        updateMinutesSyncUI("saved");
+      }
+    }
+  } catch (e) {}
+};
+
 function startMinutesPolling() {
   if (minutesPollInterval) clearInterval(minutesPollInterval);
-
-  minutesPollInterval = setInterval(async () => {
-    const tab = document.getElementById("tab-minutes");
-    if (
-      !tab ||
-      tab.classList.contains("hidden-force") ||
-      isMinutesSyncing ||
-      pendingMinutesUpdates.size > 0
-    )
-      return;
-
-    const fetchStartTime = Date.now();
-
-    try {
-      const res = await apiCall("fetchMinutes");
-      if (lastLocalChange > fetchStartTime) return;
-
-      if (res.minutes) {
-        let hasRemoteChanges = false;
-        res.minutes.forEach((sNote) => {
-          const lNote = minutesMap.get(sNote.id);
-          if (
-            !lNote ||
-            (sNote.ts > lNote.ts && !pendingMinutesUpdates.has(sNote.id))
-          ) {
-            minutesMap.set(sNote.id, sNote);
-            updateNoteDOM(sNote);
-            hasRemoteChanges = true;
-          }
-        });
-
-        if (hasRemoteChanges && pendingMinutesUpdates.size === 0) {
-          updateMinutesSyncUI("saved");
-        }
-      }
-    } catch (e) {}
-  }, 8000);
+  minutesPollInterval = setInterval(window.pollMinutesNow, 8000);
 }
 
 function renderAllMinutes() {

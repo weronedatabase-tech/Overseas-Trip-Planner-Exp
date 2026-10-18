@@ -1,4 +1,6 @@
 import express from 'express';
+import http from 'http';
+import { WebSocketServer } from 'ws';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -6,6 +8,8 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 const port = 3000;
 
 const DATA_DIR = path.join(__dirname, 'data');
@@ -15,6 +19,59 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 const OVERRIDES_FILE = path.join(DATA_DIR, 'receipts_overrides.json');
 const TRIP_FILES_FILE = path.join(DATA_DIR, 'trip_files.json');
+
+// WebSocket connection handling & real-time broadcast
+wss.on('connection', (ws) => {
+  ws.isAlive = true;
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+
+  ws.on('message', (raw) => {
+    try {
+      const msg = JSON.parse(raw.toString());
+      if (msg.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', ts: Date.now() }));
+      } else if (msg.type === 'sync:invalidate' && msg.action) {
+        const domain = invalidateCacheForAction(msg.action);
+        broadcastSyncEvent({
+          type: 'sync:update',
+          action: msg.action,
+          domain: msg.domain || domain,
+          clientId: msg.clientId || null,
+          ts: Date.now()
+        }, ws);
+      }
+    } catch (e) {
+      // Ignore malformed messages
+    }
+  });
+});
+
+const wsHeartbeatInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    try {
+      ws.ping();
+    } catch (e) {}
+  });
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(wsHeartbeatInterval);
+});
+
+function broadcastSyncEvent(eventObj, excludeWs = null) {
+  const payload = JSON.stringify(eventObj);
+  wss.clients.forEach((client) => {
+    if (client !== excludeWs && client.readyState === 1) {
+      try {
+        client.send(payload);
+      } catch (e) {}
+    }
+  });
+}
 
 function loadTripFiles() {
   try {
@@ -105,20 +162,76 @@ const cache = new Map();
 // Active requests cache to prevent duplicate concurrent network calls
 const activeRequests = new Map();
 
-function invalidateReceiptsCache() {
+function invalidateCacheByPrefixes(prefixes) {
   for (const key of cache.keys()) {
-    if (key.startsWith('fetchReceipts')) {
+    if (prefixes.some(prefix => key.startsWith(prefix))) {
       cache.delete(key);
     }
   }
 }
 
+function invalidateReceiptsCache() {
+  invalidateCacheByPrefixes(['fetchReceipts', 'fetchFinance', 'getProfile']);
+}
+
 function invalidateSettingsCache() {
-  for (const key of cache.keys()) {
-    if (key.startsWith('getSettings')) {
-      cache.delete(key);
-    }
+  invalidateCacheByPrefixes(['getSettings']);
+}
+
+const MUTATION_DOMAIN_MAP = {
+  syncReceipts: { domain: 'receipts', prefixes: ['fetchReceipts', 'fetchFinance', 'getProfile'] },
+  uploadReceipt: { domain: 'receipts', prefixes: ['fetchReceipts', 'fetchFinance', 'getProfile'] },
+  saveFinance: { domain: 'finance', prefixes: ['fetchFinance', 'fetchReceipts', 'getProfile'] },
+  syncPairingUpdates: { domain: 'pairings', prefixes: ['fetchPairingsOnly', 'fetchLogistics', 'getProfile'] },
+  syncRoomUpdates: { domain: 'rooms', prefixes: ['fetchRoomsOnly', 'fetchLogistics', 'getProfile'] },
+  syncAssignments: { domain: 'logistics', prefixes: ['fetchLogistics', 'fetchAdminRoster', 'getProfile', 'fetchAttendanceData'] },
+  syncAttendanceUpdate: { domain: 'attendance', prefixes: ['fetchAttendanceData', 'fetchLogistics'] },
+  syncMinutes: { domain: 'minutes', prefixes: ['fetchMinutes'] },
+  updateProfile: { domain: 'roster', prefixes: ['fetchAdminRoster', 'fetchLogistics', 'getProfile', 'getPublicTrainees', 'fetchFinance'] },
+  adminUpdateParticipant: { domain: 'roster', prefixes: ['fetchAdminRoster', 'fetchLogistics', 'getProfile', 'getPublicTrainees', 'fetchFinance'] },
+  submitRegistration: { domain: 'roster', prefixes: ['fetchAdminRoster', 'fetchLogistics', 'getProfile', 'getPublicTrainees', 'fetchFinance'] },
+  deleteParticipant: { domain: 'roster', prefixes: ['fetchAdminRoster', 'fetchLogistics', 'getProfile', 'getPublicTrainees', 'fetchFinance'] },
+  setTripFile: { domain: 'settings', prefixes: ['getSettings'] },
+  saveTripSettings: { domain: 'settings', prefixes: ['getSettings'] },
+  toggleRegistration: { domain: 'settings', prefixes: ['getSettings'] },
+  toggleEdits: { domain: 'settings', prefixes: ['getSettings'] },
+  addProjectGroup: { domain: 'settings', prefixes: ['getSettings', 'fetchLogistics', 'fetchAdminRoster'] },
+  removeProjectGroup: { domain: 'settings', prefixes: ['getSettings', 'fetchLogistics', 'fetchAdminRoster'] },
+  modifyJunctures: { domain: 'settings', prefixes: ['getSettings', 'fetchAttendanceData'] },
+  modifyICJunctures: { domain: 'settings', prefixes: ['getSettings', 'fetchAttendanceData'] },
+  saveSortingRules: { domain: 'settings', prefixes: ['getSettings', 'fetchLogistics', 'fetchAdminRoster'] },
+  saveCustomViewsOrder: { domain: 'settings', prefixes: ['getSettings'] },
+  addCommittee: { domain: 'settings', prefixes: ['getSettings', 'fetchAdminRoster'] },
+  removeCommittee: { domain: 'settings', prefixes: ['getSettings', 'fetchAdminRoster'] },
+  addHelpline: { domain: 'settings', prefixes: ['getSettings'] },
+  removeHelpline: { domain: 'settings', prefixes: ['getSettings'] },
+  archiveAndReset: { domain: 'settings', prefixes: ['ALL'] },
+  clearCache: { domain: 'settings', prefixes: ['ALL'] },
+  uploadDriveFile: { domain: 'files', prefixes: ['getSettings'] },
+  createDriveFolder: { domain: 'files', prefixes: ['getSettings'] },
+  createGoogleDoc: { domain: 'files', prefixes: ['getSettings'] },
+  renameDriveItem: { domain: 'files', prefixes: ['getSettings'] },
+  deleteDriveItem: { domain: 'files', prefixes: ['getSettings'] },
+  bulkDriveOperation: { domain: 'files', prefixes: ['getSettings'] },
+  syncManualPairingUpdates: { domain: 'outing', prefixes: ['fetchPairingsOnly', 'fetchLogistics'] },
+  syncManualGroupingUpdates: { domain: 'outing', prefixes: ['fetchLogistics'] },
+  runAutoPairing: { domain: 'outing', prefixes: ['fetchPairingsOnly', 'fetchLogistics'] },
+  runAutoGrouping: { domain: 'outing', prefixes: ['fetchLogistics'] },
+  syncCommAttendance: { domain: 'outing', prefixes: ['fetchAttendanceData'] },
+  addCommJuncture: { domain: 'outing', prefixes: ['fetchAttendanceData'] },
+  deleteCommJuncture: { domain: 'outing', prefixes: ['fetchAttendanceData'] },
+  submitAttendanceData: { domain: 'outing', prefixes: ['fetchAttendanceData'] }
+};
+
+function invalidateCacheForAction(action) {
+  const entry = MUTATION_DOMAIN_MAP[action];
+  if (!entry) return null;
+  if (entry.prefixes.includes('ALL')) {
+    cache.clear();
+  } else {
+    invalidateCacheByPrefixes(entry.prefixes);
   }
+  return entry.domain;
 }
 
 // Cache these read-only actions to optimize for concurrent usage (>50 users)
@@ -182,7 +295,7 @@ app.post('/api/upload-file', async (req, res) => {
 });
 
 app.post('/api', async (req, res) => {
-  let { action, payload, API_URL } = req.body;
+  let { action, payload, API_URL, clientId } = req.body;
   if (!API_URL) {
     API_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
   }
@@ -212,7 +325,15 @@ app.post('/api', async (req, res) => {
       console.warn('GAS syncReceipts warning:', e.message);
     }
 
+    invalidateReceiptsCache();
     const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
+    broadcastSyncEvent({
+      type: 'sync:update',
+      action: 'syncReceipts',
+      domain: 'receipts',
+      clientId: clientId || null,
+      ts: Date.now()
+    });
     return res.json({ status: 'success', receipts: merged });
   }
 
@@ -266,6 +387,8 @@ app.post('/api', async (req, res) => {
       console.warn('GAS uploadReceipt warning:', e.message);
     }
 
+    invalidateReceiptsCache();
+
     if (gasSuccess) {
       // If the latest created receipt in gasReceipts doesn't have a valid fileUrl, fallback to localFileUrl
       if (localFileUrl && gasReceipts.length > 0) {
@@ -275,6 +398,13 @@ app.post('/api', async (req, res) => {
         }
       }
       const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
+      broadcastSyncEvent({
+        type: 'sync:update',
+        action: 'uploadReceipt',
+        domain: 'receipts',
+        clientId: clientId || null,
+        ts: Date.now()
+      });
       return res.json({ status: 'success', receipts: merged });
     }
 
@@ -299,6 +429,13 @@ app.post('/api', async (req, res) => {
     saveReceiptOverrides(overrides);
 
     const merged = mergeReceiptsWithOverrides(gasReceipts, overrides);
+    broadcastSyncEvent({
+      type: 'sync:update',
+      action: 'uploadReceipt',
+      domain: 'receipts',
+      clientId: clientId || null,
+      ts: Date.now()
+    });
     return res.json({ status: 'success', receipts: merged, receiptId: newId });
   }
 
@@ -331,13 +468,28 @@ app.post('/api', async (req, res) => {
       console.warn('GAS setTripFile warning:', e.message);
     }
 
+    invalidateSettingsCache();
     const merged = mergeSettingsWithTripFiles(gasSettings.status === 'success' ? gasSettings : { status: 'success' });
+    broadcastSyncEvent({
+      type: 'sync:update',
+      action: 'setTripFile',
+      domain: 'settings',
+      clientId: clientId || null,
+      ts: Date.now()
+    });
     return res.json(merged);
   }
 
-  const cacheKey = action + JSON.stringify(payload || {});
+  // Pre-invalidate cache if this is a known mutation action
+  const mutationDomain = invalidateCacheForAction(action);
+
+  const cleanPayload = { ...(payload || {}) };
+  const forceRefresh = Boolean(cleanPayload.force);
+  delete cleanPayload.force;
+
+  const cacheKey = action + JSON.stringify(cleanPayload);
   
-  if (CACHEABLE_ACTIONS.includes(action)) {
+  if (CACHEABLE_ACTIONS.includes(action) && !forceRefresh) {
     const cached = cache.get(cacheKey);
     // Cache for 10 seconds to combine concurrent requests across clients
     if (cached && (Date.now() - cached.timestamp < 10000)) { 
@@ -361,10 +513,10 @@ app.post('/api', async (req, res) => {
     }
   }
 
-  // Request coalescing for identical API_URL and cacheKey
+  // Request coalescing for identical API_URL and cacheKey (only for cacheable read actions)
   const requestKey = API_URL + cacheKey;
   
-  if (activeRequests.has(requestKey)) {
+  if (CACHEABLE_ACTIONS.includes(action) && !forceRefresh && activeRequests.has(requestKey)) {
     try {
       const text = await activeRequests.get(requestKey);
       if (action === 'fetchReceipts') {
@@ -398,7 +550,9 @@ app.post('/api', async (req, res) => {
     return await fetchResponse.text();
   })();
 
-  activeRequests.set(requestKey, fetchPromise);
+  if (CACHEABLE_ACTIONS.includes(action)) {
+    activeRequests.set(requestKey, fetchPromise);
+  }
 
   try {
     const text = await fetchPromise;
@@ -411,6 +565,29 @@ app.post('/api', async (req, res) => {
            }
        } catch (e) {
            // Not JSON, don't cache
+       }
+    } else if (mutationDomain) {
+       // Post-invalidate cache after mutation finishes and broadcast real-time sync event
+       invalidateCacheForAction(action);
+       try {
+         const parsed = JSON.parse(text);
+         if (!parsed || parsed.status !== 'error') {
+           broadcastSyncEvent({
+             type: 'sync:update',
+             action,
+             domain: mutationDomain,
+             clientId: clientId || null,
+             ts: Date.now()
+           });
+         }
+       } catch (e) {
+         broadcastSyncEvent({
+           type: 'sync:update',
+           action,
+           domain: mutationDomain,
+           clientId: clientId || null,
+           ts: Date.now()
+         });
        }
     }
     
@@ -450,7 +627,7 @@ app.post('/api', async (req, res) => {
   }
 });
 
-app.listen(port, '0.0.0.0', () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server running at http://0.0.0.0:${port}`);
 });
 

@@ -854,40 +854,42 @@ async function executeManualPairingSync() {
   }
 }
 
+window.pollManualPairingNow = async function () {
+  if (
+    !currentManualPairingSheetUrl ||
+    isManualPairingSyncing ||
+    (window.dndState && (window.dndState.el || window.dndState.isDragging))
+  )
+    return;
+  if (pendingPairingUpdates.length > 0) return;
+
+  const fetchStartTime = Date.now();
+
+  try {
+    const res = await apiCall("fetchManualPairingData", {
+      sheetUrl: currentManualPairingSheetUrl,
+    });
+    if (
+      res.success &&
+      !isManualPairingSyncing &&
+      pendingPairingUpdates.length === 0
+    ) {
+      if (lastPairingLocalChange > fetchStartTime) return;
+
+      const newDataStr = JSON.stringify(res.data);
+      const oldDataStr = JSON.stringify(manualPairingData);
+
+      if (newDataStr !== oldDataStr) {
+        manualPairingData = res.data;
+        renderManualPairings();
+      }
+    }
+  } catch (e) {}
+};
+
 function startManualPairingPolling() {
   if (manualPairingPollInterval) clearInterval(manualPairingPollInterval);
-
-  manualPairingPollInterval = setInterval(async () => {
-    if (
-      isManualPairingSyncing ||
-      (window.dndState && (window.dndState.el || window.dndState.isDragging))
-    )
-      return;
-    if (pendingPairingUpdates.length > 0) return;
-
-    const fetchStartTime = Date.now();
-
-    try {
-      const res = await apiCall("fetchManualPairingData", {
-        sheetUrl: currentManualPairingSheetUrl,
-      });
-      if (
-        res.success &&
-        !isManualPairingSyncing &&
-        pendingPairingUpdates.length === 0
-      ) {
-        if (lastPairingLocalChange > fetchStartTime) return;
-
-        const newDataStr = JSON.stringify(res.data);
-        const oldDataStr = JSON.stringify(manualPairingData);
-
-        if (newDataStr !== oldDataStr) {
-          manualPairingData = res.data;
-          renderManualPairings();
-        }
-      }
-    } catch (e) {}
-  }, 10000);
+  manualPairingPollInterval = setInterval(window.pollManualPairingNow, 10000);
 }
 
 async function manualSyncManualPairing() {

@@ -576,43 +576,44 @@ async function executeGroupingSync() {
   }
 }
 
+window.pollGroupingNow = async function () {
+  if (isGroupingSyncing || !currentGroupingSheetUrl) return;
+
+  if (
+    document.activeElement &&
+    document.activeElement.id === "groupingSearchInput"
+  )
+    return;
+
+  if (pendingGroupingUpdates.length > 0) return;
+
+  const fetchStartTime = Date.now();
+
+  try {
+    const res = await apiCall("fetchManualPairingData", {
+      sheetUrl: currentGroupingSheetUrl,
+    });
+    if (
+      res.success &&
+      !isGroupingSyncing &&
+      pendingGroupingUpdates.length === 0
+    ) {
+      if (lastGroupingLocalChange > fetchStartTime) return;
+
+      const newDataStr = JSON.stringify(res.data);
+      const oldDataStr = JSON.stringify(groupingData);
+
+      if (newDataStr !== oldDataStr) {
+        groupingData = res.data;
+        renderGroupingList();
+      }
+    }
+  } catch (e) {}
+};
+
 function startGroupingPolling() {
   if (groupingPollInterval) clearInterval(groupingPollInterval);
-
-  groupingPollInterval = setInterval(async () => {
-    if (isGroupingSyncing) return;
-
-    if (
-      document.activeElement &&
-      document.activeElement.id === "groupingSearchInput"
-    )
-      return;
-
-    if (pendingGroupingUpdates.length > 0) return;
-
-    const fetchStartTime = Date.now();
-
-    try {
-      const res = await apiCall("fetchManualPairingData", {
-        sheetUrl: currentGroupingSheetUrl,
-      });
-      if (
-        res.success &&
-        !isGroupingSyncing &&
-        pendingGroupingUpdates.length === 0
-      ) {
-        if (lastGroupingLocalChange > fetchStartTime) return;
-
-        const newDataStr = JSON.stringify(res.data);
-        const oldDataStr = JSON.stringify(groupingData);
-
-        if (newDataStr !== oldDataStr) {
-          groupingData = res.data;
-          renderGroupingList();
-        }
-      }
-    } catch (e) {}
-  }, 10000);
+  groupingPollInterval = setInterval(window.pollGroupingNow, 10000);
 }
 
 async function manualSyncGrouping() {

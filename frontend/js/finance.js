@@ -528,136 +528,137 @@ async function executeReceiptSync() {
   }
 }
 
+window.pollFinanceNow = async function () {
+  const tab = document.getElementById("tab-finance");
+  if (
+    !tab ||
+    tab.classList.contains("hidden-force") ||
+    isFinanceSyncing ||
+    isReceiptSyncing ||
+    finDndState.active
+  )
+    return;
+
+  const fetchStartTime = Date.now();
+
+  try {
+    const [finRes, recRes] = await Promise.all([
+      apiCall("fetchFinance").catch((e) => {
+        console.warn("fetchFinance failed", e);
+        return { data: { options: [], config: {} }, rates: { SGD: 1 } };
+      }),
+      apiCall("fetchReceipts").catch((e) => {
+        console.warn("fetchReceipts failed", e);
+        return { receipts: [] };
+      }),
+    ]);
+
+    if (lastLocalChange > fetchStartTime) return;
+
+    let hasChanges = false;
+
+    if (recRes && Array.isArray(recRes.receipts)) {
+      const incoming = recRes.receipts;
+      const isReceiptsChanged =
+        incoming.length !== globalReceipts.length ||
+        incoming.some((r) => {
+          const cur = globalReceipts.find((g) => g.id === r.id);
+          if (!cur) return true;
+          return (
+            (cur.ts || 0) !== (r.ts || 0) ||
+            cur.amount !== r.amount ||
+            cur.sgdAmount !== r.sgdAmount ||
+            cur.currency !== r.currency ||
+            Boolean(cur.isReimbursed) !== Boolean(r.isReimbursed) ||
+            Boolean(cur.isDeleted) !== Boolean(r.isDeleted) ||
+            cur.uploaderNric !== r.uploaderNric ||
+            cur.paidByNric !== r.paidByNric ||
+            cur.category !== r.category ||
+            cur.fileUrl !== r.fileUrl ||
+            cur.remarks !== r.remarks
+          );
+        });
+
+      if (isReceiptsChanged) {
+        globalReceipts = incoming.map((r) => {
+          if (pendingReceiptUpdates.has(r.id)) {
+            return { ...r, ...pendingReceiptUpdates.get(r.id) };
+          }
+          if (locallyDeletedReceiptIds.has(r.id)) {
+            return { ...r, isDeleted: true };
+          }
+          return r;
+        });
+        hasChanges = true;
+      }
+    }
+
+    if (finRes && finRes.rates) {
+      const ratesStr = JSON.stringify(finRes.rates);
+      if (ratesStr !== JSON.stringify(globalFinanceRates)) {
+        globalFinanceRates = finRes.rates;
+        hasChanges = true;
+      }
+    }
+
+    if (finRes.data) {
+      if (
+        finRes.data.config &&
+        finRes.data.config.ts > (financeConfig.ts || 0)
+      ) {
+        financeConfig = finRes.data.config;
+        if (!financeConfig.customRates) financeConfig.customRates = {};
+        if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+        if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+        hasChanges = true;
+      }
+
+      if (finRes.data.options && Array.isArray(finRes.data.options)) {
+        finRes.data.options.forEach((sOpt) => {
+          let lIdx = financeOptions.findIndex((o) => o.id === sOpt.id);
+          if (lIdx === -1) {
+            sOpt._isCollapsed = isFinanceCollapsed;
+            financeOptions.push(sOpt);
+            hasChanges = true;
+          } else {
+            let lOpt = financeOptions[lIdx];
+            if (
+              sOpt.ts > (lOpt.ts || 0) &&
+              !pendingFinanceUpdates.has(sOpt.id)
+            ) {
+              sOpt._isCollapsed = lOpt._isCollapsed;
+              financeOptions[lIdx] = sOpt;
+              hasChanges = true;
+            }
+          }
+        });
+        const serverIds = finRes.data.options.map((o) => o.id);
+        const initialLength = financeOptions.length;
+        financeOptions = financeOptions.filter(
+          (o) => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id),
+        );
+        if (financeOptions.length !== initialLength) hasChanges = true;
+      }
+    }
+
+    if (
+      hasChanges &&
+      document.activeElement.tagName !== "INPUT" &&
+      document.activeElement.tagName !== "TEXTAREA"
+    ) {
+      renderAllFinanceTabs();
+      if (
+        pendingFinanceUpdates.size === 0 &&
+        pendingReceiptUpdates.size === 0
+      )
+        setFinanceSyncButtonState("saved");
+    }
+  } catch (e) {}
+};
+
 function startFinancePolling() {
   if (financePollInterval) clearInterval(financePollInterval);
-
-  financePollInterval = setInterval(async () => {
-    const tab = document.getElementById("tab-finance");
-    if (
-      !tab ||
-      tab.classList.contains("hidden-force") ||
-      isFinanceSyncing ||
-      isReceiptSyncing ||
-      finDndState.active
-    )
-      return;
-
-    const fetchStartTime = Date.now();
-
-    try {
-      const [finRes, recRes] = await Promise.all([
-        apiCall("fetchFinance").catch((e) => {
-          console.warn("fetchFinance failed", e);
-          return { data: { options: [], config: {} }, rates: { SGD: 1 } };
-        }),
-        apiCall("fetchReceipts").catch((e) => {
-          console.warn("fetchReceipts failed", e);
-          return { receipts: [] };
-        }),
-      ]);
-
-      if (lastLocalChange > fetchStartTime) return;
-
-      let hasChanges = false;
-
-      if (recRes && Array.isArray(recRes.receipts)) {
-        const incoming = recRes.receipts;
-        const isReceiptsChanged =
-          incoming.length !== globalReceipts.length ||
-          incoming.some((r) => {
-            const cur = globalReceipts.find((g) => g.id === r.id);
-            if (!cur) return true;
-            return (
-              (cur.ts || 0) !== (r.ts || 0) ||
-              cur.amount !== r.amount ||
-              cur.sgdAmount !== r.sgdAmount ||
-              cur.currency !== r.currency ||
-              Boolean(cur.isReimbursed) !== Boolean(r.isReimbursed) ||
-              Boolean(cur.isDeleted) !== Boolean(r.isDeleted) ||
-              cur.uploaderNric !== r.uploaderNric ||
-              cur.paidByNric !== r.paidByNric ||
-              cur.category !== r.category ||
-              cur.fileUrl !== r.fileUrl ||
-              cur.remarks !== r.remarks
-            );
-          });
-
-        if (isReceiptsChanged) {
-          globalReceipts = incoming.map((r) => {
-            if (pendingReceiptUpdates.has(r.id)) {
-              return { ...r, ...pendingReceiptUpdates.get(r.id) };
-            }
-            if (locallyDeletedReceiptIds.has(r.id)) {
-              return { ...r, isDeleted: true };
-            }
-            return r;
-          });
-          hasChanges = true;
-        }
-      }
-
-      if (finRes && finRes.rates) {
-        const ratesStr = JSON.stringify(finRes.rates);
-        if (ratesStr !== JSON.stringify(globalFinanceRates)) {
-          globalFinanceRates = finRes.rates;
-          hasChanges = true;
-        }
-      }
-
-      if (finRes.data) {
-        if (
-          finRes.data.config &&
-          finRes.data.config.ts > (financeConfig.ts || 0)
-        ) {
-          financeConfig = finRes.data.config;
-          if (!financeConfig.customRates) financeConfig.customRates = {};
-          if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
-          if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
-          hasChanges = true;
-        }
-
-        if (finRes.data.options && Array.isArray(finRes.data.options)) {
-          finRes.data.options.forEach((sOpt) => {
-            let lIdx = financeOptions.findIndex((o) => o.id === sOpt.id);
-            if (lIdx === -1) {
-              sOpt._isCollapsed = isFinanceCollapsed;
-              financeOptions.push(sOpt);
-              hasChanges = true;
-            } else {
-              let lOpt = financeOptions[lIdx];
-              if (
-                sOpt.ts > (lOpt.ts || 0) &&
-                !pendingFinanceUpdates.has(sOpt.id)
-              ) {
-                sOpt._isCollapsed = lOpt._isCollapsed;
-                financeOptions[lIdx] = sOpt;
-                hasChanges = true;
-              }
-            }
-          });
-          const serverIds = finRes.data.options.map((o) => o.id);
-          const initialLength = financeOptions.length;
-          financeOptions = financeOptions.filter(
-            (o) => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id),
-          );
-          if (financeOptions.length !== initialLength) hasChanges = true;
-        }
-      }
-
-      if (
-        hasChanges &&
-        document.activeElement.tagName !== "INPUT" &&
-        document.activeElement.tagName !== "TEXTAREA"
-      ) {
-        renderAllFinanceTabs();
-        if (
-          pendingFinanceUpdates.size === 0 &&
-          pendingReceiptUpdates.size === 0
-        )
-          setFinanceSyncButtonState("saved");
-      }
-    } catch (e) {}
-  }, 10000);
+  financePollInterval = setInterval(window.pollFinanceNow, 10000);
 }
 
 async function manualFinanceSync(btn) {

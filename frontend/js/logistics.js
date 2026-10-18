@@ -579,62 +579,63 @@ async function executePairingSync() {
   }
 }
 
-function startPairingPolling() {
-  if (pairingPollInterval) clearInterval(pairingPollInterval);
+window.pollPairingsNow = async function () {
+  const logTab = document.getElementById("tab-logistics");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    isPairingSyncing ||
+    pendingPairingsMap.size > 0 ||
+    (dndState.type === "pairing" && (dndState.el || dndState.isDragging))
+  )
+    return;
 
-  pairingPollInterval = setInterval(async () => {
-    const logTab = document.getElementById("tab-logistics");
-    if (
-      !logTab ||
-      logTab.classList.contains("hidden-force") ||
-      isPairingSyncing ||
-      pendingPairingsMap.size > 0 ||
-      (dndState.type === "pairing" && (dndState.el || dndState.isDragging))
-    )
-      return;
+  const fetchStartTime = Date.now();
+  try {
+    const res = await apiCall("fetchPairingsOnly");
+    if (lastLocalChange > fetchStartTime) return;
 
-    const fetchStartTime = Date.now();
-    try {
-      const res = await apiCall("fetchPairingsOnly");
-      if (lastLocalChange > fetchStartTime) return;
-
-      if (res.pairings) {
-        let hasChanges = false;
-        res.pairings.forEach((sPair) => {
-          const key = sPair.traineeNric + "_" + sPair.volNric;
-          if (!pendingPairingsMap.has(key)) {
-            let lPair = globalLogistics.pairings.find(
-              (p) =>
-                p.traineeNric === sPair.traineeNric &&
-                p.volNric === sPair.volNric,
-            );
-            if (lPair) {
-              if (sPair.ts > lPair.ts) {
-                lPair.status = sPair.status;
-                lPair.ts = sPair.ts;
-                hasChanges = true;
-              }
-            } else {
-              globalLogistics.pairings.push(sPair);
+    if (res.pairings && globalLogistics && globalLogistics.pairings) {
+      let hasChanges = false;
+      res.pairings.forEach((sPair) => {
+        const key = sPair.traineeNric + "_" + sPair.volNric;
+        if (!pendingPairingsMap.has(key)) {
+          let lPair = globalLogistics.pairings.find(
+            (p) =>
+              p.traineeNric === sPair.traineeNric &&
+              p.volNric === sPair.volNric,
+          );
+          if (lPair) {
+            if (sPair.ts > lPair.ts) {
+              lPair.status = sPair.status;
+              lPair.ts = sPair.ts;
               hasChanges = true;
             }
-          }
-        });
-
-        if (hasChanges && !dndState.el && !dndState.isDragging) {
-          renderPairings();
-          const sheet = document.getElementById("selectionBottomSheet");
-          if (
-            sheet &&
-            !sheet.classList.contains("hidden-force") &&
-            currentPairingTarget
-          ) {
-            openPairingSheet(currentPairingTarget, currentPairingSourceRole);
+          } else {
+            globalLogistics.pairings.push(sPair);
+            hasChanges = true;
           }
         }
+      });
+
+      if (hasChanges && !dndState.el && !dndState.isDragging) {
+        renderPairings();
+        const sheet = document.getElementById("selectionBottomSheet");
+        if (
+          sheet &&
+          !sheet.classList.contains("hidden-force") &&
+          currentPairingTarget
+        ) {
+          openPairingSheet(currentPairingTarget, currentPairingSourceRole);
+        }
       }
-    } catch (e) {}
-  }, 8000);
+    }
+  } catch (e) {}
+};
+
+function startPairingPolling() {
+  if (pairingPollInterval) clearInterval(pairingPollInterval);
+  pairingPollInterval = setInterval(window.pollPairingsNow, 8000);
 }
 
 // ==========================================
@@ -1116,53 +1117,104 @@ async function executeRoomSync() {
 }
 
 let roomPollInterval = null;
-function startRoomPolling() {
-  if (roomPollInterval) clearInterval(roomPollInterval);
-  roomPollInterval = setInterval(async () => {
-    const logTab = document.getElementById("tab-logistics");
-    const roomSec = document.getElementById("log-rooms");
-    if (
-      !logTab ||
-      logTab.classList.contains("hidden-force") ||
-      !roomSec ||
-      roomSec.classList.contains("hidden-force") ||
-      isRoomSyncing ||
-      pendingRoomUpdates.size > 0 ||
-      (dndState.type === "rooming" && (dndState.el || dndState.isDragging))
-    )
-      return;
+window.pollRoomsNow = async function () {
+  const logTab = document.getElementById("tab-logistics");
+  const roomSec = document.getElementById("log-rooms");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    !roomSec ||
+    roomSec.classList.contains("hidden-force") ||
+    isRoomSyncing ||
+    pendingRoomUpdates.size > 0 ||
+    (dndState.type === "rooming" && (dndState.el || dndState.isDragging))
+  )
+    return;
 
-    const fetchStartTime = Date.now();
-    try {
-      const res = await apiCall("fetchRoomsOnly");
-      if (lastLocalChange > fetchStartTime) return;
+  const fetchStartTime = Date.now();
+  try {
+    const res = await apiCall("fetchRoomsOnly");
+    if (lastLocalChange > fetchStartTime) return;
 
-      if (res.rooms) {
-        let hasChanges = false;
-        res.rooms.forEach((sRoom) => {
-          if (!pendingRoomUpdates.has(sRoom.id)) {
-            let lRoom = globalLogistics.rooms.find((r) => r.id === sRoom.id);
-            if (lRoom) {
-              if (sRoom.ts > (lRoom.ts || 0)) {
-                lRoom.name = sRoom.name;
-                lRoom.capacity = sRoom.capacity;
-                lRoom.occupants = sRoom.occupants;
-                lRoom.isDeleted = sRoom.isDeleted;
-                lRoom.ts = sRoom.ts;
-                hasChanges = true;
-              }
-            } else {
-              globalLogistics.rooms.push(sRoom);
+    if (res.rooms && globalLogistics && globalLogistics.rooms) {
+      let hasChanges = false;
+      res.rooms.forEach((sRoom) => {
+        if (!pendingRoomUpdates.has(sRoom.id)) {
+          let lRoom = globalLogistics.rooms.find((r) => r.id === sRoom.id);
+          if (lRoom) {
+            if (sRoom.ts > (lRoom.ts || 0)) {
+              lRoom.name = sRoom.name;
+              lRoom.capacity = sRoom.capacity;
+              lRoom.occupants = sRoom.occupants;
+              lRoom.isDeleted = sRoom.isDeleted;
+              lRoom.ts = sRoom.ts;
               hasChanges = true;
             }
+          } else {
+            globalLogistics.rooms.push(sRoom);
+            hasChanges = true;
           }
-        });
-        if (hasChanges && !dndState.el && !dndState.isDragging) {
-          renderRooms();
         }
+      });
+      if (hasChanges && !dndState.el && !dndState.isDragging) {
+        renderRooms();
       }
-    } catch (e) {}
-  }, 10000);
+    }
+  } catch (e) {}
+};
+
+window.pollLogisticsAssignmentsNow = async function () {
+  const logTab = document.getElementById("tab-logistics");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    isGroupSyncing ||
+    isBusSyncing ||
+    pendingGroupUpdates.size > 0 ||
+    pendingBusUpdates.size > 0 ||
+    (dndState && (dndState.el || dndState.isDragging))
+  )
+    return;
+
+  const fetchStartTime = Date.now();
+  try {
+    const res = await apiCall("fetchLogistics");
+    if (lastLocalChange > fetchStartTime) return;
+    if (res && res.participants && globalLogistics && globalLogistics.participants) {
+      let groupChanged = false;
+      let busChanged = false;
+      res.participants.forEach((sPart) => {
+        const lPart = globalLogistics.participants.find(
+          (p) => p.nric === sPart.nric,
+        );
+        if (lPart) {
+          if (
+            !pendingGroupUpdates.has(sPart.nric) &&
+            (lPart.logisticsGroup !== sPart.logisticsGroup ||
+              lPart.isGroupIC !== sPart.isGroupIC)
+          ) {
+            lPart.logisticsGroup = sPart.logisticsGroup;
+            lPart.isGroupIC = sPart.isGroupIC;
+            groupChanged = true;
+          }
+          if (
+            !pendingBusUpdates.has(sPart.nric) &&
+            lPart.bus !== sPart.bus
+          ) {
+            lPart.bus = sPart.bus;
+            busChanged = true;
+          }
+        }
+      });
+      if (groupChanged) renderGroups();
+      if (busChanged) renderBuses();
+    }
+  } catch (e) {}
+};
+
+function startRoomPolling() {
+  if (roomPollInterval) clearInterval(roomPollInterval);
+  roomPollInterval = setInterval(window.pollRoomsNow, 10000);
 }
 
 async function manualSyncRooms(btn) {

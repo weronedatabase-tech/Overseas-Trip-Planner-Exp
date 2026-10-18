@@ -2174,6 +2174,40 @@ window.manualSyncIcAttendance = async function () {
   }
 };
 
+window.pollIcAttendanceNow = async function () {
+  const select = document.getElementById("icJunctureSelect");
+  const container = document.getElementById("icAttendanceContainer");
+  if (
+    !select ||
+    !container ||
+    isIcAttendanceSyncing ||
+    pendingIcAttendanceUpdates.size > 0
+  )
+    return;
+
+  const juncture = select.value;
+  if (!juncture) return;
+
+  const fetchStartTime = Date.now();
+  try {
+    const res = await apiCall("fetchAttendanceData", {
+      juncture,
+      forceRebuild: false,
+    });
+    if (
+      lastLocalChange > fetchStartTime ||
+      isIcAttendanceSyncing ||
+      pendingIcAttendanceUpdates.size > 0
+    )
+      return;
+    const incoming = res.data || {};
+    if (JSON.stringify(incoming) !== JSON.stringify(currentIcAttendanceData)) {
+      currentIcAttendanceData = incoming;
+      renderGroupAttendance(false);
+    }
+  } catch (e) {}
+};
+
 window.setIcSyncButtonState = function (state) {
   const btn = document.getElementById("icSyncBtn");
   if (!btn) return;

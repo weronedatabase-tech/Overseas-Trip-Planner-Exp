@@ -590,31 +590,30 @@ async function manualSyncAttendance() {
   }
 }
 
-function startAttendancePolling() {
-  if (attendancePollInterval) clearInterval(attendancePollInterval);
+window.pollAttendanceNow = async function () {
+  const attTab = document.getElementById("tab-attendance");
+  if (
+    !attTab ||
+    attTab.classList.contains("hidden-force") ||
+    isAttendanceSyncing ||
+    pendingAttendanceUpdates.size > 0
+  )
+    return;
 
-  attendancePollInterval = setInterval(async () => {
-    const attTab = document.getElementById("tab-attendance");
-    if (
-      !attTab ||
-      attTab.classList.contains("hidden-force") ||
-      isAttendanceSyncing ||
-      pendingAttendanceUpdates.size > 0
-    )
-      return;
+  const juncEl = document.getElementById("attJunctureSelect");
+  const juncture = juncEl ? juncEl.value : "";
+  if (!juncture) return;
 
-    const juncture = document.getElementById("attJunctureSelect").value;
-    if (!juncture) return;
+  const fetchStartTime = Date.now();
 
-    const fetchStartTime = Date.now();
+  try {
+    const res = await apiCall("fetchAttendanceData", { juncture });
+    if (lastLocalChange > fetchStartTime) return;
 
-    try {
-      const res = await apiCall("fetchAttendanceData", { juncture });
-      if (lastLocalChange > fetchStartTime) return;
+    const remoteData = res.data || {};
+    let hasChanges = false;
 
-      const remoteData = res.data || {};
-      let hasChanges = false;
-
+    if (globalLogistics && globalLogistics.participants) {
       globalLogistics.participants.forEach((p) => {
         const rEntry = remoteData[p.nric] || { status: false, ts: 0 };
         const lEntry = attendanceState[p.nric] || { status: false, ts: 0 };
@@ -624,12 +623,17 @@ function startAttendancePolling() {
           hasChanges = true;
         }
       });
+    }
 
-      if (hasChanges) {
-        renderAttendanceLists();
-      }
-    } catch (e) {}
-  }, 8000);
+    if (hasChanges) {
+      renderAttendanceLists();
+    }
+  } catch (e) {}
+};
+
+function startAttendancePolling() {
+  if (attendancePollInterval) clearInterval(attendancePollInterval);
+  attendancePollInterval = setInterval(window.pollAttendanceNow, 8000);
 }
 
 function setAttSyncButtonState(state) {

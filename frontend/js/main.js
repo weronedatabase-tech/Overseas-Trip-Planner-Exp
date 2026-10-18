@@ -1151,6 +1151,28 @@ async function silentHydration() {
   }
 }
 
+window.refreshSettingsRealtime = async function () {
+  try {
+    const config = await apiCall("getSettings", { force: true });
+    if (config && config.status !== "error") {
+      appSettings = config;
+      localStorage.setItem("appSettings", JSON.stringify(appSettings));
+      if (typeof applyHydrationDOMUpdates === "function") {
+        applyHydrationDOMUpdates();
+      }
+      if (
+        window.location.pathname.endsWith("settings.html") &&
+        typeof buildSettingsUI === "function" &&
+        document.activeElement &&
+        document.activeElement.tagName !== "INPUT" &&
+        document.activeElement.tagName !== "TEXTAREA"
+      ) {
+        buildSettingsUI();
+      }
+    }
+  } catch (e) {}
+};
+
 function processDisplayNames(participants) {
   if (!participants) return;
   const nameCounts = {};

@@ -1817,65 +1817,67 @@ async function manualSyncCommAttendance() {
   );
 }
 
-function startCommAttPolling() {
-  if (commAttPollInterval) clearInterval(commAttPollInterval);
+window.pollCommAttNow = function () {
+  const view = document.getElementById("view-comm-attendance");
+  if (!view || view.classList.contains("hidden") || !currentCommAttSheetUrl)
+    return;
 
-  commAttPollInterval = setInterval(() => {
-    const view = document.getElementById("view-comm-attendance");
-    if (!view || view.classList.contains("hidden")) return;
+  if (isCommAttSyncing || hasPendingUpdates()) return;
 
-    if (isCommAttSyncing || hasPendingUpdates()) return;
+  const fetchStartTime = Date.now();
 
-    const fetchStartTime = Date.now();
+  apiCall("fetchCommAttendance", { sheetUrl: currentCommAttSheetUrl }).then(
+    (res) => {
+      if (res.success && !isCommAttSyncing && !hasPendingUpdates()) {
+        if (lastCommAttLocalChange > fetchStartTime) return;
 
-    apiCall("fetchCommAttendance", { sheetUrl: currentCommAttSheetUrl }).then(
-      (res) => {
-        if (res.success && !isCommAttSyncing && !hasPendingUpdates()) {
-          if (lastCommAttLocalChange > fetchStartTime) return;
+        const oldJunctures = JSON.stringify(commAttData.junctures);
+        const oldBusJunctures = JSON.stringify(commAttData.busJunctures);
+        const oldParticipants = JSON.stringify(commAttData.participants);
+        const oldAttendance = JSON.stringify(commAttData.attendance);
+        const oldBusAttendance = JSON.stringify(commAttData.busAttendance);
 
-          const oldJunctures = JSON.stringify(commAttData.junctures);
-          const oldBusJunctures = JSON.stringify(commAttData.busJunctures);
-          const oldParticipants = JSON.stringify(commAttData.participants);
-          const oldAttendance = JSON.stringify(commAttData.attendance);
-          const oldBusAttendance = JSON.stringify(commAttData.busAttendance);
+        commAttData = res;
+        ensureMeetingJuncture();
 
-          commAttData = res;
-          ensureMeetingJuncture();
+        const newJunctures = JSON.stringify(commAttData.junctures);
+        const newBusJunctures = JSON.stringify(commAttData.busJunctures);
+        const newParticipants = JSON.stringify(commAttData.participants);
+        const newAttendance = JSON.stringify(commAttData.attendance);
+        const newBusAttendance = JSON.stringify(commAttData.busAttendance);
 
-          const newJunctures = JSON.stringify(commAttData.junctures);
-          const newBusJunctures = JSON.stringify(commAttData.busJunctures);
-          const newParticipants = JSON.stringify(commAttData.participants);
-          const newAttendance = JSON.stringify(commAttData.attendance);
-          const newBusAttendance = JSON.stringify(commAttData.busAttendance);
+        if (
+          oldJunctures !== newJunctures ||
+          oldParticipants !== newParticipants
+        ) {
+          renderCommAttFilters();
+          renderCommAttJunctures();
+        } else if (oldAttendance !== newAttendance) {
+          renderCommAttLists();
+        }
 
-          if (
-            oldJunctures !== newJunctures ||
+        if (
+          !document
+            .getElementById("busTrackerModal")
+            .classList.contains("hidden")
+        ) {
+          if (oldBusJunctures !== newBusJunctures) {
+            renderBusJunctures();
+          } else if (
+            oldBusAttendance !== newBusAttendance ||
             oldParticipants !== newParticipants
           ) {
-            renderCommAttFilters();
-            renderCommAttJunctures();
-          } else if (oldAttendance !== newAttendance) {
-            renderCommAttLists();
-          }
-
-          if (
-            !document
-              .getElementById("busTrackerModal")
-              .classList.contains("hidden")
-          ) {
-            if (oldBusJunctures !== newBusJunctures) {
-              renderBusJunctures();
-            } else if (
-              oldBusAttendance !== newBusAttendance ||
-              oldParticipants !== newParticipants
-            ) {
-              renderBusLists();
-            }
+            renderBusLists();
           }
         }
-      },
-    );
-  }, 10000);
+      }
+    },
+  );
+};
+
+function startCommAttPolling() {
+  if (commAttPollInterval) clearInterval(commAttPollInterval);
+  commAttPollInterval = setInterval(window.pollCommAttNow, 10000);
 }
 
 function handleCommAttSearch() {
