@@ -1031,8 +1031,8 @@ function renderLandingInfographic() {
     };
 
     img.src = imgSrc;
-    if (title && infoName) {
-      title.textContent = infoName;
+    if (title) {
+      title.textContent = "TRIP INFOGRAPHIC";
     }
     if (link) {
       link.href = infoUrl || (driveFileId ? `https://drive.google.com/file/d/${driveFileId}/view?usp=sharing` : "#");

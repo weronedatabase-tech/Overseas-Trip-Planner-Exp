@@ -93,7 +93,7 @@ function buildFilesUI() {
  <div class="flex items-center gap-1.5 md:gap-2">
      <button onclick="bulkCopySelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border-2 border-green-200 dark:border-green-700 rounded shadow-md hover:bg-green-100 transition focus:outline-none">Copy</button>
      <button onclick="bulkMoveSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 border-2 border-orange-200 dark:border-orange-800 rounded shadow-md hover:bg-orange-50 transition focus:outline-none">Move</button>
-     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border-2 border-red-200 dark:border-red-800 rounded shadow-md hover:bg-red-50 transition focus:outline-none">Delete</button>
+     <button onclick="bulkDeleteSelected()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-2 border-red-300 dark:border-red-800 rounded shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none">Delete</button>
      <button onclick="clearDriveSelection()" class="px-2 py-1.5 text-xs md:text-xs font-bold bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-2 border-gray-300 dark:border-gray-600 rounded shadow-md hover:bg-gray-100 transition focus:outline-none ml-2">Cancel</button>
  </div>
 </div>

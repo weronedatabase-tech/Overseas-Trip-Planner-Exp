@@ -3317,7 +3317,7 @@ function renderFeeTracker(targetScrollPoc = null) {
         <div class="flex justify-between items-center gap-2 mb-2 pb-1.5 border-b border-gray-100 dark:border-gray-800/80">
             <div class="flex items-center gap-1.5 flex-wrap min-w-0">
                 <span class="text-[11px] font-black uppercase tracking-widest text-gray-400 bg-gray-100 dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700 shrink-0">Size: ${c.size}</span>
-                ${c.isPaid ? `<span class="text-[11px] font-black uppercase tracking-widest text-emerald-950 dark:text-emerald-100 bg-emerald-300 dark:bg-emerald-700 px-2 py-0.5 rounded border-2 border-emerald-500 dark:border-emerald-400 shadow-sm shrink-0">PAID</span>` : ""}
+                ${c.isPaid ? `<span class="text-xs font-black uppercase tracking-widest text-white bg-green-600 dark:bg-emerald-500 dark:text-gray-950 px-2.5 py-0.5 rounded-md border border-green-700 dark:border-emerald-300 shadow-sm shrink-0">PAID</span>` : ""}
             </div>
             
             <div class="flex items-center gap-1.5 shrink-0">
@@ -3665,10 +3665,6 @@ window.showContactPaymentPopup = function (pocNric) {
         <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
           Screenshots (${feeReceipts.length})
         </span>
-        <button type="button" onclick="document.getElementById('adminPaymentContactModal').classList.add('hidden-force'); openAdminFeeScreenshotModal('${pocNric}')" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 cursor-pointer">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-          Manage / Upload
-        </button>
       </div>
   `;
 

@@ -525,7 +525,7 @@ function renderProfileFullView() {
   let receiptsHtml = `
 <div class="bg-white dark:bg-gray-900 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-md">
    <h3 class="text-sm font-black text-gray-900 dark:text-white tracking-tight border-b-2 border-gray-200 dark:border-gray-800 pb-2 mb-3">Trip Fees Payment Confirmation</h3>
-   <div id="myReceiptsContainer" class="overflow-x-auto">
+   <div id="myReceiptsContainer" class="w-full">
        ${generateMyReceiptsHtml()}
    </div>
 </div>
@@ -1097,39 +1097,89 @@ function generateMyReceiptsHtml() {
     const dateStr = rec.ts ? ((typeof formatDDMmmYYYY === "function" ? formatDDMmmYYYY(rec.ts) : "") + " " + timeStr) : "";
     const amtVal = parseFloat(rec.sgdAmount || rec.amount) || 0;
 
+    let imgSrc = "";
+    const isPdf = Boolean((rec.fileUrl && rec.fileUrl.toLowerCase().includes(".pdf")) || rec.mimeType === "application/pdf");
+    if (rec.fileUrl) {
+      if (rec.fileUrl.startsWith("/uploads/") || rec.fileUrl.startsWith("data:") || rec.fileUrl.startsWith("blob:")) {
+        imgSrc = rec.fileUrl;
+      } else {
+        const match = rec.fileUrl.match(/[-\w]{25,}/);
+        imgSrc = match ? `https://lh3.googleusercontent.com/d/${match[0]}` : rec.fileUrl;
+      }
+    }
+
+    const driveMatch = rec.fileUrl ? rec.fileUrl.match(/[-\w]{25,}/) : null;
+    const driveFileId = driveMatch ? driveMatch[0] : "";
+
     return `
-      <div class="bg-gray-50 dark:bg-gray-800/50 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs space-y-2">
-        <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="font-black text-sm text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-              <span class="text-[11px] font-semibold text-gray-400 bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600">${dateStr}</span>
+      <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-md border-2 border-gray-200 dark:border-gray-700 overflow-hidden w-full transition-all animate-slide-up">
+        <!-- Header Bar: Identical layout to Trip Infographic header -->
+        <div class="px-4 py-2.5 bg-gradient-to-r from-gray-50 to-indigo-50/40 dark:from-gray-900 dark:to-indigo-950/20 border-b-2 border-gray-100 dark:border-gray-800 flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="p-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 shrink-0">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+              </svg>
+            </span>
+            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
+              <span class="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-wider truncate">PAYMENT SCREENSHOT</span>
+              <span class="font-black text-xs text-purple-700 dark:text-purple-300">SGD $${amtVal.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+              ${dateStr ? `<span class="text-[10px] font-semibold text-gray-400 bg-white dark:bg-gray-700 px-1.5 py-0.5 rounded border border-gray-200 dark:border-gray-600 shrink-0">${dateStr}</span>` : ""}
             </div>
-            ${rec.remarks ? `<p class="text-xs text-gray-600 dark:text-gray-300 mt-1 italic">"${rec.remarks}"</p>` : ""}
           </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button type="button" onclick="prepareProfileReceiptOverwrite('${rec.id}')" class="px-2.5 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 rounded-lg border border-blue-200 dark:border-blue-800 transition cursor-pointer flex items-center gap-1" title="Replace this specific screenshot">
+
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" onclick="prepareProfileReceiptOverwrite('${rec.id}')" class="px-2 py-1 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 rounded-lg border border-blue-200 dark:border-blue-800 transition cursor-pointer flex items-center gap-1" title="Replace this specific screenshot">
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-              Overwrite
+              <span>Overwrite</span>
             </button>
             <button type="button" onclick="deleteProfileReceipt('${rec.id}')" class="p-1.5 text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded-lg transition cursor-pointer" title="Delete this screenshot">
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
+            ${rec.fileUrl ? `
+              <a
+                href="${rec.fileUrl}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-xs font-bold text-primary dark:text-green-400 hover:underline flex items-center gap-1"
+                title="Open in new window"
+              >
+                <span>Open Full</span>
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            ` : ""}
           </div>
         </div>
 
-        ${rec.fileUrl ? `
-          <div class="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-            <a href="${rec.fileUrl}" target="_blank" class="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1.5 truncate">
-              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-              <span class="truncate">View Uploaded Document / Screenshot</span>
-            </a>
-            <a href="${rec.fileUrl}" target="_blank" class="text-[11px] font-bold text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white flex items-center gap-0.5 shrink-0 ml-2">
-              <span>Open</span>
-              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-            </a>
+        ${rec.remarks ? `
+          <div class="px-4 py-1.5 bg-gray-50/70 dark:bg-gray-900/40 border-b border-gray-100 dark:border-gray-800 text-xs italic text-gray-600 dark:text-gray-300">
+            "${rec.remarks}"
           </div>
-        ` : `<span class="text-xs text-red-500">File link unavailable</span>`}
+        ` : ""}
+
+        <!-- Image Display Area: Contained height so scrolling is never affected, exactly like trip infographic -->
+        <div class="p-3 bg-gray-50/50 dark:bg-gray-900/40 flex justify-center items-center min-h-[160px]">
+          ${isPdf ? `
+            <div class="p-6 text-center flex flex-col items-center justify-center space-y-2">
+              <svg class="w-12 h-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+              <p class="text-xs font-bold text-gray-700 dark:text-gray-300">PDF Document Attached</p>
+              <a href="${rec.fileUrl}" target="_blank" class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg shadow hover:opacity-90 transition">Open PDF Document</a>
+            </div>
+          ` : (imgSrc ? `
+            <img
+              src="${imgSrc}"
+              alt="Payment Screenshot"
+              class="w-full h-auto max-h-[450px] object-contain rounded-2xl shadow-sm hover:opacity-95 transition cursor-pointer"
+              onclick="window.openReceiptImageModal(this.src)"
+              loading="lazy"
+              onerror="if(!this.dataset.fallbackCount){this.dataset.fallbackCount='1';const id='${driveFileId}';if(id)this.src='https://drive.google.com/thumbnail?id='+id+'&sz=w2000';}else if(this.dataset.fallbackCount==='1'){this.dataset.fallbackCount='2';const id='${driveFileId}';if(id)this.src='https://drive.google.com/uc?export=view&id='+id;}"
+            />
+          ` : `
+            <div class="text-xs text-red-500 font-bold p-4">Image link unavailable</div>
+          `)}
+        </div>
       </div>
     `;
   }).join("");
@@ -1142,7 +1192,7 @@ function generateMyReceiptsHtml() {
           <span class="text-xs font-black uppercase tracking-wider text-purple-900 dark:text-purple-200">
             ${feeReceipts.length} ${feeReceipts.length === 1 ? "Screenshot Documented" : "Screenshots Documented"}
           </span>
-          <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">Partial payments, multiple transfers, and refund records</p>
+          <p class="text-[11px] text-purple-700 dark:text-purple-300 font-medium">Payment verification records</p>
         </div>
         <div class="text-right">
           <span class="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">Total Documented</span>
@@ -1150,12 +1200,37 @@ function generateMyReceiptsHtml() {
         </div>
       </div>
 
-      <div class="space-y-2.5">
+      <div class="space-y-4">
         ${receiptsListHtml}
       </div>
     </div>
   `;
 }
+
+window.openReceiptImageModal = function (src) {
+  if (!src) return;
+  let modal = document.getElementById("receiptImageModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "receiptImageModal";
+    modal.className =
+      "fixed inset-0 bg-black/80 z-[200] flex flex-col justify-center items-center p-3 backdrop-blur-md";
+    modal.innerHTML = `
+      <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+        <button onclick="document.getElementById('receiptImageModal').classList.add('hidden-force')" class="absolute -top-10 right-0 text-white hover:text-gray-300 text-3xl font-black px-2 focus:outline-none cursor-pointer">&times;</button>
+        <img id="receiptImageModalImg" src="" alt="Payment Screenshot" class="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+      </div>
+    `;
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal || e.target.tagName === "BUTTON") {
+        modal.classList.add("hidden-force");
+      }
+    });
+    document.body.appendChild(modal);
+  }
+  document.getElementById("receiptImageModalImg").src = src;
+  modal.classList.remove("hidden-force");
+};
 
 function enableEditMode(i) {
   document.getElementById(`profCard_${i}`).classList.add("hidden-force");
