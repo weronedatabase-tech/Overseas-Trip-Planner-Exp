@@ -263,13 +263,20 @@ function renderOtherTable() {
       );
     });
   }
-  data.sort((a, b) => {
-    let valA = (a.fullName || "").toString().toLowerCase();
-    let valB = (b.fullName || "").toString().toLowerCase();
-    if (valA < valB) return -1;
-    if (valA > valB) return 1;
-    return 0;
-  });
+  if (otherSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(data, otherSearchQuery, (p) => ({
+      primary: [p.shortName, p.fullName],
+      secondary: [p.sleeping, p.otherPoints, p.diet, p.role, p.group],
+    }));
+  } else {
+    data.sort((a, b) => {
+      let valA = (a.fullName || "").toString().toLowerCase();
+      let valB = (b.fullName || "").toString().toLowerCase();
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+      return 0;
+    });
+  }
 
   const thead = document.getElementById("otherTableHead");
   let headHtml = `<tr>

@@ -1309,6 +1309,11 @@ window.handleProfileRelatedSearch = function (idx, fullQuery) {
       (t.fullName || "").toLowerCase().includes(query) ||
       (t.shortName || "").toLowerCase().includes(query),
   );
+  if (query && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(results, query, (t) => ({
+      primary: [t.shortName, t.fullName],
+    }));
+  }
 
   if (results.length === 0) {
     dd.innerHTML =
@@ -1923,9 +1928,11 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
 
   if (select.options.length <= 1) {
     let adminHtml = "";
-    (appSettings.junctures || []).forEach((j) => {
-      adminHtml += `<option value="${j}">${j}</option>`;
-    });
+    (appSettings.junctures || [])
+      .filter((j) => !String(j).startsWith("__BUS__"))
+      .forEach((j) => {
+        adminHtml += `<option value="${j}">${j}</option>`;
+      });
     const optAdmin = document.getElementById("optgroup-admin-junctures");
     if (optAdmin) optAdmin.innerHTML = adminHtml;
 
@@ -2381,6 +2388,19 @@ window.filterMyGroup = function () {
   const query = (document.getElementById("myGroupSearchInput").value || "")
     .toLowerCase()
     .trim();
+  const container = document.getElementById("myGroupMembersGrid");
+  if (container && window.sortDOMElementsBySearchRelevance) {
+    window.sortDOMElementsBySearchRelevance(
+      container,
+      ".my-group-card",
+      query,
+      (card) => ({
+        primary: [card.getAttribute("data-name") || ""],
+        secondary: [card.textContent || ""],
+      }),
+    );
+    return;
+  }
   const cards = document.querySelectorAll(".my-group-card");
   cards.forEach((card) => {
     const nameData = card.getAttribute("data-name");
@@ -2393,6 +2413,19 @@ window.filterMyAtt = function () {
   const query = (document.getElementById("myAttSearchInput").value || "")
     .toLowerCase()
     .trim();
+  const container = document.getElementById("icAttendanceContainer");
+  if (container && window.sortDOMElementsBySearchRelevance) {
+    window.sortDOMElementsBySearchRelevance(
+      container,
+      ".my-att-card",
+      query,
+      (card) => ({
+        primary: [card.getAttribute("data-name") || ""],
+        secondary: [card.textContent || ""],
+      }),
+    );
+    return;
+  }
   const cards = document.querySelectorAll(".my-att-card");
   cards.forEach((card) => {
     const nameData = card.getAttribute("data-name");

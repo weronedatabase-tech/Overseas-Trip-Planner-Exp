@@ -196,6 +196,11 @@ function addRegMember() {
               t.name.toLowerCase().includes(query) ||
               (t.shortName && t.shortName.toLowerCase().includes(query)),
           );
+          if (window.sortBySearchRelevance) {
+            window.sortBySearchRelevance(matches, query, (t) => ({
+              primary: [t.shortName, t.name],
+            }));
+          }
         }
         return matches.map((t) => {
           const formatted = `${t.name}${t.shortName ? " (" + t.shortName + ")" : ""}`;
@@ -331,6 +336,11 @@ function openCaregiverPopup(idx) {
             t.name.toLowerCase().includes(query) ||
             (t.shortName && t.shortName.toLowerCase().includes(query)),
         );
+        if (window.sortBySearchRelevance) {
+          window.sortBySearchRelevance(matches, query, (t) => ({
+            primary: [t.shortName, t.name],
+          }));
+        }
       }
       return matches.map((t) => {
         const formatted = `${t.name}${t.shortName ? " (" + t.shortName + ")" : ""}`;
@@ -496,6 +506,11 @@ function filterTraineeDropdown(idx) {
         t.name.toLowerCase().includes(query) ||
         (t.shortName && t.shortName.toLowerCase().includes(query)),
     );
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(matches, query, (t) => ({
+        primary: [t.shortName, t.name],
+      }));
+    }
   }
 
   let html = "";

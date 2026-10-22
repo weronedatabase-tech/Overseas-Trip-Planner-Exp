@@ -225,6 +225,9 @@ function filterNames() {
   }
   list.innerHTML = "";
   const matches = allNames.filter((n) => n.toLowerCase().includes(filter));
+  if (filter && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(matches, filter, (n) => ({ primary: [n] }));
+  }
   matches.forEach((name) => {
     const li = document.createElement("li");
     li.className =
@@ -296,6 +299,9 @@ function filterProjects() {
   const filter = input.value.toLowerCase();
   list.innerHTML = "";
   const matches = allProjects.filter((p) => p.toLowerCase().includes(filter));
+  if (filter && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(matches, filter, (p) => ({ primary: [p] }));
+  }
   matches.forEach((proj) => {
     const li = document.createElement("li");
     li.className =
@@ -336,6 +342,9 @@ function filterActiveVols() {
     (v) =>
       v.toLowerCase().includes(filter) && !currentVolPairedValue.includes(v),
   );
+  if (filter && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(matches, filter, (v) => ({ primary: [v] }));
+  }
 
   list.classList.remove("hidden");
 

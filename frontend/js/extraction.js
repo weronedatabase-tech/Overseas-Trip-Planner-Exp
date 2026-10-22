@@ -169,15 +169,31 @@ function renderExtractSearchResults() {
     );
   });
 
-  // Group family members together
-  matches.sort((a, b) => {
-    if (a.pocNric < b.pocNric) return -1;
-    if (a.pocNric > b.pocNric) return 1;
+  if (window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(matches, query, (p) => ({
+      primary: [p.shortName, p.fullName, p.nric],
+      secondary: [
+        p.passportNo,
+        p.role,
+        p.group,
+        p.logisticsGroup,
+        p.bus,
+        p.room,
+        p.relatedTrainee,
+        p.contact,
+        p.email,
+      ],
+    }));
+  } else {
+    matches.sort((a, b) => {
+      if (a.pocNric < b.pocNric) return -1;
+      if (a.pocNric > b.pocNric) return 1;
 
-    let roleA = a.role === "TRAINEE" ? 1 : a.role === "CAREGIVER" ? 2 : 3;
-    let roleB = b.role === "TRAINEE" ? 1 : b.role === "CAREGIVER" ? 2 : 3;
-    return roleA - roleB;
-  });
+      let roleA = a.role === "TRAINEE" ? 1 : a.role === "CAREGIVER" ? 2 : 3;
+      let roleB = b.role === "TRAINEE" ? 1 : b.role === "CAREGIVER" ? 2 : 3;
+      return roleA - roleB;
+    });
+  }
 
   matches = matches.slice(0, 15); // Limit to top 5 results for clarity
 
@@ -525,10 +541,17 @@ function renderCustomColumns() {
   // Available
   if (availList) {
     let availHtml = "";
-    customAvailableColumns.forEach((col) => {
-      if (customSelectedColumns.includes(col.id)) return;
-      if (query && !col.label.toLowerCase().includes(query)) return;
-
+    let availCols = customAvailableColumns.filter((col) => {
+      if (customSelectedColumns.includes(col.id)) return false;
+      if (query && !col.label.toLowerCase().includes(query)) return false;
+      return true;
+    });
+    if (query && window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(availCols, query, (col) => ({
+        primary: [col.label, col.id],
+      }));
+    }
+    availCols.forEach((col) => {
       availHtml += `
           <div class="flex items-center justify-between p-2 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary transition group cursor-pointer shadow-sm" onclick="addCustomColumn('${col.id}')">
               <span class="text-xs font-bold text-gray-700 dark:text-gray-200 group-hover:text-primary transition-colors truncate pr-2">${col.label}</span>

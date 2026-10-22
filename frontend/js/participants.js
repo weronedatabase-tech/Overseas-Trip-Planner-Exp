@@ -713,47 +713,69 @@ function renderRosterTable() {
 
   const countEl = document.getElementById("rosterTotalCount");
   if (countEl) countEl.innerText = `(${data.length})`;
-  data.sort((a, b) => {
-    for (let rule of rosterSortRules) {
-      if (rule.col === "specialSort") {
-        let keyA = specialSortMap.get(a.nric);
-        let keyB = specialSortMap.get(b.nric);
+  if (rosterSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(data, rosterSearchQuery, (p) => ({
+      primary: [p.shortName, p.fullName, p.name],
+      secondary: [
+        p.nric,
+        p.passportNo,
+        p.role,
+        p.group,
+        p.logisticsGroup,
+        p.bus,
+        p.room,
+        p.pairings,
+        p.relatedTrainee,
+        p.contact,
+        p.email,
+        p.diet,
+        p.medical,
+        p.otherPoints,
+      ],
+    }));
+  } else {
+    data.sort((a, b) => {
+      for (let rule of rosterSortRules) {
+        if (rule.col === "specialSort") {
+          let keyA = specialSortMap.get(a.nric);
+          let keyB = specialSortMap.get(b.nric);
 
-        if (keyA.group < keyB.group) return rule.asc ? -1 : 1;
-        if (keyA.group > keyB.group) return rule.asc ? 1 : -1;
+          if (keyA.group < keyB.group) return rule.asc ? -1 : 1;
+          if (keyA.group > keyB.group) return rule.asc ? 1 : -1;
 
-        if (keyA.catScore < keyB.catScore) return rule.asc ? -1 : 1;
-        if (keyA.catScore > keyB.catScore) return rule.asc ? 1 : -1;
+          if (keyA.catScore < keyB.catScore) return rule.asc ? -1 : 1;
+          if (keyA.catScore > keyB.catScore) return rule.asc ? 1 : -1;
 
-        if (keyA.catScore === 1) {
-          if (keyA.poc < keyB.poc) return rule.asc ? -1 : 1;
-          if (keyA.poc > keyB.poc) return rule.asc ? 1 : -1;
+          if (keyA.catScore === 1) {
+            if (keyA.poc < keyB.poc) return rule.asc ? -1 : 1;
+            if (keyA.poc > keyB.poc) return rule.asc ? 1 : -1;
+          }
+
+          if (keyA.roleScore < keyB.roleScore) return rule.asc ? -1 : 1;
+          if (keyA.roleScore > keyB.roleScore) return rule.asc ? 1 : -1;
+
+          if (keyA.name < keyB.name) return rule.asc ? -1 : 1;
+          if (keyA.name > keyB.name) return rule.asc ? 1 : -1;
+          continue;
         }
 
-        if (keyA.roleScore < keyB.roleScore) return rule.asc ? -1 : 1;
-        if (keyA.roleScore > keyB.roleScore) return rule.asc ? 1 : -1;
+        let valA = a[rule.col] || "";
+        let valB = b[rule.col] || "";
 
-        if (keyA.name < keyB.name) return rule.asc ? -1 : 1;
-        if (keyA.name > keyB.name) return rule.asc ? 1 : -1;
-        continue;
+        if (rule.col === "passportExpiry" || rule.col === "dob") {
+          valA = new Date(valA).getTime() || 0;
+          valB = new Date(valB).getTime() || 0;
+        } else {
+          valA = valA.toString().toLowerCase();
+          valB = valB.toString().toLowerCase();
+        }
+
+        if (valA < valB) return rule.asc ? -1 : 1;
+        if (valA > valB) return rule.asc ? 1 : -1;
       }
-
-      let valA = a[rule.col] || "";
-      let valB = b[rule.col] || "";
-
-      if (rule.col === "passportExpiry" || rule.col === "dob") {
-        valA = new Date(valA).getTime() || 0;
-        valB = new Date(valB).getTime() || 0;
-      } else {
-        valA = valA.toString().toLowerCase();
-        valB = valB.toString().toLowerCase();
-      }
-
-      if (valA < valB) return rule.asc ? -1 : 1;
-      if (valA > valB) return rule.asc ? 1 : -1;
-    }
-    return 0;
-  });
+      return 0;
+    });
+  }
 
   const thead = document.getElementById("rosterTableHead");
   let headHtml = `<tr>

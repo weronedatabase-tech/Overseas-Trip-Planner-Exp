@@ -1614,8 +1614,14 @@ function renderGroups() {
   });
 
   document.getElementById("groupUnassignedCount").innerText = unassigned.length;
-  if (window.sortParticipantsSpecial)
+  if (query && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(unassigned, query, (p) => ({
+      primary: [p.displayName, p.shortName, p.name],
+      secondary: [p.nric, p.logisticsGroup, p.group],
+    }));
+  } else if (window.sortParticipantsSpecial) {
     window.sortParticipantsSpecial(unassigned, globalLogistics.participants);
+  }
   let unHtml = "";
   unassigned.forEach((item) => {
     unHtml += generateGroupCardHtml(item);
@@ -1626,8 +1632,26 @@ function renderGroups() {
       unHtml ||
       '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
+  let groupsToRender = [...activeGroupsList];
+  if (query && window.sortBySearchRelevance) {
+    groupsToRender.forEach((gName) => {
+      window.sortBySearchRelevance(groupMap[gName], query, (p) => ({
+        primary: [p.displayName, p.shortName, p.name],
+        secondary: [p.nric, p.logisticsGroup, p.group],
+      }));
+    });
+    window.sortBySearchRelevance(groupsToRender, query, (gName) => ({
+      primary: [
+        `Group ${gName}`,
+        gName,
+        ...groupMap[gName].map((p) => p.displayName || p.name),
+      ],
+      secondary: groupMap[gName].flatMap((p) => [p.name, p.nric]),
+    }));
+  }
+
   let grpHtml = "";
-  activeGroupsList.forEach((gName) => {
+  groupsToRender.forEach((gName) => {
     let occHtml = "";
     groupMap[gName].forEach((item) => {
       occHtml += generateGroupCardHtml(item, true);
@@ -1718,8 +1742,14 @@ function renderBuses() {
   });
 
   document.getElementById("busUnassignedCount").innerText = unassigned.length;
-  if (window.sortParticipantsSpecial)
+  if (query && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(unassigned, query, (p) => ({
+      primary: [p.displayName, p.shortName, p.name],
+      secondary: [p.nric, p.bus, p.group],
+    }));
+  } else if (window.sortParticipantsSpecial) {
     window.sortParticipantsSpecial(unassigned, globalLogistics.participants);
+  }
   let unHtml = "";
   unassigned.forEach((item) => {
     unHtml += generateBusCardHtml(item);
@@ -1730,8 +1760,26 @@ function renderBuses() {
       unHtml ||
       '<p class="text-xs text-gray-500 font-bold p-2 text-center mt-2">All assigned / No matches.</p>';
 
+  let busesToRender = [...activeBusesList];
+  if (query && window.sortBySearchRelevance) {
+    busesToRender.forEach((bName) => {
+      window.sortBySearchRelevance(busMap[bName], query, (p) => ({
+        primary: [p.displayName, p.shortName, p.name],
+        secondary: [p.nric, p.bus, p.group],
+      }));
+    });
+    window.sortBySearchRelevance(busesToRender, query, (bName) => ({
+      primary: [
+        `Bus ${bName}`,
+        bName,
+        ...busMap[bName].map((p) => p.displayName || p.name),
+      ],
+      secondary: busMap[bName].flatMap((p) => [p.name, p.nric]),
+    }));
+  }
+
   let busHtml = "";
-  activeBusesList.forEach((bName) => {
+  busesToRender.forEach((bName) => {
     let occHtml = "";
     busMap[bName].forEach((item) => {
       occHtml += generateBusCardHtml(item, true);
@@ -2322,6 +2370,14 @@ function renderPairings() {
     };
     sourceArr = sourceArr.filter(matchFn);
     targetArr = targetArr.filter(matchFn);
+    if (window.sortBySearchRelevance) {
+      const getPairFields = (p) => ({
+        primary: [p.displayName, p.shortName, p.name],
+        secondary: [p.nric, p.group],
+      });
+      window.sortBySearchRelevance(sourceArr, query, getPairFields);
+      window.sortBySearchRelevance(targetArr, query, getPairFields);
+    }
   }
 
   const volColClass = "bg-orange-50/30 dark:bg-orange-900/10";
@@ -2427,11 +2483,17 @@ function renderRooms() {
 
   document.getElementById("unassignedCount").innerText =
     filteredUnassigned.length;
-  if (window.sortParticipantsSpecial)
+  if (query && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(filteredUnassigned, query, (p) => ({
+      primary: [p.displayName, p.shortName, p.name],
+      secondary: [p.nric, p.group],
+    }));
+  } else if (window.sortParticipantsSpecial) {
     window.sortParticipantsSpecial(
       filteredUnassigned,
       globalLogistics.participants,
     );
+  }
   let unHtml = "";
   filteredUnassigned.forEach((item) => {
     const dynColor = getProjectColor(item.group);
@@ -2489,6 +2551,23 @@ function renderRooms() {
         );
       });
     });
+    if (window.sortBySearchRelevance) {
+      roomsToRender = [...roomsToRender];
+      window.sortBySearchRelevance(roomsToRender, query, (r) => {
+        const occPeople = (r.occupants || [])
+          .map((nric) =>
+            globalLogistics.participants.find((x) => x.nric === nric),
+          )
+          .filter(Boolean);
+        return {
+          primary: [
+            r.name,
+            ...occPeople.map((p) => p.displayName || p.shortName || p.name),
+          ],
+          secondary: occPeople.flatMap((p) => [p.name, p.nric, p.group]),
+        };
+      });
+    }
   }
 
   let roomHtml = "";
@@ -2715,6 +2794,19 @@ function openRoomAddSheet(roomId) {
 
 function filterBottomSheet() {
   const query = document.getElementById("sheetSearchInput").value.toLowerCase();
+  const container = document.getElementById("sheetListContainer");
+  if (container && window.sortDOMElementsBySearchRelevance) {
+    window.sortDOMElementsBySearchRelevance(
+      container,
+      ".sheet-list-item",
+      query,
+      (el) => ({
+        primary: [el.dataset.name || "", el.dataset.fullname || ""],
+        secondary: [el.textContent || ""],
+      }),
+    );
+    return;
+  }
   const items = document.querySelectorAll(".sheet-list-item");
   items.forEach((item) => {
     if (
@@ -2931,11 +3023,23 @@ function renderGroupBusOptions() {
         </div>`;
   }
 
-  list.forEach((item) => {
+  let filteredList = [...list];
+  if (query) {
+    filteredList = filteredList.filter((item) => {
+      const nameStr = activeAssignType === "room" ? item.name : item;
+      return nameStr.toLowerCase().includes(query);
+    });
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(filteredList, query, (item) => {
+        const nameStr = activeAssignType === "room" ? item.name : item;
+        return { primary: [nameStr] };
+      });
+    }
+  }
+
+  filteredList.forEach((item) => {
     let nameStr = activeAssignType === "room" ? item.name : item;
     let idVal = activeAssignType === "room" ? item.id : item;
-
-    if (query && !nameStr.toLowerCase().includes(query)) return;
 
     let icHtml = "";
     if (activeAssignType === "group") {

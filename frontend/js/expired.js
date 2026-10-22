@@ -295,21 +295,28 @@ function renderExpiredTable() {
     });
   }
 
-  // Sort by expiry date ascending for 'expiring', or full name ascending
-  data.sort((a, b) => {
-    if (expiredFilterMode === "expiring") {
-      const dateA = parsePassportDate(a.passportExpiry) || new Date(9999, 0, 1);
-      const dateB = parsePassportDate(b.passportExpiry) || new Date(9999, 0, 1);
-      if (dateA.getTime() !== dateB.getTime()) {
-        return dateA.getTime() - dateB.getTime();
+  // Sort by search relevance when searching, otherwise by expiry date ascending for 'expiring' or full name ascending
+  if (expiredSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(data, expiredSearchQuery, (p) => ({
+      primary: [p.shortName, p.fullName, p.passportNo, p.nric],
+      secondary: [p.nationality, p.role, p.group],
+    }));
+  } else {
+    data.sort((a, b) => {
+      if (expiredFilterMode === "expiring") {
+        const dateA = parsePassportDate(a.passportExpiry) || new Date(9999, 0, 1);
+        const dateB = parsePassportDate(b.passportExpiry) || new Date(9999, 0, 1);
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA.getTime() - dateB.getTime();
+        }
       }
-    }
-    const valA = (a.fullName || "").toString().toLowerCase();
-    const valB = (b.fullName || "").toString().toLowerCase();
-    if (valA < valB) return -1;
-    if (valA > valB) return 1;
-    return 0;
-  });
+      const valA = (a.fullName || "").toString().toLowerCase();
+      const valB = (b.fullName || "").toString().toLowerCase();
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+      return 0;
+    });
+  }
 
   const thead = document.getElementById("expiredTableHead");
   if (thead) {

@@ -207,7 +207,14 @@ function renderGroupingList() {
 
     if (colTrainees.length === 0 && !isUnassigned) return;
 
-    colTrainees.sort((a, b) => a.name.localeCompare(b.name));
+    if (currentGroupingSearch && window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(colTrainees, currentGroupingSearch, (t) => ({
+        primary: [t.name],
+        secondary: [t.volPaired],
+      }));
+    } else {
+      colTrainees.sort((a, b) => a.name.localeCompare(b.name));
+    }
 
     let cardsHtml = "";
     colTrainees.forEach((t) => {

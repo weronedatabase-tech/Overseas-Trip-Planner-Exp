@@ -2465,6 +2465,45 @@ function renderReceiptsBrowser() {
 
   if (receiptSearchQuery && receiptSearchQuery.trim()) {
     filteredReceipts = filteredReceipts.filter((r) => matchesReceiptFuzzy(r, receiptSearchQuery, optMap));
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(filteredReceipts, receiptSearchQuery, (r) => {
+        const catName = getReceiptCategoryName(r, optMap);
+        let uploaderName = r.uploaderName || r.uploaderNric || "";
+        let uploaderShortName = "";
+        let payerName = r.paidByNric || r.uploaderNric || "";
+        let payerShortName = "";
+        if (globalLogistics && globalLogistics.participants) {
+          const up = globalLogistics.participants.find((x) => x.nric === r.uploaderNric);
+          if (up) {
+            uploaderName = up.name || uploaderName;
+            uploaderShortName = up.shortName || "";
+          }
+          const pp = globalLogistics.participants.find((x) => x.nric === (r.paidByNric || r.uploaderNric));
+          if (pp) {
+            payerName = pp.name || payerName;
+            payerShortName = pp.shortName || "";
+          }
+        }
+        return {
+          primary: [
+            uploaderShortName,
+            uploaderName,
+            payerShortName,
+            payerName,
+            catName,
+            r.remarks || "",
+          ],
+          secondary: [
+            r.uploaderNric || "",
+            r.paidByNric || "",
+            String(r.amount || ""),
+            String(r.sgdAmount || ""),
+            r.currency || "",
+            r.id || "",
+          ],
+        };
+      });
+    }
   }
 
   // Update stats & summary
@@ -3284,10 +3323,35 @@ function renderFeeTracker(targetScrollPoc = null) {
       cardsData.push({ poc, members, size, dev, rem, isPaid, finalExpected });
   }
 
-  cardsData.sort((a, b) => {
-    if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1;
-    return b.size - a.size;
-  });
+  const searchLower = finSearchQuery.toLowerCase().trim();
+  if (searchLower && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(cardsData, searchLower, (c) => {
+      const _hash = c.poc
+        .split("")
+        .reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
+      const orderNo =
+        c.poc.substring(0, 4).toUpperCase() +
+        "-" +
+        Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
+      return {
+        primary: [
+          ...c.members.map((m) => m.shortName || m.name || ""),
+          ...c.members.map((m) => m.fullName || m.name || ""),
+          orderNo,
+        ],
+        secondary: [
+          ...c.members.map((m) => m.nric || ""),
+          c.poc,
+          c.rem || "",
+        ],
+      };
+    });
+  } else {
+    cardsData.sort((a, b) => {
+      if (a.isPaid !== b.isPaid) return a.isPaid ? 1 : -1;
+      return b.size - a.size;
+    });
+  }
 
   let cardsHtml = "";
   cardsData.forEach((c) => {

@@ -268,13 +268,20 @@ function renderMedicalTable() {
       );
     });
   }
-  data.sort((a, b) => {
-    let valA = (a.fullName || "").toString().toLowerCase();
-    let valB = (b.fullName || "").toString().toLowerCase();
-    if (valA < valB) return -1;
-    if (valA > valB) return 1;
-    return 0;
-  });
+  if (medicalSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(data, medicalSearchQuery, (p) => ({
+      primary: [p.shortName, p.fullName],
+      secondary: [p.medical, p.diet, p.otherPoints, p.role, p.group],
+    }));
+  } else {
+    data.sort((a, b) => {
+      let valA = (a.fullName || "").toString().toLowerCase();
+      let valB = (b.fullName || "").toString().toLowerCase();
+      if (valA < valB) return -1;
+      if (valA > valB) return 1;
+      return 0;
+    });
+  }
 
   const thead = document.getElementById("medicalTableHead");
   let headHtml = `<tr>

@@ -647,16 +647,17 @@ async function editJuncture(oldName) {
 function renderJunctureList(list) {
   const ul = document.getElementById("junctureList");
   if (!ul) return;
-  if (ul)
-    ul.innerHTML =
-      !list || list.length === 0
-        ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No junctures defined yet.</li>'
-        : "";
-  if (list)
-    list.forEach((j) => {
-      const safeName = j.replace(/'/g, "\\'");
-      ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><span class="font-bold text-xs text-gray-900 dark:text-white truncate mr-2">${j}</span><div class="flex space-x-1.5 shrink-0"><button onclick="editJuncture('${safeName}')" title="Edit" class="text-green-600 dark:text-green-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md flex items-center justify-center focus:outline-none hover:bg-green-50 dark:hover:bg-gray-700 transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button><button onclick="removeJuncture('${safeName}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded shadow-md flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></div></li>`;
-    });
+  const filtered = (list || []).filter(
+    (j) => !String(j).startsWith("__BUS__"),
+  );
+  ul.innerHTML =
+    filtered.length === 0
+      ? '<li class="text-xs font-bold text-gray-500 dark:text-gray-400 px-1">No junctures defined yet.</li>'
+      : "";
+  filtered.forEach((j) => {
+    const safeName = j.replace(/'/g, "\\'");
+    ul.innerHTML += `<li class="flex justify-between items-center bg-gray-50/50 dark:bg-gray-950/50 p-2 md:p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 shadow-md"><span class="font-bold text-xs text-gray-900 dark:text-white truncate mr-2">${j}</span><div class="flex space-x-1.5 shrink-0"><button onclick="editJuncture('${safeName}')" title="Edit" class="text-green-600 dark:text-green-400 font-bold p-1.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md flex items-center justify-center focus:outline-none hover:bg-green-50 dark:hover:bg-gray-700 transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg></button><button onclick="removeJuncture('${safeName}', this)" title="Remove" class="text-red-600 dark:text-red-400 font-bold p-1.5 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 rounded shadow-md flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none"><span class="btn-text"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></span><div class="btn-spinner spinner-red hidden-force !w-4 !h-4 border-2"></div></button></div></li>`;
+  });
 }
 
 async function addCommittee(btn) {

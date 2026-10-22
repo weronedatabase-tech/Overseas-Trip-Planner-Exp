@@ -1014,6 +1014,12 @@ function renderCommAttLists() {
         (p.meetingLoc && p.meetingLoc.toLowerCase().includes(query)) ||
         (p.dismissalLoc && p.dismissalLoc.toLowerCase().includes(query)),
     );
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(participants, query, (p) => ({
+        primary: [p.name],
+        secondary: [p.volPaired, p.group, p.meetingLoc, p.dismissalLoc],
+      }));
+    }
   }
 
   participants.forEach((p) => {
@@ -2134,9 +2140,15 @@ function renderBusLists() {
         p.name.toLowerCase().includes(query) ||
         (p.volPaired && p.volPaired.toLowerCase().includes(query)),
     );
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(eligibleTrainees, query, (p) => ({
+        primary: [p.name],
+        secondary: [p.volPaired],
+      }));
+    }
+  } else {
+    eligibleTrainees.sort((a, b) => a.name.localeCompare(b.name));
   }
-
-  eligibleTrainees.sort((a, b) => a.name.localeCompare(b.name));
 
   eligibleTrainees.forEach((p) => {
     const currentBus = commAttData.busAttendance[juncture]

@@ -287,6 +287,12 @@ function renderAllMinutes() {
         (n.updatedBy && n.updatedBy.toLowerCase().includes(minutesSearchQuery))
       );
     });
+    if (window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(sorted, minutesSearchQuery, (n) => ({
+        primary: [n.assignedTo, n.date, n.content],
+        secondary: [n.updatedBy],
+      }));
+    }
   }
 
   if (sorted.length === 0) {

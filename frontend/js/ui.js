@@ -892,6 +892,234 @@ window.sortParticipantsSpecial = function (arr, allParticipants) {
   });
 };
 
+window.scoreSearchMatch = function (
+  query,
+  primaryFields = [],
+  secondaryFields = [],
+) {
+  const q = String(query || "")
+    .toLowerCase()
+    .trim();
+  if (!q) return 0;
+  const qTokens = q.split(/\s+/).filter(Boolean);
+
+  function scoreField(fieldVal, isPrimary, fieldIdx) {
+    if (fieldVal === null || fieldVal === undefined) return Infinity;
+    const val = String(fieldVal).toLowerCase().trim();
+    if (!val) return Infinity;
+
+    const base = (isPrimary ? 0 : 1000) + fieldIdx * 0.5;
+    const lenPenalty = Math.min(Math.max(0, val.length - q.length), 80) * 0.05;
+
+    if (val === q) return base + 0;
+    if (val.startsWith(q)) return base + 10 + lenPenalty;
+
+    const words = val.split(/[\s()\[\],|/-]+/).filter(Boolean);
+    for (let wIdx = 0; wIdx < words.length; wIdx++) {
+      if (words[wIdx] === q) {
+        return base + 25 + wIdx * 2 + lenPenalty;
+      }
+    }
+    for (let wIdx = 0; wIdx < words.length; wIdx++) {
+      if (words[wIdx].startsWith(q)) {
+        return base + 40 + wIdx * 2 + lenPenalty;
+      }
+    }
+
+    if (qTokens.length > 1) {
+      const allStartWords = qTokens.every((tok) =>
+        words.some((w) => w.startsWith(tok)),
+      );
+      if (allStartWords) return base + 60 + lenPenalty;
+    }
+
+    const subIdx = val.indexOf(q);
+    if (subIdx !== -1) {
+      return base + 100 + Math.min(subIdx, 80) + lenPenalty;
+    }
+
+    if (qTokens.length > 1) {
+      const allSubstrings = qTokens.every((tok) => val.includes(tok));
+      if (allSubstrings) return base + 220 + lenPenalty;
+    }
+
+    // Subsequence / fuzzy fallback
+    let qIdx = 0;
+    for (let i = 0; i < val.length && qIdx < q.length; i++) {
+      if (val[i] === q[qIdx]) qIdx++;
+    }
+    if (qIdx === q.length) {
+      return base + 400 + lenPenalty;
+    }
+
+    return Infinity;
+  }
+
+  let bestScore = Infinity;
+  const pList = Array.isArray(primaryFields) ? primaryFields : [primaryFields];
+  const sList = Array.isArray(secondaryFields)
+    ? secondaryFields
+    : [secondaryFields];
+
+  for (let i = 0; i < pList.length; i++) {
+    const s = scoreField(pList[i], true, i);
+    if (s < bestScore) bestScore = s;
+  }
+  for (let i = 0; i < sList.length; i++) {
+    const s = scoreField(sList[i], false, i);
+    if (s < bestScore) bestScore = s;
+  }
+
+  return bestScore;
+};
+
+window.sortBySearchRelevance = function (items, query, getFieldsFn) {
+  if (!Array.isArray(items) || items.length <= 1) return items;
+  const q = String(query || "")
+    .toLowerCase()
+    .trim();
+  if (!q) return items;
+
+  const decorated = items.map((item, idx) => {
+    const rawFields =
+      typeof getFieldsFn === "function" ? getFieldsFn(item) : { primary: [item] };
+    const primary = Array.isArray(rawFields)
+      ? rawFields
+      : rawFields && Array.isArray(rawFields.primary)
+        ? rawFields.primary
+        : [];
+    const secondary =
+      rawFields && !Array.isArray(rawFields) && Array.isArray(rawFields.secondary)
+        ? rawFields.secondary
+        : [];
+    const score = window.scoreSearchMatch(q, primary, secondary);
+    const firstPrimary =
+      primary.find((v) => v !== null && v !== undefined && String(v).trim() !== "") ||
+      "";
+    return {
+      item,
+      idx,
+      score,
+      tieText: String(firstPrimary).toLowerCase().trim(),
+    };
+  });
+
+  decorated.sort((a, b) => {
+    if (a.score !== b.score) return a.score - b.score;
+    if (a.tieText && b.tieText && a.tieText !== b.tieText) {
+      const cmp = a.tieText.localeCompare(b.tieText, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      });
+      if (cmp !== 0) return cmp;
+    }
+    return a.idx - b.idx;
+  });
+
+  for (let i = 0; i < decorated.length; i++) {
+    items[i] = decorated[i].item;
+  }
+  return items;
+};
+
+window.sortDOMElementsBySearchRelevance = function (
+  container,
+  itemSelector,
+  query,
+  getFieldsFn,
+) {
+  const containerEl =
+    typeof container === "string"
+      ? document.getElementById(container) || document.querySelector(container)
+      : container;
+  if (!containerEl) return;
+
+  const items = Array.from(containerEl.querySelectorAll(itemSelector));
+  if (items.length === 0) return;
+
+  items.forEach((el, idx) => {
+    if (el.dataset.origSearchIdx === undefined) {
+      el.dataset.origSearchIdx = String(idx);
+    }
+  });
+
+  const parentEl = items[0].parentElement;
+  if (!parentEl) return;
+
+  // Find a reference node after the last matching item so trailing non-item nodes stay at the bottom
+  const itemSet = new Set(items);
+  let tailRefNode = null;
+  const parentChildren = Array.from(parentEl.children);
+  for (let i = parentChildren.length - 1; i >= 0; i--) {
+    if (itemSet.has(parentChildren[i])) {
+      tailRefNode = parentChildren[i].nextSibling;
+      break;
+    }
+  }
+
+  const q = String(query || "")
+    .toLowerCase()
+    .trim();
+
+  if (!q) {
+    items.sort(
+      (a, b) =>
+        Number(a.dataset.origSearchIdx || 0) -
+        Number(b.dataset.origSearchIdx || 0),
+    );
+    items.forEach((el) => {
+      el.classList.remove("hidden-force");
+      if (el.style.display === "none") el.style.display = "";
+      parentEl.insertBefore(el, tailRefNode);
+    });
+    return;
+  }
+
+  const matched = [];
+  items.forEach((el) => {
+    const rawFields =
+      typeof getFieldsFn === "function"
+        ? getFieldsFn(el)
+        : {
+            primary: [el.dataset.name || "", el.dataset.fullname || ""],
+            secondary: [el.textContent || ""],
+          };
+    const primary = Array.isArray(rawFields)
+      ? rawFields
+      : rawFields.primary || [];
+    const secondary = Array.isArray(rawFields)
+      ? []
+      : rawFields.secondary || [];
+
+    const combined = [...primary, ...secondary]
+      .map((x) => String(x || "").toLowerCase())
+      .join(" ");
+    const isMatch = combined.includes(q);
+
+    if (isMatch) {
+      el.classList.remove("hidden-force");
+      if (el.style.display === "none") el.style.display = "";
+      const score = window.scoreSearchMatch(q, primary, secondary);
+      matched.push({
+        el,
+        score,
+        origIdx: Number(el.dataset.origSearchIdx || 0),
+      });
+    } else {
+      el.classList.add("hidden-force");
+    }
+  });
+
+  matched.sort((a, b) => {
+    if (a.score !== b.score) return a.score - b.score;
+    return a.origIdx - b.origIdx;
+  });
+
+  matched.forEach((m) => {
+    parentEl.insertBefore(m.el, tailRefNode);
+  });
+};
+
 window.setupTokenInput = function (inputId, getSuggestionsCallback) {
   const originalInput = document.getElementById(inputId);
   if (!originalInput || originalInput.dataset.tokenized) return;
@@ -979,7 +1207,12 @@ window.setupTokenInput = function (inputId, getSuggestionsCallback) {
   inputField.addEventListener("input", () => {
     const query = inputField.value.trim().toLowerCase();
     if (query) {
-      const suggestions = getSuggestionsCallback(query);
+      const suggestions = getSuggestionsCallback(query) || [];
+      if (window.sortBySearchRelevance) {
+        window.sortBySearchRelevance(suggestions, query, (s) => ({
+          primary: [s.label, s.value],
+        }));
+      }
       renderDropdown(suggestions);
     } else {
       dropdown.classList.add("hidden-force");
@@ -1014,9 +1247,13 @@ window.setupTokenInput = function (inputId, getSuggestionsCallback) {
   }
 
   inputField.addEventListener("focus", () => {
-    const suggestions = getSuggestionsCallback(
-      inputField.value.trim().toLowerCase(),
-    );
+    const query = inputField.value.trim().toLowerCase();
+    const suggestions = getSuggestionsCallback(query) || [];
+    if (query && window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(suggestions, query, (s) => ({
+        primary: [s.label, s.value],
+      }));
+    }
     renderDropdown(suggestions);
   });
 
@@ -1393,12 +1630,15 @@ window.setupNationalityDropdown = function (inputId) {
   });
 
   const renderList = (query) => {
-    const q = (query || "").toLowerCase();
+    const q = (query || "").toLowerCase().trim();
     let html = "";
 
     const filtered = window.NATIONALITIES_LIST.filter(
       (n) => n !== "Others" && n.toLowerCase().includes(q),
     );
+    if (q && window.sortBySearchRelevance) {
+      window.sortBySearchRelevance(filtered, q, (n) => ({ primary: [n] }));
+    }
 
     const othersHtml = `<div class="p-2.5 border-b-2 border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm font-bold text-primary italic bg-green-50/50 dark:bg-green-900/20 nat-opt" data-val="Others">Others (Please specify)</div>`;
 

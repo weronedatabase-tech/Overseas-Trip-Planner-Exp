@@ -592,8 +592,23 @@ function renderManualPairings() {
     return nameA.localeCompare(nameB);
   };
 
-  vols.sort(sortFn);
-  trainees.sort(sortFn);
+  if (volSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(vols, volSearchQuery, (v) => ({
+      primary: [v.name],
+      secondary: [v.project],
+    }));
+  } else {
+    vols.sort(sortFn);
+  }
+
+  if (traSearchQuery && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(trainees, traSearchQuery, (t) => ({
+      primary: [t.name],
+      secondary: [t.project, t.group],
+    }));
+  } else {
+    trainees.sort(sortFn);
+  }
 
   if (isFilteredManualPairingMode) {
     trainees = trainees.filter(
@@ -996,6 +1011,11 @@ function filterQuickPairList() {
   const matches = quickPairContext.targetList.filter((name) =>
     name.toLowerCase().includes(input),
   );
+  if (input && window.sortBySearchRelevance) {
+    window.sortBySearchRelevance(matches, input, (name) => ({
+      primary: [name],
+    }));
+  }
 
   if (matches.length === 0) {
     listEl.innerHTML =
