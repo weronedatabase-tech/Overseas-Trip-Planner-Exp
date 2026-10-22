@@ -52,7 +52,7 @@ function buildAttendanceUI() {
      <div class="flex items-center gap-2 shrink-0">
        <h3 class="text-xs md:text-sm font-black text-gray-900 dark:text-white tracking-tight shrink-0">Live Attendance</h3>
        <button id="liveBusBtn" onclick="openBusTrackerModal()" class="text-[10px] md:text-xs font-extrabold text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/30 border-2 border-yellow-300 dark:border-yellow-700 px-2 py-0.5 rounded-md shadow-sm flex items-center hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition cursor-pointer shrink-0" title="Adhoc Bus Attendance Tracker">
-         <i class="fa-solid fa-bus mr-1"></i> BUS
+         <i class="fa-solid fa-bus mr-1"></i> ADHOC BUS
        </button>
      </div>
      
