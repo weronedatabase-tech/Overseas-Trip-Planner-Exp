@@ -2249,7 +2249,7 @@ function toggleAltSwap() {
 
 function generatePillHtml(targetName, targetColorClass, traineeNric, volNric) {
   return `<div class="relative flex w-full align-top pointer-events-auto">
-<div class="${targetColorClass} text-xs md:text-sm pl-2 pr-6 py-1 rounded shadow-md border-2 border-gray-300 dark:border-gray-600 font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full">
+<div class="${targetColorClass} text-xs md:text-[12px] pl-2 pr-6 py-1 rounded shadow-md border-2 border-gray-300 dark:border-gray-600 font-bold opacity-90 leading-tight break-words whitespace-normal text-left w-full">
 ${targetName}
 </div>
 <div class="remove-x" onclick="unpairTrainee('${traineeNric}', '${volNric}')">×</div>
@@ -2300,7 +2300,7 @@ function generateCardHtml(
   return `
 <div class="dnd-draggable dnd-dropzone bg-white dark:bg-gray-800 p-1.5 md:p-2 rounded-md border-2 border-gray-200 dark:border-gray-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] cursor-grab active:cursor-grabbing hover:border-primary transition select-none flex flex-col min-h-[60px] gap-1" data-nric="${item.nric}" data-role="${item.role}">
     <div class="flex justify-between items-start w-full gap-1">
-        <div class="main-name-pill font-extrabold text-sm md:text-[12px] px-1.5 py-0.5 rounded shadow-md border ${dynColor} max-w-full inline-flex flex-wrap items-center gap-1 self-start min-w-0 leading-[1.1]">
+        <div class="main-name-pill font-extrabold text-sm md:text-sm px-1.5 py-0.5 rounded shadow-md border ${dynColor} max-w-full inline-flex flex-wrap items-center gap-1 self-start min-w-0 leading-[1.1]">
             <span class="break-words whitespace-normal min-w-0 text-left">${displayName}</span>
             ${famBadge}
         </div>

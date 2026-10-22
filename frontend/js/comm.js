@@ -2001,6 +2001,78 @@ function addBusOption() {
   renderBusLists();
 }
 
+async function renameBusOption() {
+  const juncture = busState.currentJuncture;
+  const selectEl = document.getElementById("busFilterSelect");
+  const filterBus = selectEl ? selectEl.value : "ALL";
+
+  if (!juncture) return;
+  if (!filterBus || filterBus === "ALL") {
+    showFlashMessage(
+      "busGlobalStatus",
+      "Please select a specific bus from the dropdown to rename.",
+      "error",
+    );
+    return;
+  }
+
+  const rawName = await appPrompt(
+    `Enter new name for "${filterBus}":`,
+    filterBus,
+    "Rename Bus",
+    "Bus Name",
+  );
+  if (!rawName || !rawName.trim()) return;
+  const newBus = rawName.trim();
+  if (newBus === filterBus) return;
+
+  const duplicate = busState.busOptions.find(
+    (b) => b !== filterBus && b.toLowerCase() === newBus.toLowerCase(),
+  );
+  if (duplicate) {
+    showFlashMessage(
+      "busGlobalStatus",
+      `A bus named "${duplicate}" already exists.`,
+      "error",
+    );
+    return;
+  }
+
+  busState.busOptions = busState.busOptions.map((b) =>
+    b === filterBus ? newBus : b,
+  );
+  busState.busOptions.sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+  );
+
+  let hasChanges = false;
+  const juncKey = "__BUS__" + juncture;
+
+  if (commAttData.busAttendance[juncture]) {
+    for (let name in commAttData.busAttendance[juncture]) {
+      if (commAttData.busAttendance[juncture][name] === filterBus) {
+        commAttData.busAttendance[juncture][name] = newBus;
+
+        if (!pendingCommAttUpdates[juncKey])
+          pendingCommAttUpdates[juncKey] = {};
+        pendingCommAttUpdates[juncKey][name] = newBus;
+
+        hasChanges = true;
+      }
+    }
+  }
+
+  lastCommAttLocalChange = Date.now();
+
+  renderBusFilterOptions();
+  if (selectEl) selectEl.value = newBus;
+  renderBusLists();
+
+  if (hasChanges) {
+    triggerSync();
+  }
+}
+
 async function removeBusOption() {
   const juncture = busState.currentJuncture;
   const filterBus = document.getElementById("busFilterSelect").value;

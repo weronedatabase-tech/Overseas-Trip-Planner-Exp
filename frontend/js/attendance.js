@@ -9,7 +9,7 @@ let savedAttJuncture = null;
 let savedAttAssignment = "ALL";
 
 // Adhoc Bus Tracker State
-let busState = {
+let adhocBusState = {
   juncture: "",
   assignment: "ALL",
   busFilter: "ALL",
@@ -17,9 +17,9 @@ let busState = {
   busOptions: ["Bus 1"],
   busOptionsTs: {}, // { ["Bus 1"]: 123456 }
 };
-let pendingBusUpdates = new Map(); // key -> { nric, status, ts }
-let busSyncTimeout = null;
-let isBusSyncing = false;
+let pendingAdhocBusUpdates = new Map(); // key -> { nric, status, ts }
+let adhocBusSyncTimeout = null;
+let isAdhocBusSyncing = false;
 
 function getRegularJunctures() {
   return (appSettings.junctures || []).filter(
@@ -225,12 +225,15 @@ function buildAttendanceUI() {
             </div>
           </div>
           <div class="flex items-center gap-1 w-full">
-            <select id="busFilterSelect" onchange="busState.busFilter = this.value; renderBusLists();" class="flex-1 min-w-0 py-0.5 px-1.5 text-[11px] font-extrabold rounded border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500">
+            <select id="busFilterSelect" onchange="adhocBusState.busFilter = this.value; renderBusLists();" class="flex-1 min-w-0 py-0.5 px-1.5 text-[11px] font-extrabold rounded border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-green-500">
               <option value="ALL">All Buses</option>
               <option value="Bus 1">Bus 1</option>
             </select>
             <button onclick="addBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded hover:bg-green-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Add Next Bus">
               <i class="fa-solid fa-plus"></i>
+            </button>
+            <button onclick="renameBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Rename Selected Bus">
+              <i class="fa-solid fa-pen"></i>
             </button>
             <button onclick="removeBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Remove Selected Bus">
               <i class="fa-solid fa-trash"></i>
@@ -1044,10 +1047,10 @@ window.openBusTrackerModal = async function () {
       }
     }
     if (
-      busState.assignment &&
-      asgnSel.querySelector(`option[value="${busState.assignment}"]`)
+      adhocBusState.assignment &&
+      asgnSel.querySelector(`option[value="${adhocBusState.assignment}"]`)
     ) {
-      asgnSel.value = busState.assignment;
+      asgnSel.value = adhocBusState.assignment;
     }
   }
 
@@ -1070,15 +1073,15 @@ function renderBusJunctures() {
     busJunctures.forEach((j) => {
       juncSel.innerHTML += `<option value="${j}">${j}</option>`;
     });
-    if (busState.juncture && busJunctures.includes(busState.juncture)) {
-      juncSel.value = busState.juncture;
+    if (adhocBusState.juncture && busJunctures.includes(adhocBusState.juncture)) {
+      juncSel.value = adhocBusState.juncture;
     } else {
-      busState.juncture = busJunctures[0];
-      juncSel.value = busState.juncture;
+      adhocBusState.juncture = busJunctures[0];
+      juncSel.value = adhocBusState.juncture;
     }
   } else {
     juncSel.innerHTML = `<option value="">No Bus Junctures</option>`;
-    busState.juncture = "";
+    adhocBusState.juncture = "";
   }
 }
 
@@ -1152,11 +1155,11 @@ function parseRemoteBusAttendanceData(remoteData) {
 window.changeBusContext = async function () {
   const juncSel = document.getElementById("busJunctureSelect");
   const juncture = juncSel ? juncSel.value : "";
-  busState.juncture = juncture;
+  adhocBusState.juncture = juncture;
 
   if (!juncture) {
-    busState.data = {};
-    busState.busOptions = ["Bus 1"];
+    adhocBusState.data = {};
+    adhocBusState.busOptions = ["Bus 1"];
     renderBusFilterOptions();
     renderBusLists();
     return;
@@ -1171,11 +1174,11 @@ window.changeBusContext = async function () {
       juncture: "__BUS__" + juncture,
     });
     const parsed = parseRemoteBusAttendanceData(res.data || {});
-    busState.data = parsed.participantBusMap;
-    busState.busOptions = parsed.busOptions;
-    busState.busOptionsTs = {};
+    adhocBusState.data = parsed.participantBusMap;
+    adhocBusState.busOptions = parsed.busOptions;
+    adhocBusState.busOptionsTs = {};
     Object.keys(parsed.busOptionStatusMap).forEach((b) => {
-      busState.busOptionsTs[b] = parsed.busOptionStatusMap[b].ts;
+      adhocBusState.busOptionsTs[b] = parsed.busOptionStatusMap[b].ts;
     });
 
     renderBusFilterOptions();
@@ -1193,33 +1196,33 @@ function renderBusFilterOptions() {
   const sel = document.getElementById("busFilterSelect");
   if (!sel) return;
 
-  if (!busState.busOptions || busState.busOptions.length === 0) {
-    busState.busOptions = ["Bus 1"];
+  if (!adhocBusState.busOptions || adhocBusState.busOptions.length === 0) {
+    adhocBusState.busOptions = ["Bus 1"];
   }
 
-  const prev = busState.busFilter || sel.value || "ALL";
+  const prev = adhocBusState.busFilter || sel.value || "ALL";
   let html = `<option value="ALL">All Buses</option>`;
-  busState.busOptions.forEach((b) => {
+  adhocBusState.busOptions.forEach((b) => {
     html += `<option value="${b}">${b}</option>`;
   });
   sel.innerHTML = html;
 
-  if (prev === "ALL" || busState.busOptions.includes(prev)) {
+  if (prev === "ALL" || adhocBusState.busOptions.includes(prev)) {
     sel.value = prev;
-    busState.busFilter = prev;
+    adhocBusState.busFilter = prev;
   } else {
-    sel.value = busState.busOptions[0] || "ALL";
-    busState.busFilter = sel.value;
+    sel.value = adhocBusState.busOptions[0] || "ALL";
+    adhocBusState.busFilter = sel.value;
   }
 }
 
 window.addBusOption = function () {
-  if (!busState.juncture) {
+  if (!adhocBusState.juncture) {
     showBusFlashMessage("Please create or select a bus juncture first.", true);
     return;
   }
   let maxNum = 0;
-  busState.busOptions.forEach((b) => {
+  adhocBusState.busOptions.forEach((b) => {
     const m = b.match(/^Bus\s+(\d+)$/i);
     if (m) {
       const n = parseInt(m[1], 10);
@@ -1227,26 +1230,113 @@ window.addBusOption = function () {
     }
   });
   const nextBus = `Bus ${maxNum + 1}`;
-  if (!busState.busOptions.includes(nextBus)) {
-    busState.busOptions.push(nextBus);
-    busState.busOptions.sort((a, b) =>
+  if (!adhocBusState.busOptions.includes(nextBus)) {
+    adhocBusState.busOptions.push(nextBus);
+    adhocBusState.busOptions.sort((a, b) =>
       a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
     );
   }
-  busState.busFilter = nextBus;
+  adhocBusState.busFilter = nextBus;
   renderBusFilterOptions();
   renderBusLists();
 
   const ts = Date.now();
-  busState.busOptionsTs[nextBus] = ts;
+  adhocBusState.busOptionsTs[nextBus] = ts;
   const optKey = `__BUSOPT__::${nextBus}`;
-  pendingBusUpdates.set(optKey, { nric: optKey, status: true, ts });
+  pendingAdhocBusUpdates.set(optKey, { nric: optKey, status: true, ts });
   scheduleBusAttendanceSync();
   showBusFlashMessage(`${nextBus} added and selected.`);
 };
 
+window.renameBusOption = async function () {
+  if (!adhocBusState.juncture) {
+    showBusFlashMessage("Please create or select a bus juncture first.", true);
+    return;
+  }
+  const sel = document.getElementById("busFilterSelect");
+  const oldBus = sel ? sel.value : "ALL";
+
+  if (!oldBus || oldBus === "ALL") {
+    showBusFlashMessage("Please select a specific bus to rename.", true);
+    if (sel) {
+      sel.classList.add("ring-2", "ring-red-500");
+      setTimeout(() => sel.classList.remove("ring-2", "ring-red-500"), 1200);
+    }
+    return;
+  }
+
+  const rawName = await appPrompt(
+    `Enter new name for "${oldBus}":`,
+    oldBus,
+    "Rename Bus",
+    "Bus Name",
+  );
+  if (!rawName || !rawName.trim()) return;
+
+  const newBus = normalizeBusLabel(rawName.trim());
+  if (!newBus || newBus === oldBus) return;
+
+  const duplicate = adhocBusState.busOptions.find(
+    (b) => b !== oldBus && b.toLowerCase() === newBus.toLowerCase(),
+  );
+  if (duplicate) {
+    showBusFlashMessage(`A bus named "${duplicate}" already exists.`, true);
+    return;
+  }
+
+  const ts = Date.now();
+  const assignedNrics = Object.keys(adhocBusState.data).filter(
+    (nric) => adhocBusState.data[nric]?.bus === oldBus,
+  );
+
+  assignedNrics.forEach((nric) => {
+    const upperNric = nric.toUpperCase();
+    const oldCompKey = `${upperNric}::${oldBus}`;
+    const newCompKey = `${upperNric}::${newBus}`;
+    pendingAdhocBusUpdates.set(oldCompKey, {
+      nric: oldCompKey,
+      status: false,
+      ts,
+    });
+    pendingAdhocBusUpdates.set(newCompKey, {
+      nric: newCompKey,
+      status: true,
+      ts: ts + 1,
+    });
+    adhocBusState.data[nric] = { bus: newBus, ts: ts + 1 };
+  });
+
+  const oldOptKey = `__BUSOPT__::${oldBus}`;
+  const newOptKey = `__BUSOPT__::${newBus}`;
+  adhocBusState.busOptionsTs[oldBus] = ts;
+  adhocBusState.busOptionsTs[newBus] = ts + 1;
+  pendingAdhocBusUpdates.set(oldOptKey, {
+    nric: oldOptKey,
+    status: false,
+    ts,
+  });
+  pendingAdhocBusUpdates.set(newOptKey, {
+    nric: newOptKey,
+    status: true,
+    ts: ts + 1,
+  });
+
+  adhocBusState.busOptions = adhocBusState.busOptions.map((b) =>
+    b === oldBus ? newBus : b,
+  );
+  adhocBusState.busOptions.sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+  );
+  adhocBusState.busFilter = newBus;
+
+  renderBusFilterOptions();
+  renderBusLists();
+  scheduleBusAttendanceSync();
+  showBusFlashMessage(`Renamed "${oldBus}" to "${newBus}".`);
+};
+
 window.removeBusOption = async function () {
-  if (!busState.juncture) return;
+  if (!adhocBusState.juncture) return;
   const sel = document.getElementById("busFilterSelect");
   const targetBus = sel ? sel.value : "ALL";
 
@@ -1255,14 +1345,14 @@ window.removeBusOption = async function () {
     return;
   }
 
-  if (busState.busOptions.length <= 1) {
+  if (adhocBusState.busOptions.length <= 1) {
     showBusFlashMessage("At least one bus must remain.", true);
     return;
   }
 
   // Count participants currently on targetBus
-  const assignedNrics = Object.keys(busState.data).filter(
-    (nric) => busState.data[nric]?.bus === targetBus,
+  const assignedNrics = Object.keys(adhocBusState.data).filter(
+    (nric) => adhocBusState.data[nric]?.bus === targetBus,
   );
 
   if (assignedNrics.length > 0) {
@@ -1278,18 +1368,18 @@ window.removeBusOption = async function () {
 
   const ts = Date.now();
   assignedNrics.forEach((nric) => {
-    busState.data[nric] = { bus: "", ts };
+    adhocBusState.data[nric] = { bus: "", ts };
     const compKey = `${nric}::${targetBus}`;
-    pendingBusUpdates.set(compKey, { nric: compKey, status: false, ts });
+    pendingAdhocBusUpdates.set(compKey, { nric: compKey, status: false, ts });
   });
 
-  busState.busOptions = busState.busOptions.filter((b) => b !== targetBus);
-  if (busState.busOptions.length === 0) busState.busOptions = ["Bus 1"];
-  busState.busFilter = "ALL";
+  adhocBusState.busOptions = adhocBusState.busOptions.filter((b) => b !== targetBus);
+  if (adhocBusState.busOptions.length === 0) adhocBusState.busOptions = ["Bus 1"];
+  adhocBusState.busFilter = "ALL";
 
   const optKey = `__BUSOPT__::${targetBus}`;
-  busState.busOptionsTs[targetBus] = ts;
-  pendingBusUpdates.set(optKey, { nric: optKey, status: false, ts });
+  adhocBusState.busOptionsTs[targetBus] = ts;
+  pendingAdhocBusUpdates.set(optKey, { nric: optKey, status: false, ts });
 
   renderBusFilterOptions();
   renderBusLists();
@@ -1318,7 +1408,7 @@ window.promptNewBusJuncture = async function () {
       newName: internalName,
     });
     appSettings.junctures = res.junctures;
-    busState.juncture = cleanName;
+    adhocBusState.juncture = cleanName;
     renderBusJunctures();
     showBusFlashMessage(`Bus juncture "${cleanName}" created.`);
     await changeBusContext();
@@ -1359,7 +1449,7 @@ window.promptDeleteBusJuncture = async function () {
       oldName: "__BUS__" + cleanName,
     });
     appSettings.junctures = res.junctures;
-    busState.juncture = "";
+    adhocBusState.juncture = "";
     renderBusJunctures();
     showBusFlashMessage(`Bus juncture "${cleanName}" deleted.`);
     await changeBusContext();
@@ -1375,7 +1465,7 @@ function getFilteredBusParticipants() {
   if (!globalLogistics || !globalLogistics.participants) return [];
   const assignmentEl = document.getElementById("busAssignmentSelect");
   const assignment = assignmentEl ? assignmentEl.value : "ALL";
-  busState.assignment = assignment;
+  adhocBusState.assignment = assignment;
 
   const searchInput = document.getElementById("busSearchInput");
   const query = searchInput ? searchInput.value.toLowerCase().trim() : "";
@@ -1437,14 +1527,14 @@ function sortBusParticipants(list, sortByBusFirst = false) {
     sorted.sort((a, b) => {
       const busA =
         (
-          busState.data[a.nric.toUpperCase()] ||
-          busState.data[a.nric] ||
+          adhocBusState.data[a.nric.toUpperCase()] ||
+          adhocBusState.data[a.nric] ||
           {}
         ).bus || "";
       const busB =
         (
-          busState.data[b.nric.toUpperCase()] ||
-          busState.data[b.nric] ||
+          adhocBusState.data[b.nric.toUpperCase()] ||
+          adhocBusState.data[b.nric] ||
           {}
         ).bus || "";
       return busA.localeCompare(busB, undefined, {
@@ -1462,7 +1552,7 @@ window.renderBusLists = function () {
   const boardedList = document.getElementById("busBoardedList");
   if (!notBoardedList || !boardedList) return;
 
-  if (!busState.juncture) {
+  if (!adhocBusState.juncture) {
     notBoardedList.innerHTML =
       '<p class="text-xs text-gray-400 dark:text-gray-500 font-bold p-4 text-center mt-2">Create or select a Bus Juncture (+) above to start tracking.</p>';
     boardedList.innerHTML =
@@ -1473,15 +1563,15 @@ window.renderBusLists = function () {
   }
 
   const busFilterEl = document.getElementById("busFilterSelect");
-  const busFilter = busFilterEl ? busFilterEl.value : busState.busFilter || "ALL";
-  busState.busFilter = busFilter;
+  const busFilter = busFilterEl ? busFilterEl.value : adhocBusState.busFilter || "ALL";
+  adhocBusState.busFilter = busFilter;
 
   const participants = getFilteredBusParticipants();
   const notBoardedArr = [];
   const boardedArr = [];
 
   participants.forEach((p) => {
-    const entry = busState.data[p.nric.toUpperCase()] || busState.data[p.nric];
+    const entry = adhocBusState.data[p.nric.toUpperCase()] || adhocBusState.data[p.nric];
     const assignedBus = entry && entry.bus ? entry.bus : "";
     const isBoarded = Boolean(assignedBus);
 
@@ -1532,7 +1622,7 @@ window.renderBusLists = function () {
     .join("");
   const boardedHtml = sortedBoarded
     .map((p) => {
-      const entry = busState.data[p.nric.toUpperCase()] || busState.data[p.nric];
+      const entry = adhocBusState.data[p.nric.toUpperCase()] || adhocBusState.data[p.nric];
       const assignedBus = entry && entry.bus ? entry.bus : "";
       return generateBusCard(p, assignedBus);
     })
@@ -1621,14 +1711,14 @@ window.handleBusCardClick = function (nric, isBoarded, event) {
 };
 
 function toggleBusStatus(nric, shouldBoard) {
-  if (!busState.juncture) {
+  if (!adhocBusState.juncture) {
     showBusFlashMessage("Please create or select a bus juncture first.", true);
     return;
   }
 
   const upperNric = nric.toUpperCase();
   const busFilterEl = document.getElementById("busFilterSelect");
-  const currentFilter = busFilterEl ? busFilterEl.value : busState.busFilter;
+  const currentFilter = busFilterEl ? busFilterEl.value : adhocBusState.busFilter;
   const ts = Date.now();
 
   if (shouldBoard) {
@@ -1647,25 +1737,25 @@ function toggleBusStatus(nric, shouldBoard) {
       return;
     }
 
-    const prevBus = busState.data[upperNric]?.bus;
+    const prevBus = adhocBusState.data[upperNric]?.bus;
     if (prevBus && prevBus !== currentFilter) {
       const prevKey = `${upperNric}::${prevBus}`;
-      pendingBusUpdates.set(prevKey, {
+      pendingAdhocBusUpdates.set(prevKey, {
         nric: prevKey,
         status: false,
         ts: ts - 1,
       });
     }
 
-    busState.data[upperNric] = { bus: currentFilter, ts };
+    adhocBusState.data[upperNric] = { bus: currentFilter, ts };
     const newKey = `${upperNric}::${currentFilter}`;
-    pendingBusUpdates.set(newKey, { nric: newKey, status: true, ts });
+    pendingAdhocBusUpdates.set(newKey, { nric: newKey, status: true, ts });
   } else {
-    const prevBus = busState.data[upperNric]?.bus || currentFilter;
-    busState.data[upperNric] = { bus: "", ts };
+    const prevBus = adhocBusState.data[upperNric]?.bus || currentFilter;
+    adhocBusState.data[upperNric] = { bus: "", ts };
     if (prevBus && prevBus !== "ALL") {
       const compKey = `${upperNric}::${prevBus}`;
-      pendingBusUpdates.set(compKey, { nric: compKey, status: false, ts });
+      pendingAdhocBusUpdates.set(compKey, { nric: compKey, status: false, ts });
     }
   }
 
@@ -1679,11 +1769,11 @@ function toggleBusStatus(nric, shouldBoard) {
       const matched = getFilteredBusParticipants();
       if (matched.length > 0) {
         const firstBoarded = Boolean(
-          busState.data[matched[0].nric.toUpperCase()]?.bus,
+          adhocBusState.data[matched[0].nric.toUpperCase()]?.bus,
         );
         const allSame = matched.every(
           (p) =>
-            Boolean(busState.data[p.nric.toUpperCase()]?.bus) === firstBoarded,
+            Boolean(adhocBusState.data[p.nric.toUpperCase()]?.bus) === firstBoarded,
         );
         if (allSame) {
           searchInput.value = "";
@@ -1702,26 +1792,26 @@ window.handleBusSearch = function () {
 };
 
 function scheduleBusAttendanceSync() {
-  if (busSyncTimeout) clearTimeout(busSyncTimeout);
-  busSyncTimeout = setTimeout(() => {
+  if (adhocBusSyncTimeout) clearTimeout(adhocBusSyncTimeout);
+  adhocBusSyncTimeout = setTimeout(() => {
     executeBusAttendanceSync();
   }, 800);
 }
 
 async function executeBusAttendanceSync() {
-  if (pendingBusUpdates.size === 0 || !busState.juncture) return;
+  if (pendingAdhocBusUpdates.size === 0 || !adhocBusState.juncture) return;
 
-  isBusSyncing = true;
+  isAdhocBusSyncing = true;
   setAttSyncButtonState("saving", "btn-sync-bus");
 
-  const batchMap = new Map(pendingBusUpdates);
-  pendingBusUpdates.clear();
+  const batchMap = new Map(pendingAdhocBusUpdates);
+  pendingAdhocBusUpdates.clear();
 
   const updates = Array.from(batchMap.values());
 
   try {
     await apiCall("syncAttendanceUpdate", {
-      juncture: "__BUS__" + busState.juncture,
+      juncture: "__BUS__" + adhocBusState.juncture,
       updates,
       takenBy: currentUser?.name || currentUser?.nric || "ADMIN",
     });
@@ -1730,15 +1820,15 @@ async function executeBusAttendanceSync() {
     showBusFlashMessage("Bus sync failed. Retrying...", true);
     setAttSyncButtonState("error", "btn-sync-bus");
     batchMap.forEach((val, key) => {
-      if (!pendingBusUpdates.has(key)) pendingBusUpdates.set(key, val);
+      if (!pendingAdhocBusUpdates.has(key)) pendingAdhocBusUpdates.set(key, val);
     });
   } finally {
-    isBusSyncing = false;
+    isAdhocBusSyncing = false;
   }
 }
 
 window.manualSyncBusAttendance = async function () {
-  if (pendingBusUpdates.size > 0) {
+  if (pendingAdhocBusUpdates.size > 0) {
     await executeBusAttendanceSync();
   }
   await changeBusContext();
@@ -1747,35 +1837,35 @@ window.manualSyncBusAttendance = async function () {
 
 async function pollBusAttendanceNow() {
   if (
-    !busState.juncture ||
-    isBusSyncing ||
-    pendingBusUpdates.size > 0
+    !adhocBusState.juncture ||
+    isAdhocBusSyncing ||
+    pendingAdhocBusUpdates.size > 0
   )
     return;
 
   const fetchStartTime = Date.now();
   try {
     const res = await apiCall("fetchAttendanceData", {
-      juncture: "__BUS__" + busState.juncture,
+      juncture: "__BUS__" + adhocBusState.juncture,
     });
-    if (lastLocalChange > fetchStartTime || pendingBusUpdates.size > 0) return;
+    if (lastLocalChange > fetchStartTime || pendingAdhocBusUpdates.size > 0) return;
 
     const parsed = parseRemoteBusAttendanceData(res.data || {});
     let hasChanges = false;
 
     if (
-      JSON.stringify(parsed.busOptions) !== JSON.stringify(busState.busOptions)
+      JSON.stringify(parsed.busOptions) !== JSON.stringify(adhocBusState.busOptions)
     ) {
-      busState.busOptions = parsed.busOptions;
+      adhocBusState.busOptions = parsed.busOptions;
       renderBusFilterOptions();
       hasChanges = true;
     }
 
     Object.keys(parsed.participantBusMap).forEach((nric) => {
       const rEntry = parsed.participantBusMap[nric];
-      const lEntry = busState.data[nric] || { bus: "", ts: 0 };
+      const lEntry = adhocBusState.data[nric] || { bus: "", ts: 0 };
       if (rEntry.ts > lEntry.ts) {
-        busState.data[nric] = rEntry;
+        adhocBusState.data[nric] = rEntry;
         hasChanges = true;
       }
     });
@@ -1787,12 +1877,12 @@ async function pollBusAttendanceNow() {
 }
 
 function formatBusExportText(type) {
-  const juncture = busState.juncture || "Bus Attendance";
-  const busFilter = busState.busFilter || "ALL";
+  const juncture = adhocBusState.juncture || "Bus Attendance";
+  const busFilter = adhocBusState.busFilter || "ALL";
   const participants = getFilteredBusParticipants();
 
   const filteredList = participants.filter((p) => {
-    const assignedBus = busState.data[p.nric.toUpperCase()]?.bus || "";
+    const assignedBus = adhocBusState.data[p.nric.toUpperCase()]?.bus || "";
     if (type === "notBoarded") return !assignedBus;
     if (busFilter === "ALL") return Boolean(assignedBus);
     return assignedBus === busFilter;
@@ -1815,7 +1905,7 @@ function formatBusExportText(type) {
     list.forEach((p, idx) => {
       const dName = p.displayName || p.shortName || p.name;
       const roleShort = (p.role || "").substring(0, 3).toUpperCase();
-      const assignedBus = busState.data[p.nric.toUpperCase()]?.bus || "";
+      const assignedBus = adhocBusState.data[p.nric.toUpperCase()]?.bus || "";
       const busSuffix =
         type === "boarded" && busFilter === "ALL" && assignedBus
           ? ` [${assignedBus}]`

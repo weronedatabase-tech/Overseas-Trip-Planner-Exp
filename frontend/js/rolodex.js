@@ -1,5 +1,5 @@
 var currentPickerTarget = null;
-const monthsArr = [
+var monthsArr = [
   "Jan",
   "Feb",
   "Mar",
