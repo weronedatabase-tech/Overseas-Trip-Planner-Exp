@@ -129,8 +129,8 @@ async function submitLandingReceipt(e) {
     err.textContent = "Invalid NRIC/FIN or Passport format.";
     return err.classList.remove("hidden-force");
   }
-  if (amount <= 0) {
-    err.textContent = "Amount must be greater than 0.";
+  if (isNaN(amount) || amount === 0) {
+    err.textContent = "Please enter a valid non-zero amount.";
     return err.classList.remove("hidden-force");
   }
   if (!category) {
@@ -155,6 +155,7 @@ async function submitLandingReceipt(e) {
     const ext = file.name.split(".").pop() || "png";
     const receiptNo = `${nric.slice(-4)}${Date.now().toString().slice(-4)}`;
     const finalFileName = `${uploaderName || nric} - ${receiptNo}.${ext}`;
+    const parsedSgd = parseFloat(document.getElementById("landingRecSgd").value);
 
     const payload = {
       uploaderNric: nric,
@@ -162,8 +163,7 @@ async function submitLandingReceipt(e) {
       currency: document.getElementById("landingRecCurrency").value,
       amount: amount,
       rate: parseFloat(document.getElementById("landingRecRate").value) || 1,
-      sgdAmount:
-        parseFloat(document.getElementById("landingRecSgd").value) || amount,
+      sgdAmount: isNaN(parsedSgd) || parsedSgd === 0 ? amount : parsedSgd,
       categoryId: category,
       remarks: remarks,
       fileName: finalFileName,

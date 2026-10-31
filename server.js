@@ -4,6 +4,7 @@ import { WebSocketServer } from 'ws';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import ExcelJS from 'exceljs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -213,6 +214,7 @@ const MUTATION_DOMAIN_MAP = {
   renameDriveItem: { domain: 'files', prefixes: ['getSettings'] },
   deleteDriveItem: { domain: 'files', prefixes: ['getSettings'] },
   bulkDriveOperation: { domain: 'files', prefixes: ['getSettings'] },
+  extractData: { domain: 'files', prefixes: ['getSettings'] },
   syncManualPairingUpdates: { domain: 'outing', prefixes: ['fetchPairingsOnly', 'fetchLogistics'] },
   syncManualGroupingUpdates: { domain: 'outing', prefixes: ['fetchLogistics'] },
   runAutoPairing: { domain: 'outing', prefixes: ['fetchPairingsOnly', 'fetchLogistics'] },
@@ -478,6 +480,360 @@ app.post('/api', async (req, res) => {
       ts: Date.now()
     });
     return res.json(merged);
+  }
+
+  // Handle extractData by generating an Excel (.xlsx) workbook and uploading to Drive
+  if (action === 'extractData') {
+    try {
+      const p = payload || {};
+      const extractType = p.extractType || '';
+      const excludedNrics = Array.isArray(p.excludedNrics) ? p.excludedNrics : [];
+      const customConfig = p.customConfig || {};
+
+      const fetchGasJson = async (act, extra = {}) => {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: act, ...extra }),
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          redirect: 'follow'
+        });
+        return await resp.json();
+      };
+
+      const [settingsRes, rosterRes, logRes] = await Promise.all([
+        fetchGasJson('getSettings').catch(() => ({})),
+        fetchGasJson('fetchAdminRoster').catch(() => ({ roster: [] })),
+        fetchGasJson('fetchLogistics').catch(() => ({ rooms: [], pairings: [] }))
+      ]);
+
+      const tripTitle = (settingsRes && settingsRes.tripTitle) || 'TOT';
+      const tripYear = (settingsRes && settingsRes.tripYear) || new Date().getFullYear().toString();
+      const rosterData = Array.isArray(rosterRes && rosterRes.roster) ? [...rosterRes.roster] : [];
+
+      // Enrich with logistics data (rooms & pairings)
+      try {
+        const roomsMap = {};
+        const pairingsMap = {};
+        if (logRes && Array.isArray(logRes.rooms)) {
+          logRes.rooms.forEach(r => {
+            if (!r.isDeleted && Array.isArray(r.occupants)) {
+              r.occupants.forEach(n => {
+                roomsMap[n] = String(r.name || '').toUpperCase();
+              });
+            }
+          });
+        }
+        if (logRes && Array.isArray(logRes.pairings)) {
+          logRes.pairings.filter(pair => pair.status === 'ACTIVE').forEach(pair => {
+            if (!pairingsMap[pair.traineeNric]) pairingsMap[pair.traineeNric] = [];
+            if (!pairingsMap[pair.volNric]) pairingsMap[pair.volNric] = [];
+            const v = rosterData.find(x => x.nric === pair.volNric);
+            const t = rosterData.find(x => x.nric === pair.traineeNric);
+            if (v) pairingsMap[pair.traineeNric].push(((v.shortName || v.fullName) || '').toUpperCase());
+            if (t) pairingsMap[pair.volNric].push(((t.shortName || t.fullName) || '').toUpperCase());
+          });
+        }
+        rosterData.forEach(person => {
+          person.room = roomsMap[person.nric] || 'UNASSIGNED';
+          let myPairings = pairingsMap[person.nric] ? [...pairingsMap[person.nric]] : [];
+          if (person.role === 'CAREGIVER' && person.relatedTrainee) {
+            const rNames = person.relatedTrainee.split('|').map(n => n.trim().toLowerCase());
+            const relatedList = rosterData.filter(
+              x => rNames.includes((x.fullName || '').toLowerCase()) && x.role === 'TRAINEE'
+            );
+            relatedList.forEach(related => {
+              if (related && pairingsMap[related.nric]) {
+                myPairings.push(...pairingsMap[related.nric]);
+              }
+            });
+          }
+          person.pairings = myPairings.length > 0 ? Array.from(new Set(myPairings)).join(', ') : 'NONE';
+        });
+      } catch (enrichErr) {}
+
+      rosterData.sort((a, b) => String(a.fullName || '').localeCompare(String(b.fullName || '')));
+      const targetRoster = rosterData.filter(person => !excludedNrics.includes(person.nric));
+
+      const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const getSGTParts = (dateInput) => {
+        if (!dateInput) return null;
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return null;
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Singapore',
+          year: 'numeric',
+          month: 'numeric',
+          day: 'numeric'
+        }).formatToParts(d);
+        const map = {};
+        parts.forEach(pt => { map[pt.type] = pt.value; });
+        return {
+          year: parseInt(map.year, 10),
+          month: parseInt(map.month, 10),
+          day: parseInt(map.day, 10)
+        };
+      };
+      const formatDdMmmYyyy = (dateInput) => {
+        const pt = getSGTParts(dateInput);
+        if (!pt) return '';
+        return `${String(pt.day).padStart(2, '0')} ${MONTHS_SHORT[pt.month - 1]} ${pt.year}`;
+      };
+      const formatDdSlashMmYyyy = (dateInput) => {
+        const pt = getSGTParts(dateInput);
+        if (!pt) return '';
+        return `${String(pt.day).padStart(2, '0')}/${String(pt.month).padStart(2, '0')}/${pt.year}`;
+      };
+      const calcAge = (dateInput) => {
+        const pt = getSGTParts(dateInput);
+        if (!pt) return '';
+        const now = getSGTParts(new Date());
+        let a = now.year - pt.year;
+        const m = now.month - pt.month;
+        if (m < 0 || (m === 0 && now.day < pt.day)) a--;
+        return a.toString();
+      };
+
+      const workbook = new ExcelJS.Workbook();
+      let baseFileName = 'Extraction';
+
+      if (extractType === 'insurance') {
+        baseFileName = `Insurance Submission_${tripTitle}_${tripYear}`;
+        const sheet = workbook.addWorksheet('Insurance');
+        const colWidths = [6, 36, 22, 18, 8, 18, 12, 18, 22, 15, 29];
+        sheet.columns = colWidths.map(w => ({ width: w }));
+
+        const header = [
+          'No.',
+          'Name of Person(s) to be insured',
+          'NRIC/FIN/Passport No.',
+          'Date of Birth (DD/MM/YYYY)',
+          'Age',
+          'Nationality',
+          'Gender',
+          'Contact No',
+          'Relationship to Applicant',
+          'Transport',
+          'Project Group'
+        ];
+        const headerRow = sheet.addRow(header);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'left', wrapText: true };
+
+        targetRoster.forEach((person, idx) => {
+          const row = sheet.addRow([
+            idx + 1,
+            person.fullName || '',
+            person.nric || '',
+            formatDdMmmYyyy(person.dob),
+            calcAge(person.dob),
+            person.nationality || '',
+            person.gender || '',
+            person.contact || '',
+            'Friend',
+            'Bus',
+            'West End & RSPID (WGS)'
+          ]);
+          row.alignment = { horizontal: 'left', wrapText: true };
+        });
+      } else if (extractType === 'bus') {
+        baseFileName = `Bus for ICA Submission_${tripTitle}_${tripYear}`;
+        const buses = {};
+        targetRoster.forEach(person => {
+          let b = person.bus ? String(person.bus).trim() : 'Unassigned';
+          if (!b) b = 'Unassigned';
+          if (!buses[b]) buses[b] = [];
+          buses[b].push(person);
+        });
+        if (Object.keys(buses).length === 0) {
+          buses['Unassigned'] = [];
+        }
+
+        const colWidths = [6, 40, 12, 18, 18, 18, 18, 29, 22, 29];
+        for (const b in buses) {
+          let tabName = 'Unassigned';
+          if (b.toLowerCase() !== 'unassigned') {
+            const clean = b.replace(/bus/i, '').trim();
+            tabName = 'Bus ' + clean;
+          }
+          const sheet = workbook.addWorksheet(tabName);
+          sheet.columns = colWidths.map(w => ({ width: w }));
+
+          const busInfoLabels = [
+            'Departure from Singapore Date',
+            'Estimated time to reach checkpoint',
+            'Arrival to Singapore Date',
+            'Estimated time to reach checkpoint',
+            'Checkpoint (Tuas / Woodlands)',
+            'Point of Contact',
+            'Bus Plate #, Assigned Bus Driver name & Passport Detail:'
+          ];
+          busInfoLabels.forEach((label, idx) => {
+            const r = sheet.getRow(idx + 1);
+            const cellB = r.getCell(2);
+            cellB.value = label;
+            cellB.font = { bold: true };
+            cellB.alignment = { wrapText: true, vertical: 'top' };
+          });
+
+          const row7 = sheet.getRow(7);
+          row7.height = 100;
+          const cellC7 = row7.getCell(3);
+          cellC7.value = '1. Bus plate No: \n2. Driver Full Name: \n3. Driver Gender: \n4. Driver Date of Birth: \n5. Driver Passport Number: \n6. Driver Passport Expiry: \n7. Driver Nationality: \n8. H/P: ';
+          cellC7.alignment = { vertical: 'top', wrapText: true };
+
+          const header = [
+            'S/N',
+            'Full Name as per Passport',
+            'Gender',
+            'Date of Birth',
+            'Passport No.',
+            'Passport Expiry Date',
+            'Nationality',
+            'Medical Conditions',
+            'Remarks',
+            'Clients / Volunteers / Caregivers'
+          ];
+          const row9 = sheet.getRow(9);
+          header.forEach((hText, cIdx) => {
+            const cell = row9.getCell(cIdx + 1);
+            cell.value = hText;
+            cell.font = { bold: true };
+            cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+          });
+
+          const busParticipants = buses[b];
+          busParticipants.forEach((person, idx) => {
+            let roleMapped = 'Volunteer';
+            if (person.role === 'TRAINEE') roleMapped = 'Client';
+            else if (person.role === 'CAREGIVER') roleMapped = 'Caregiver';
+
+            const r = sheet.getRow(10 + idx);
+            const vals = [
+              idx + 1,
+              person.fullName || '',
+              person.gender || '',
+              formatDdSlashMmYyyy(person.dob),
+              person.passportNo || person.nric || '',
+              formatDdSlashMmYyyy(person.passportExpiry),
+              person.nationality || '',
+              '',
+              '',
+              roleMapped
+            ];
+            vals.forEach((v, cIdx) => {
+              const cell = r.getCell(cIdx + 1);
+              cell.value = v;
+              cell.alignment = { wrapText: true, vertical: 'top', horizontal: 'left' };
+            });
+          });
+        }
+      } else if (extractType === 'custom') {
+        baseFileName = (customConfig && customConfig.sheetName)
+          ? String(customConfig.sheetName).trim()
+          : 'Custom Extraction';
+        const sheet = workbook.addWorksheet('Extraction');
+        const colDefs = Array.isArray(customConfig.columns) ? customConfig.columns : [];
+        const colLabels = {
+          fullName: 'Full Name',
+          shortName: 'Short Name',
+          nric: 'NRIC / FIN',
+          email: 'Email Address',
+          role: 'Role',
+          gender: 'Gender',
+          contact: 'Contact Number',
+          address: 'Home Address',
+          nationality: 'Nationality',
+          passportNo: 'Passport No.',
+          passportExpiry: 'Passport Expiry Date',
+          dob: 'Date of Birth',
+          diet: 'Dietary Restrictions',
+          emergencyName: 'Emergency Contact Name',
+          emergencyContact: 'Emergency Contact Number',
+          emergencyRelation: 'Emergency Contact Relationship',
+          sleeping: 'Sleeping Arrangement',
+          otherPoints: 'Other Points to Note',
+          medical: 'Medical Conditions',
+          bus: 'Bus',
+          logisticsGroup: 'Logistics Group',
+          group: 'Project Group',
+          relatedTrainee: 'Related Trainee(s)',
+          relationship: 'Relationship to Trainee',
+          room: 'Room Assignment',
+          pairings: 'Pairings'
+        };
+
+        const widths = [8];
+        colDefs.forEach(c => {
+          if (['fullName', 'address', 'medical', 'otherPoints', 'relatedTrainee'].includes(c)) widths.push(36);
+          else if (['nric', 'dob', 'passportExpiry', 'gender', 'role', 'bus', 'room', 'shortName'].includes(c)) widths.push(18);
+          else if (['contact', 'emergencyContact'].includes(c)) widths.push(19);
+          else widths.push(22);
+        });
+        sheet.columns = widths.map(w => ({ width: w }));
+
+        const header = ['S/N', ...colDefs.map(c => colLabels[c] || c)];
+        const headerRow = sheet.addRow(header);
+        headerRow.font = { bold: true };
+        headerRow.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+
+        targetRoster.forEach((person, idx) => {
+          const rowVals = [idx + 1];
+          colDefs.forEach(c => {
+            let val = person[c] || '';
+            if ((c === 'dob' || c === 'passportExpiry') && val) {
+              const formatted = formatDdMmmYyyy(val);
+              if (formatted) val = formatted;
+            }
+            rowVals.push(val);
+          });
+          const row = sheet.addRow(rowVals);
+          row.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        });
+      } else {
+        return res.status(400).json({ status: 'error', message: 'Invalid extraction type.' });
+      }
+
+      const excelFileName = baseFileName.toLowerCase().endsWith('.xlsx')
+        ? baseFileName
+        : `${baseFileName}.xlsx`;
+      const buffer = await workbook.xlsx.writeBuffer();
+      const base64Data = Buffer.from(buffer).toString('base64');
+
+      const uploadResp = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'uploadDriveFile',
+          folderId: p.folderId || 'root',
+          fileName: excelFileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          fileData: base64Data
+        }),
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        redirect: 'follow'
+      });
+      const uploadJson = await uploadResp.json();
+      if (uploadJson && uploadJson.status === 'error') {
+        return res.json(uploadJson);
+      }
+
+      broadcastSyncEvent({
+        type: 'sync:update',
+        action: 'extractData',
+        domain: 'files',
+        clientId: clientId || null,
+        ts: Date.now()
+      });
+
+      return res.json({
+        status: 'success',
+        fileName: excelFileName,
+        folders: uploadJson ? uploadJson.folders : undefined,
+        files: uploadJson ? uploadJson.files : undefined
+      });
+    } catch (err) {
+      console.error('extractData error:', err);
+      return res.json({ status: 'error', message: err.message });
+    }
   }
 
   // Pre-invalidate cache if this is a known mutation action

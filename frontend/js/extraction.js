@@ -334,12 +334,18 @@ function performExtraction() {
     .then((res) => {
       overlay.classList.add("hidden-force");
       if (res.status === "success") {
-        showToast("Extraction successful!");
-        if (typeof refreshCurrentDriveFolder === "function") {
+        showToast("Excel extraction successful!");
+        if (
+          typeof currentDrivePath !== "undefined" &&
+          currentDrivePath.length <= 1
+        ) {
           if (
-            typeof currentDrivePath !== "undefined" &&
-            currentDrivePath.length <= 1
+            Array.isArray(res.folders) &&
+            Array.isArray(res.files) &&
+            typeof renderDriveContents === "function"
           ) {
+            renderDriveContents(res.folders, res.files);
+          } else if (typeof refreshCurrentDriveFolder === "function") {
             refreshCurrentDriveFolder(null);
           }
         }
@@ -477,11 +483,11 @@ async function showCustomExtractionPopup() {
             </button>
             <div class="p-5 md:p-6 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
                 <h2 class="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight">Custom Extraction</h2>
-                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Configure your Google Sheet</p>
+                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Configure your Excel File</p>
             </div>
             <div class="p-5 md:p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                 <div>
-                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Sheet Name</label>
+                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Excel File Name</label>
                     <input type="text" id="customSheetName" placeholder="e.g. Flight Details" class="w-full py-2.5 px-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition">
                 </div>
                 
@@ -698,12 +704,18 @@ function performCustomExtraction() {
     .then((res) => {
       overlay.classList.add("hidden-force");
       if (res.status === "success") {
-        showToast("Extraction successful!");
-        if (typeof refreshCurrentDriveFolder === "function") {
+        showToast("Excel extraction successful!");
+        if (
+          typeof currentDrivePath !== "undefined" &&
+          currentDrivePath.length <= 1
+        ) {
           if (
-            typeof currentDrivePath !== "undefined" &&
-            currentDrivePath.length <= 1
+            Array.isArray(res.folders) &&
+            Array.isArray(res.files) &&
+            typeof renderDriveContents === "function"
           ) {
+            renderDriveContents(res.folders, res.files);
+          } else if (typeof refreshCurrentDriveFolder === "function") {
             refreshCurrentDriveFolder(null);
           }
         }

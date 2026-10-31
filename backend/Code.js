@@ -1757,9 +1757,11 @@ function extractData(extractType, excludedNrics, customConfig) {
     
     const folder = getTripFolder();
     let fileId;
+    let exportFileName = 'Extraction';
     
     if (extractType === 'insurance') {
       const fileName = `Insurance Submission_${tripTitle}_${tripYear}`;
+      exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
       fileId = ss.getId();
       const sheet = ss.getSheets()[0];
@@ -1825,10 +1827,9 @@ function extractData(extractType, excludedNrics, customConfig) {
       // 5. Bold row 1
       sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
       
-      DriveApp.getFileById(fileId).moveTo(folder);
-      
     } else if (extractType === 'bus') {
       const fileName = `Bus for ICA Submission_${tripTitle}_${tripYear}`;
+      exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
       fileId = ss.getId();
       
@@ -1840,6 +1841,9 @@ function extractData(extractType, excludedNrics, customConfig) {
         if (!buses[b]) buses[b] = [];
         buses[b].push(p);
       });
+      if (Object.keys(buses).length === 0) {
+        buses['Unassigned'] = [];
+      }
       
       let isFirst = true;
       for (const b in buses) {
@@ -1869,7 +1873,7 @@ function extractData(extractType, excludedNrics, customConfig) {
         sheet.getRange("B1:B7").setFontWeight("bold").setWrap(true);
         
         sheet.getRange("C7").setValue("1. Bus plate No: \n2. Driver Full Name: \n3. Driver Gender: \n4. Driver Date of Birth: \n5. Driver Passport Number: \n6. Driver Passport Expiry: \n7. Driver Nationality: \n8. H/P: ");
-        sheet.getRange("C7").setVerticalAlignment("top").setWrap(false);
+        sheet.getRange("C7").setVerticalAlignment("top").setWrap(true);
         sheet.setRowHeight(7, 130);
         
         // Row 9 Header (Note: Row 8 is blank)
@@ -1931,15 +1935,15 @@ function extractData(extractType, excludedNrics, customConfig) {
           dataRange.setWrap(true).setVerticalAlignment("top").setHorizontalAlignment("left");
         }
       }
-      DriveApp.getFileById(fileId).moveTo(folder);
     } else if (extractType === 'custom') {
-      const fileName = customConfig.sheetName || 'Custom Extraction';
+      const fileName = (customConfig && customConfig.sheetName) ? String(customConfig.sheetName).trim() : 'Custom Extraction';
+      exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
       fileId = ss.getId();
       const sheet = ss.getSheets()[0];
       sheet.setName("Extraction");
       
-      const colDefs = customConfig.columns || [];
+      const colDefs = (customConfig && customConfig.columns) || [];
       const colLabels = {
         fullName: 'Full Name', shortName: 'Short Name', nric: 'NRIC / FIN', email: 'Email Address', role: 'Role', gender: 'Gender', contact: 'Contact Number', address: 'Home Address', nationality: 'Nationality', passportNo: 'Passport No.', passportExpiry: 'Passport Expiry Date', dob: 'Date of Birth', diet: 'Dietary Restrictions', emergencyName: 'Emergency Contact Name', emergencyContact: 'Emergency Contact Number', emergencyRelation: 'Emergency Contact Relationship', sleeping: 'Sleeping Arrangement', otherPoints: 'Other Points to Note', medical: 'Medical Conditions', bus: 'Bus', logisticsGroup: 'Logistics Group', group: 'Project Group', relatedTrainee: 'Related Trainee(s)', relationship: 'Relationship to Trainee', room: 'Room Assignment', pairings: 'Pairings'
       };
@@ -1982,8 +1986,33 @@ function extractData(extractType, excludedNrics, customConfig) {
       dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
       
       sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
-      
-      DriveApp.getFileById(fileId).moveTo(folder);
+    }
+
+    if (fileId) {
+      SpreadsheetApp.flush();
+      const tempSheetId = fileId;
+      const exportUrl = "https://docs.google.com/spreadsheets/d/" + tempSheetId + "/export?format=xlsx";
+      const response = UrlFetchApp.fetch(exportUrl, {
+        headers: {
+          Authorization: "Bearer " + ScriptApp.getOAuthToken()
+        },
+        muteHttpExceptions: true
+      });
+      if (response.getResponseCode() !== 200) {
+        try { DriveApp.getFileById(tempSheetId).setTrashed(true); } catch (cleanErr) {}
+        throw new Error("Failed to export Excel file (HTTP " + response.getResponseCode() + ")");
+      }
+      const excelName = exportFileName.toLowerCase().endsWith(".xlsx")
+        ? exportFileName
+        : exportFileName + ".xlsx";
+      const xlsxBlob = response.getBlob()
+        .setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        .setName(excelName);
+      const excelFile = folder.createFile(xlsxBlob);
+      fileId = excelFile.getId();
+      try {
+        DriveApp.getFileById(tempSheetId).setTrashed(true);
+      } catch (cleanErr) {}
     }
     
     return { status: 'success', fileId: fileId };

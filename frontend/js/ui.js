@@ -699,8 +699,20 @@ window.formatMoneyInput = function (input, isBlur) {
       input.value = "0.00";
     }
   } else {
+    if (val === "-") {
+      input.value = "-";
+      return;
+    }
     parts = val.split(".");
-    let whole = parts[0] ? parseFloat(parts[0]).toLocaleString("en-US") : "0";
+    let whole;
+    if (!parts[0]) {
+      whole = "0";
+    } else if (parts[0] === "-" || parts[0] === "-0") {
+      whole = "-0";
+    } else {
+      let parsedWhole = parseFloat(parts[0]);
+      whole = !isNaN(parsedWhole) ? parsedWhole.toLocaleString("en-US") : "0";
+    }
 
     if (parts.length > 1) {
       input.value = whole + "." + parts[1].substring(0, 2);

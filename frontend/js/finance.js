@@ -1935,8 +1935,8 @@ async function submitFinReceiptUpload(e) {
   if (typeof isValidNRIC === "function" && !isValidNRIC(nric) && nric.length < 5) {
     return showError("Invalid NRIC/FIN or Passport format.");
   }
-  if (amount <= 0) {
-    return showError("Amount must be greater than 0.");
+  if (isNaN(amount) || amount === 0) {
+    return showError("Please enter a valid non-zero amount.");
   }
   if (!category) {
     return showError("Category is required.");
@@ -1961,6 +1961,7 @@ async function submitFinReceiptUpload(e) {
     const curEl = document.getElementById("finRecCurrency");
     const rateEl = document.getElementById("finRecRate");
     const sgdEl = document.getElementById("finRecSgd");
+    const parsedSgd = parseFloat(sgdEl ? sgdEl.value : amount);
 
     const payload = {
       uploaderNric: nric,
@@ -1968,7 +1969,7 @@ async function submitFinReceiptUpload(e) {
       currency: curEl ? curEl.value : "SGD",
       amount: amount,
       rate: parseFloat(rateEl ? rateEl.value : 1) || 1,
-      sgdAmount: parseFloat(sgdEl ? sgdEl.value : amount) || amount,
+      sgdAmount: isNaN(parsedSgd) || parsedSgd === 0 ? amount : parsedSgd,
       categoryId: category,
       remarks: remarks,
       fileName: finalFileName,
@@ -2595,9 +2596,9 @@ function renderReceiptsBrowser() {
       : "text-gray-500 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700";
 
     let rateHtml = "";
-    if (r.currency !== "SGD" && r.amount > 0 && r.sgdAmount > 0) {
-      const toSgd = (r.sgdAmount / r.amount).toFixed(2);
-      const fromSgd = (r.amount / r.sgdAmount).toFixed(2);
+    if (r.currency !== "SGD" && r.amount !== 0 && r.sgdAmount !== 0) {
+      const toSgd = Math.abs(r.sgdAmount / r.amount).toFixed(2);
+      const fromSgd = Math.abs(r.amount / r.sgdAmount).toFixed(2);
       rateHtml = `
         <div class="mt-1 flex flex-col gap-0.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-lg border-2 border-gray-100 dark:border-gray-700/50">
           <div class="flex justify-between"><span>1 ${r.currency}</span><span>= ${toSgd} SGD</span></div>
@@ -3015,8 +3016,8 @@ function handleEditSgdAmountInput() {
   } else {
     const amt = parseFloat(document.getElementById("editRecAmount").value);
     const sgd = parseFloat(document.getElementById("editRecSgdAmount").value);
-    if (amt > 0 && sgd > 0) {
-      const r = sgd / amt;
+    if (!isNaN(amt) && amt !== 0 && !isNaN(sgd) && sgd !== 0) {
+      const r = Math.abs(sgd / amt);
       document.getElementById("editRecRate").value = parseFloat(r.toFixed(6));
       document.getElementById("editRecInverseRate").value = parseFloat(
         (1 / r).toFixed(4),
@@ -3058,9 +3059,9 @@ async function saveEditedReceipt(e) {
     return;
   }
 
-  if (isNaN(amount) || amount < 0) {
+  if (isNaN(amount) || amount === 0) {
     if (errorEl) {
-      errorEl.textContent = "Please enter a valid amount.";
+      errorEl.textContent = "Please enter a valid non-zero amount.";
       errorEl.classList.remove("hidden-force");
     }
     return;
@@ -4097,6 +4098,13 @@ window.submitAdminFeeScreenshot = async function (e) {
   const payerNric = document.getElementById("adminFeePayerSelect").value || pocNric;
   const payerMember = members.find((m) => m.nric === payerNric) || members[0] || { nric: payerNric, fullName: payerNric };
   const amount = parseFloat(document.getElementById("adminFeeAmount").value) || 0;
+  if (isNaN(amount) || amount === 0) {
+    if (errEl) {
+      errEl.textContent = "Please enter a valid non-zero amount.";
+      errEl.classList.remove("hidden-force");
+    }
+    return;
+  }
   const remarks = document.getElementById("adminFeeRemarks").value.trim();
   const shouldMarkPaid = document.getElementById("adminFeeMarkPaidCheckbox").checked;
 

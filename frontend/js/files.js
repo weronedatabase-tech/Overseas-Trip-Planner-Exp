@@ -622,7 +622,12 @@ function renderDriveContents(folders, files) {
     if (f.mimeType.includes("folder")) {
       bgClass = "bg-gray-100 dark:bg-gray-800";
       iconHtml = `<svg class="w-5 h-5 text-gray-600 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
-    } else if (f.mimeType.includes("spreadsheet")) {
+    } else if (
+      f.mimeType.includes("spreadsheet") ||
+      f.mimeType.includes("excel") ||
+      f.name.toLowerCase().endsWith(".xlsx") ||
+      f.name.toLowerCase().endsWith(".xls")
+    ) {
       bgClass = "bg-green-50 dark:bg-green-900/30";
       iconHtml = `<svg class="w-5 h-5 text-green-600 dark:text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`;
     } else if (f.mimeType.includes("document")) {

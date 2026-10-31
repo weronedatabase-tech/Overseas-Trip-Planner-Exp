@@ -919,9 +919,9 @@ async function submitReceipt(e, suffix = "") {
 
   const amtInput = document.getElementById("recAmount" + suffix);
   const amountVal = amtInput ? parseFloat(amtInput.value) : 0;
-  if (isNaN(amountVal) || amountVal < 0) {
+  if (isNaN(amountVal) || amountVal === 0) {
     if (err) {
-      err.textContent = "Please enter a valid transfer amount.";
+      err.textContent = "Please enter a valid non-zero transfer amount.";
       err.classList.remove("hidden-force");
     }
     return;
