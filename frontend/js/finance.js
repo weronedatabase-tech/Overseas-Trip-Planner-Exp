@@ -25,6 +25,7 @@ let isReceiptSyncing = false;
 let finSearchQuery = "";
 let receiptSearchQuery = "";
 let receiptCategoryFilter = "all";
+let activeOptionFilterId = "all";
 
 const financeScrollPositions = {
   finalized: 0,
@@ -176,7 +177,7 @@ async function buildFinanceUI() {
 <div id="fin-tab-finalized" class="flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
 <div id="fin-tab-options" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
 <div id="fin-tab-receipts" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
-<div id="fin-tab-fees" class="hidden-force flex-1 w-full p-2 md:p-4 overflow-y-auto custom-scrollbar relative"></div>
+<div id="fin-tab-fees" class="hidden-force flex-1 w-full px-2 pb-2 pt-0 md:px-4 md:pb-4 md:pt-0 overflow-y-auto custom-scrollbar relative"></div>
 `;
 
   setupFinanceScrollListeners();
@@ -1108,6 +1109,11 @@ function renderFinalizedFinances() {
 // ==========================================
 // TAB 2: TRIP OPTIONS (SANDBOX)
 // ==========================================
+window.setTripOptionFilter = function (filterId) {
+  activeOptionFilterId = filterId || "all";
+  renderFinanceOptions();
+};
+
 function renderFinanceOptions() {
   const cont = document.getElementById("fin-tab-options");
   if (!cont || cont.classList.contains("hidden-force")) return;
@@ -1120,50 +1126,204 @@ function renderFinanceOptions() {
   });
 
   const autoPax = globalLogistics?.participants?.length || 0;
-
-  let globalSettingsHtml = `
-<div class="bg-white dark:bg-gray-800 p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-wrap justify-between items-center gap-3 mb-4">
-    <div class="flex flex-wrap items-center gap-3 flex-1">
-        <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded px-2 py-1">
-            <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Pax Mode:</label>
-            <select onchange="updateFinanceConfig('globalPaxMode', this.value)" class="text-sm font-bold bg-transparent text-gray-900 dark:text-white focus:outline-none cursor-pointer">
-                <option value="individual" ${financeConfig.globalPaxMode === "individual" ? "selected" : ""}>Manual Override (Individual Options)</option>
-                <option value="manual" ${financeConfig.globalPaxMode === "manual" ? "selected" : ""}>Manual Override (All Options)</option>
-                <option value="auto" ${financeConfig.globalPaxMode === "auto" ? "selected" : ""}>Total Pax based on Sign up</option>
-            </select>
-        </div>
-        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== "manual" ? "hidden-force" : ""}">
-            <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Global Pax:</label>
-            <input type="number" min="0" value="${financeConfig.globalPaxCount}" onchange="updateFinanceConfig('globalPaxCount', this.value)" class="hide-spinners w-16 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md text-center">
-        </div>
-        <div class="flex items-center gap-1.5 ${financeConfig.globalPaxMode !== "auto" ? "hidden-force" : ""}">
-            <label class="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Active Pax:</label>
-            <span class="text-xs font-black text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded border-2 border-green-200 dark:border-green-800 shadow-md">${autoPax}</span>
-        </div>
-    </div>
-    <div class="flex items-center gap-2">
-        <button onclick="addFinanceOption()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-xs md:text-xs font-bold px-2 py-1.5 rounded-md hover:bg-green-100 transition shadow-md focus:outline-none shrink-0">+ Add Option</button>
-        <button onclick="openFinanceRatesModal()" class="text-xs md:text-xs font-bold text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 border-2 border-green-200 dark:border-green-800 px-2.5 py-1.5 rounded shadow-md whitespace-nowrap shrink-0 transition focus:outline-none flex items-center gap-1">
-            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Rates
-        </button>
-        <button onclick="toggleFinanceCollapse()" class="text-xs md:text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 px-2.5 py-1.5 rounded shadow-md whitespace-nowrap shrink-0 transition focus:outline-none">
-            ${isFinanceCollapsed ? "Expand All" : "Collapse All"}
-        </button>
-    </div>
-</div>`;
-
-  let html =
-    '<div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4 w-full items-start pb-4 max-w-full mx-auto">';
-
   const activeOptions = financeOptions.filter((o) => !o.isDeleted);
 
-  if (activeOptions.length === 0) {
-    html += `<div class="w-full col-span-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 pt-10"><p class="font-bold text-sm">No options created yet.</p></div>`;
-  } else {
+  if (
+    activeOptionFilterId !== "all" &&
+    !activeOptions.some((o) => o.id === activeOptionFilterId)
+  ) {
+    activeOptionFilterId = "all";
+  }
+
+  const myrRate = getActualRate("MYR");
+  const sgdToMyr = myrRate > 0 ? (1 / myrRate).toFixed(2) : "N/A";
+  const customRateCount = financeConfig.customRates
+    ? Object.keys(financeConfig.customRates).length
+    : 0;
+
+  let optionPillsHtml = "";
+  if (activeOptions.length > 0) {
+    const isAllSelected = activeOptionFilterId === "all";
+    optionPillsHtml += `
+      <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pt-2.5 mt-2.5 border-t border-gray-100 dark:border-gray-800">
+        <button
+          type="button"
+          onclick="setTripOptionFilter('all')"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition flex items-center gap-1.5 cursor-pointer border ${
+            isAllSelected
+              ? "bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white shadow-sm"
+              : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 dark:bg-gray-800/70 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800"
+          }"
+        >
+          <span>All Options</span>
+          <span class="font-mono tabular-nums text-[11px] opacity-75">(${activeOptions.length})</span>
+        </button>
+    `;
+
     activeOptions.forEach((opt) => {
+      const isSelected = activeOptionFilterId === opt.id;
+      const isFinal = financeConfig.finalOptionId === opt.id;
+      const pax = getActivePax(opt);
+      let optTotalSgd = 0;
+      (opt.fields || []).forEach((f) => {
+        const rate = getActualRate(f.currency);
+        const baseCost = parseFloat(f.cost) || 0;
+        const taxPct = parseFloat(f.tax) || 0;
+        const rawCost = f.costType === "per_pax" ? baseCost * pax : baseCost;
+        optTotalSgd += rawCost * (1 + taxPct / 100) * rate;
+      });
+      const dispRate = getActualRate(opt.displayCurrency || "SGD");
+      const totalDisp = optTotalSgd / dispRate;
+      const safeTitle = String(opt.title || "Untitled Option")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      optionPillsHtml += `
+        <button
+          type="button"
+          onclick="setTripOptionFilter('${opt.id}')"
+          class="px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap shrink-0 transition flex items-center gap-2 cursor-pointer border ${
+            isSelected
+              ? "bg-primary text-white border-primary shadow-sm"
+              : isFinal
+                ? "bg-green-50/80 text-green-800 border-green-300 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300 dark:border-green-800"
+                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-700"
+          }"
+        >
+          <span class="truncate max-w-[140px] sm:max-w-[180px]">${safeTitle}</span>
+          ${
+            isFinal
+              ? `<span class="text-[10px] font-black uppercase tracking-wider ${
+                  isSelected
+                    ? "text-white/90"
+                    : "text-green-700 dark:text-green-400"
+                }">✓ Final</span>`
+              : ""
+          }
+          <span id="pill_total_${opt.id}" class="font-mono tabular-nums text-[11px] font-extrabold ${
+            isSelected
+              ? "text-white/90"
+              : "text-gray-500 dark:text-gray-400"
+          }">${opt.displayCurrency} ${totalDisp.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}</span>
+        </button>
+      `;
+    });
+
+    optionPillsHtml += `</div>`;
+  }
+
+  let globalSettingsHtml = `
+<div class="bg-white dark:bg-gray-900 p-3 md:p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-800 shadow-sm mb-3 md:mb-4">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+    <!-- Left: Pax Configuration & Exchange Rate Info -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5">
+        <label for="tripOptionsPaxModeSelect" class="text-[11px] uppercase font-black text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Pax Mode</label>
+        <select
+          id="tripOptionsPaxModeSelect"
+          onchange="updateFinanceConfig('globalPaxMode', this.value)"
+          class="text-xs font-bold bg-transparent text-gray-900 dark:text-white focus:outline-none cursor-pointer pr-1"
+        >
+          <option value="individual" ${financeConfig.globalPaxMode === "individual" ? "selected" : ""}>Per-Option Pax</option>
+          <option value="manual" ${financeConfig.globalPaxMode === "manual" ? "selected" : ""}>Global Manual Pax</option>
+          <option value="auto" ${financeConfig.globalPaxMode === "auto" ? "selected" : ""}>Live Sign-ups (${autoPax})</option>
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1 ${financeConfig.globalPaxMode !== "manual" ? "hidden-force" : ""}">
+        <label class="text-[11px] uppercase font-black text-gray-500 dark:text-gray-400 tracking-wider shrink-0">Global Pax</label>
+        <input
+          type="number"
+          min="0"
+          value="${financeConfig.globalPaxCount}"
+          oninput="financeConfig.globalPaxCount = parseInt(this.value) || 0; financeOptions.forEach(o => updateTotals(o.id)); queueFinanceUpdate();"
+          onchange="updateFinanceConfig('globalPaxCount', this.value)"
+          class="hide-spinners w-16 text-xs font-black font-mono tabular-nums border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:border-primary text-center"
+        />
+      </div>
+
+      <div class="flex items-center gap-1.5 bg-green-50/70 dark:bg-green-950/30 border border-green-200 dark:border-green-800/70 rounded-lg px-2.5 py-1.5 ${financeConfig.globalPaxMode !== "auto" ? "hidden-force" : ""}">
+        <span class="text-[11px] uppercase font-bold text-green-800 dark:text-green-300 tracking-wider">Signed Up:</span>
+        <span class="text-xs font-black font-mono tabular-nums text-green-700 dark:text-green-400">${autoPax} pax</span>
+      </div>
+
+      <button
+        type="button"
+        onclick="openFinanceRatesModal()"
+        class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-300 transition cursor-pointer shrink-0"
+        title="View or override currency exchange rates"
+      >
+        <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span class="font-mono tabular-nums">1 SGD = ${sgdToMyr} MYR</span>
+        ${customRateCount > 0 ? `<span class="text-[10px] font-black text-green-700 dark:text-green-400">(${customRateCount} custom)</span>` : ""}
+      </button>
+    </div>
+
+    <!-- Right: Primary Actions -->
+    <div class="flex items-center gap-2 self-end lg:self-auto shrink-0">
+      <button
+        type="button"
+        onclick="toggleFinanceCollapse()"
+        class="text-xs font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition focus:outline-none cursor-pointer"
+      >
+        ${isFinanceCollapsed ? "Expand All" : "Collapse All"}
+      </button>
+      <button
+        type="button"
+        onclick="openFinanceRatesModal()"
+        class="text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-700 px-3 py-1.5 rounded-lg whitespace-nowrap shrink-0 transition focus:outline-none flex items-center gap-1.5 cursor-pointer"
+      >
+        <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Exchange Rates</span>
+      </button>
+      <button
+        type="button"
+        onclick="addFinanceOption()"
+        class="bg-primary hover:bg-green-700 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg transition shadow-sm focus:outline-none whitespace-nowrap shrink-0 flex items-center gap-1 cursor-pointer"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        <span>Add Option</span>
+      </button>
+    </div>
+  </div>
+  ${optionPillsHtml}
+</div>`;
+
+  const visibleOptions =
+    activeOptionFilterId === "all"
+      ? activeOptions
+      : activeOptions.filter((o) => o.id === activeOptionFilterId);
+
+  let html =
+    '<div class="grid grid-cols-1 xl:grid-cols-2 gap-4 w-full items-start pb-6 max-w-full mx-auto">';
+
+  if (visibleOptions.length === 0) {
+    html += `
+      <div class="w-full col-span-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 py-14 px-4 bg-white dark:bg-gray-900 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+        <svg class="w-12 h-12 mb-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+        <p class="font-black text-base text-gray-700 dark:text-gray-200 mb-1">No Trip Budget Options Yet</p>
+        <p class="text-xs text-gray-400 dark:text-gray-500 text-center max-w-sm mb-4">Create your first trip budget option to estimate accommodation, transport, meals, and activity costs.</p>
+        <button type="button" onclick="addFinanceOption()" class="px-4 py-2 bg-primary hover:bg-green-700 text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer">
+          + Create First Option
+        </button>
+      </div>`;
+  } else {
+    visibleOptions.forEach((opt) => {
       const pax = getActivePax(opt);
       let totalSgd = 0;
-      opt.fields.forEach((f) => {
+      (opt.fields || []).forEach((f) => {
         const rate = getActualRate(f.currency);
         const baseCost = parseFloat(f.cost) || 0;
         const taxPct = parseFloat(f.tax) || 0;
@@ -1171,102 +1331,373 @@ function renderFinanceOptions() {
         totalSgd += rawCost * (1 + taxPct / 100) * rate;
       });
 
-      const dispRate = getActualRate(opt.displayCurrency);
+      const dispCurrency = opt.displayCurrency || "SGD";
+      const dispRate = getActualRate(dispCurrency);
       const totalDisp = totalSgd / dispRate;
       const cppDisp = pax > 0 ? totalDisp / pax : 0;
+      const cppSgd = pax > 0 ? totalSgd / pax : 0;
       const paxInputDisabled = financeConfig.globalPaxMode !== "individual";
       const isLocalCollapsed =
         opt._isCollapsed !== undefined ? opt._isCollapsed : false;
-      const spanClass =
-        opt.widthSpan === 3
-          ? "col-span-1 lg:col-span-2 xl:col-span-3"
-          : opt.widthSpan === 2
-            ? "col-span-1 lg:col-span-2 xl:col-span-2"
-            : "col-span-1";
+
+      const isWideCard =
+        visibleOptions.length === 1 ||
+        activeOptionFilterId !== "all" ||
+        opt.widthSpan === 3;
+      const spanClass = isWideCard ? "col-span-1 xl:col-span-2" : "col-span-1";
 
       const isFinal = financeConfig.finalOptionId === opt.id;
-      const finalBadge = isFinal
-        ? `<span class="bg-green-100 text-green-700 border-2 border-green-200 dark:bg-green-900/40 dark:text-green-400 dark:border-green-800 text-[11px] font-black px-1.5 py-0.5 rounded shadow-md uppercase tracking-widest shrink-0">FINALIZED</span>`
+      const safeTitleAttr = String(opt.title || "")
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;");
+
+      const desktopRowGridClass = isWideCard
+        ? "lg:grid-cols-[24px_minmax(150px,1.4fr)_86px_172px_84px_124px_minmax(140px,1.2fr)_32px] lg:items-center lg:gap-2.5 lg:py-2 lg:px-3"
         : "";
 
       html += `
-        <div class="w-full shrink-0 flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-md border ${isFinal ? "border-2 border-green-400 dark:border-green-600 shadow-[0_0_15px_rgba(74,222,128,0.2)]" : "border-2 border-gray-200 dark:border-gray-700"} overflow-hidden h-fit transition-all duration-300 ${spanClass}">
-            <div class="p-2 md:p-3 ${isFinal ? "bg-green-50/50 dark:bg-green-900/20" : "bg-gray-50/80 dark:bg-gray-900/50"} flex justify-between items-center gap-2 shrink-0 ${isLocalCollapsed ? "" : "border-b-2 border-gray-200 dark:border-gray-700"}">
-                <div class="flex items-center flex-1 min-w-0 gap-2">
-                    <input type="text" value="${opt.title}" onchange="updateFinanceOption('${opt.id}', 'title', this.value)" class="font-black text-base md:text-lg bg-transparent border-b border-transparent focus:border-primary outline-none text-gray-900 dark:text-white flex-1 min-w-0 px-1 transition pb-0.5">
-                    ${finalBadge}
-                </div>
-                <div class="flex items-center gap-1.5 shrink-0">
-                    <button onclick="updateFinanceConfig('finalOptionId', '${isFinal ? "" : opt.id}')" class="${isFinal ? "text-gray-500 hover:text-red-500 bg-gray-100 hover:bg-red-50" : "text-green-600 hover:text-white hover:bg-green-500 bg-green-50"} dark:bg-gray-800 px-2 py-1 rounded text-xs font-bold border transition focus:outline-none shadow-md" title="${isFinal ? "Remove Final Status" : "Mark as Finalized Budget"}">
-                        ${isFinal ? "Unfinalize" : "Make Final"}
-                    </button>
-                    <button onclick="cycleFinanceOptionWidth('${opt.id}')" class="hidden lg:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 md:p-1.5 rounded transition bg-gray-100/50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 focus:outline-none shadow-md" title="Toggle Width">
-                        <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8L4 12l4 4m8-8l4 4-4 4"></path></svg>
-                    </button>
-                    <button onclick="toggleIndividualFinanceCollapse('${opt.id}')" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 md:p-1.5 rounded transition bg-gray-100/50 dark:bg-gray-800/50 border-2 border-gray-200 dark:border-gray-700 focus:outline-none shadow-md" title="Collapse/Expand">
-                        <svg class="w-4 h-4 md:w-5 md:h-5 transform transition-transform ${isLocalCollapsed ? "" : "rotate-180"}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" /></svg>
-                    </button>
-                    <button onclick="duplicateFinanceOption('${opt.id}')" class="text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 p-1.5 rounded transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button>
-                    <button onclick="removeFinanceOption('${opt.id}')" class="text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 p-1.5 rounded transition"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
-                </div>
+        <div class="w-full shrink-0 flex flex-col bg-white dark:bg-gray-900 rounded-xl shadow-sm border-2 ${
+          isFinal
+            ? "border-green-500 dark:border-green-500"
+            : "border-gray-200 dark:border-gray-800"
+        } overflow-hidden h-fit transition-all duration-200 ${spanClass}">
+          <!-- Option Card Header -->
+          <div class="p-3 md:px-4 md:py-3 ${
+            isFinal
+              ? "bg-green-50/70 dark:bg-green-950/30"
+              : "bg-gray-50/80 dark:bg-gray-800/50"
+          } border-b border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
+            <div class="flex items-center flex-1 min-w-[180px] gap-2">
+              <button
+                type="button"
+                onclick="toggleIndividualFinanceCollapse('${opt.id}')"
+                class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-100 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 transition focus:outline-none shrink-0 cursor-pointer"
+                title="${isLocalCollapsed ? "Expand Categories" : "Collapse Categories"}"
+              >
+                <svg class="w-4 h-4 transform transition-transform duration-200 ${isLocalCollapsed ? "-rotate-90" : "rotate-0"}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <input
+                type="text"
+                value="${safeTitleAttr}"
+                onchange="updateFinanceOption('${opt.id}', 'title', this.value)"
+                placeholder="Option Title..."
+                class="font-black text-sm md:text-base bg-transparent border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary outline-none text-gray-900 dark:text-white flex-1 min-w-0 px-1 py-0.5 transition"
+              />
+              ${
+                isFinal
+                  ? `<span class="text-[11px] font-black uppercase tracking-wider text-green-700 dark:text-green-300 bg-green-100/90 dark:bg-green-900/50 border border-green-300 dark:border-green-700 px-2 py-0.5 rounded-md shrink-0">Finalized</span>`
+                  : ""
+              }
             </div>
-            
-            <div class="${isLocalCollapsed ? "hidden-force" : "flex flex-col"}">
-                <div class="px-2 md:px-3 py-2 bg-white dark:bg-gray-800 border-b-2 border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <label class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Pax Count ${paxInputDisabled ? "(Global)" : ""}</label>
-                    <input type="number" min="0" value="${pax}" ${paxInputDisabled ? "disabled" : ""} onchange="updateFinanceOption('${opt.id}', 'pax', this.value)" class="hide-spinners w-20 text-xs font-bold px-2 py-1 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary ${paxInputDisabled ? "opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-500" : ""}">
-                </div>
-                
-                <div class="fin-cat-container p-2 bg-white dark:bg-gray-800 flex flex-col gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar" data-opt-id="${opt.id}">
-                    ${opt.fields
-                      .map((f) => {
-                        const costTypeColorClass =
-                          f.costType === "per_pax"
-                            ? "bg-purple-100 text-purple-900 border-purple-400 focus:border-purple-500 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-700"
-                            : "bg-green-100 text-green-900 border-green-400 focus:border-green-500 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700";
-                        const displayCostStr = parseFloat(
-                          f.cost || 0,
-                        ).toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        });
-                        return `
-                        <div class="fin-cat-row flex flex-col w-full bg-gray-50 dark:bg-gray-900/50 p-2 rounded-lg border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition shadow-md" data-field-id="${f.id}">
-                            <div class="flex items-center gap-2 w-full mb-1">
-                                <div class="fin-drag-handle cursor-grab active:cursor-grabbing p-1 shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition" onmousedown="startFinDrag(event)" ontouchstart="startFinDrag(event)"><svg class="w-5 h-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" /></svg></div>
-                                <button onclick="removeFinanceCategory('${opt.id}', '${f.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-1 rounded shrink-0 transition cursor-pointer" title="Delete Category"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-                                <input type="text" value="${f.name}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'name', this.value)" class="flex-1 min-w-[80px] bg-transparent text-sm font-bold text-gray-900 dark:text-gray-100 outline-none px-1 border-b border-transparent focus:border-primary transition" placeholder="Category Name">
-                            </div>
-                            <div class="flex items-center flex-wrap gap-2 pl-[42px] w-full">
-                                <select onchange="updateFinanceField('${opt.id}', '${f.id}', 'currency', this.value)" class="w-[65px] shrink-0 bg-white dark:bg-gray-950 text-xs font-bold border-2 border-gray-300 dark:border-gray-600 rounded py-1.5 pl-1.5 pr-0 outline-none focus:border-primary shadow-md cursor-pointer">${getCurrencyOptions(f.currency)}</select>
-                                <select onchange="updateFinanceField('${opt.id}', '${f.id}', 'costType', this.value)" class="w-[70px] shrink-0 text-xs font-extrabold border rounded py-1.5 px-1 outline-none shadow-md cursor-pointer transition-colors ${costTypeColorClass}"><option value="total" ${f.costType !== "per_pax" ? "selected" : ""}>Total</option><option value="per_pax" ${f.costType === "per_pax" ? "selected" : ""}>/Pax</option></select>
-                                <input type="text" value="${displayCostStr}" oninput="formatMoneyInput(this, false); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)" onblur="formatMoneyInput(this, true); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)" class="w-[100px] shrink-0 bg-white dark:bg-gray-950 text-sm font-bold border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 outline-none focus:border-primary shadow-md text-right" placeholder="0.00">
-                                <div class="flex items-center gap-1 w-[70px] shrink-0 bg-white dark:bg-gray-950 border-2 border-gray-300 dark:border-gray-600 rounded px-1.5 py-1 outline-none focus-within:border-primary shadow-md"><span class="text-xs font-bold text-gray-400">+</span><input type="number" step="0.1" min="0" value="${f.tax || ""}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'tax', this.value)" class="hide-spinners w-full bg-transparent text-sm font-bold outline-none text-right" placeholder="Tax"><span class="text-xs font-bold text-gray-500">%</span></div>
-                                <input type="text" value="${f.remarks}" onchange="updateFinanceField('${opt.id}', '${f.id}', 'remarks', this.value)" class="flex-1 min-w-[120px] bg-transparent text-xs font-medium text-gray-500 dark:text-gray-400 outline-none px-1 border-b border-transparent focus:border-primary transition" placeholder="Remarks...">
-                            </div>
-                        </div>`;
-                      })
-                      .join("")}
-                    <div class="pt-2 px-1">
-                        <button onclick="addFinanceCategory('${opt.id}')" class="w-full py-2 border border-dashed border-green-300 dark:border-green-800 rounded-lg text-green-600 dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-green-900/20 transition">+ Add Custom Category</button>
+
+            <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+              <button
+                type="button"
+                onclick="updateFinanceConfig('finalOptionId', '${isFinal ? "" : opt.id}')"
+                class="px-2.5 py-1.5 rounded-lg text-xs font-bold border transition focus:outline-none cursor-pointer whitespace-nowrap ${
+                  isFinal
+                    ? "text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 hover:border-red-300"
+                    : "text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 hover:bg-green-600 hover:text-white border-green-300 dark:border-green-700"
+                }"
+                title="${isFinal ? "Unmark as Finalized Budget" : "Mark this Option as the Finalized Budget"}"
+              >
+                ${isFinal ? "Unfinalize" : "Mark Final"}
+              </button>
+              <button
+                type="button"
+                onclick="cycleFinanceOptionWidth('${opt.id}')"
+                class="hidden xl:flex items-center gap-1 text-xs font-bold text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white px-2 py-1.5 rounded-lg transition bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:outline-none cursor-pointer ${
+                  visibleOptions.length === 1 || activeOptionFilterId !== "all"
+                    ? "opacity-40 pointer-events-none"
+                    : ""
+                }"
+                title="${isWideCard ? "Switch to Side-by-Side (2-Column) View" : "Expand to Full-Width Table View"}"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 8L4 12l4 4m8-8l4 4-4 4"></path>
+                </svg>
+                <span>${isWideCard ? "Split" : "Wide"}</span>
+              </button>
+              <button
+                type="button"
+                onclick="duplicateFinanceOption('${opt.id}')"
+                class="text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-green-400 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 p-1.5 rounded-lg transition cursor-pointer"
+                title="Duplicate Option"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+              <button
+                type="button"
+                onclick="removeFinanceOption('${opt.id}')"
+                class="text-red-600 dark:text-red-400 hover:text-white hover:bg-red-600 bg-red-50/80 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 p-1.5 rounded-lg transition cursor-pointer"
+                title="Delete Option"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Key Metrics & Option Config Bar (Always visible even when collapsed) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 md:px-4 md:py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+            <!-- Pax Count -->
+            <div class="flex items-center justify-between sm:justify-start gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70">
+              <div class="min-w-0">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none">Pax ${paxInputDisabled ? "(Global)" : ""}</span>
+                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden sm:inline">Headcount</span>
+              </div>
+              <input
+                type="number"
+                min="0"
+                value="${pax}"
+                ${paxInputDisabled ? "disabled" : ""}
+                oninput="updateFinanceOption('${opt.id}', 'pax', this.value)"
+                onchange="updateFinanceOption('${opt.id}', 'pax', this.value)"
+                class="hide-spinners w-16 ml-auto text-xs font-black font-mono tabular-nums px-2 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md text-center focus:outline-none focus:border-primary ${
+                  paxInputDisabled
+                    ? "opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-500"
+                    : "text-gray-900 dark:text-white"
+                }"
+              />
+            </div>
+
+            <!-- Display Currency -->
+            <div class="flex items-center justify-between sm:justify-start gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70">
+              <div class="min-w-0">
+                <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none">Display</span>
+                <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden sm:inline">Currency</span>
+              </div>
+              <select
+                onchange="updateFinanceOption('${opt.id}', 'displayCurrency', this.value)"
+                class="ml-auto text-xs font-black px-2 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-primary cursor-pointer text-gray-900 dark:text-white"
+              >
+                ${getCurrencyOptions(dispCurrency)}
+              </select>
+            </div>
+
+            <!-- Total Estimated -->
+            <div class="flex flex-col justify-center bg-green-50/60 dark:bg-green-950/25 px-2.5 py-1.5 rounded-lg border border-green-200/80 dark:border-green-800/60">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-green-800 dark:text-green-400 leading-none">Total Estimated</span>
+              <span id="total_${opt.id}" class="font-black font-mono tabular-nums text-xs md:text-sm text-green-700 dark:text-green-300 mt-1 leading-none truncate">
+                ${dispCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span id="total_sgd_sub_${opt.id}" class="text-[10px] font-mono tabular-nums font-semibold text-gray-500 dark:text-gray-400 mt-0.5 leading-none ${dispCurrency === "SGD" ? "hidden-force" : ""}">
+                ≈ SGD ${totalSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+
+            <!-- Cost Per Pax -->
+            <div class="flex flex-col justify-center bg-emerald-50/60 dark:bg-emerald-950/25 px-2.5 py-1.5 rounded-lg border border-emerald-200/80 dark:border-emerald-800/60">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 leading-none">Cost Per Pax</span>
+              <span id="cpp_${opt.id}" class="font-black font-mono tabular-nums text-xs md:text-sm text-emerald-700 dark:text-emerald-300 mt-1 leading-none truncate">
+                ${dispCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+              <span id="cpp_sgd_sub_${opt.id}" class="text-[10px] font-mono tabular-nums font-semibold text-gray-500 dark:text-gray-400 mt-0.5 leading-none ${dispCurrency === "SGD" ? "hidden-force" : ""}">
+                ≈ SGD ${cppSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / pax
+              </span>
+            </div>
+          </div>
+
+          <!-- Expandable Category List -->
+          <div class="${isLocalCollapsed ? "hidden-force" : "flex flex-col"}">
+            ${
+              isWideCard
+                ? `
+            <!-- Desktop Column Headers for Full-Width Spreadsheet View -->
+            <div class="hidden lg:grid lg:grid-cols-[24px_minmax(150px,1.4fr)_86px_172px_84px_124px_minmax(140px,1.2fr)_32px] lg:items-center lg:gap-2.5 px-5 py-2 bg-gray-100/80 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-800 text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+              <span></span>
+              <span>Category</span>
+              <span>Billing</span>
+              <span class="text-right pr-2">Unit Cost</span>
+              <span class="text-right pr-2">Tax %</span>
+              <span class="text-right">Line Total</span>
+              <span>Remarks / Notes</span>
+              <span></span>
+            </div>`
+                : ""
+            }
+
+            <div class="fin-cat-container p-2.5 md:p-3 bg-white dark:bg-gray-900 flex flex-col gap-2" data-opt-id="${opt.id}">
+              ${(opt.fields || [])
+                .map((f) => {
+                  const isPerPax = f.costType === "per_pax";
+                  const costTypeColorClass = isPerPax
+                    ? "bg-purple-50 text-purple-800 border-purple-300 focus:border-purple-500 dark:bg-purple-950/50 dark:text-purple-300 dark:border-purple-700"
+                    : "bg-emerald-50 text-emerald-800 border-emerald-300 focus:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700";
+
+                  const baseCost = parseFloat(f.cost) || 0;
+                  const taxPct = parseFloat(f.tax) || 0;
+                  const fRate = getActualRate(f.currency);
+                  const rawCost = isPerPax ? baseCost * pax : baseCost;
+                  const fieldSgd = rawCost * (1 + taxPct / 100) * fRate;
+                  const fieldDisp = fieldSgd / dispRate;
+
+                  const displayCostStr = baseCost.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  });
+
+                  const safeFieldName = String(f.name || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/"/g, "&quot;");
+                  const safeRemarks = String(f.remarks || "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/"/g, "&quot;");
+
+                  return `
+                  <div
+                    class="fin-cat-row grid grid-cols-12 gap-2 p-2.5 rounded-xl bg-gray-50/90 dark:bg-gray-800/40 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 border border-gray-200/80 dark:border-gray-700/70 focus-within:border-primary dark:focus-within:border-primary focus-within:bg-white dark:focus-within:bg-gray-800 transition ${desktopRowGridClass}"
+                    data-field-id="${f.id}"
+                  >
+                    <!-- 1. Drag Handle -->
+                    <div
+                      class="fin-drag-handle order-1 col-span-1 ${isWideCard ? "lg:order-1 lg:col-span-1" : "sm:order-1 sm:col-span-1"} flex items-center justify-center cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition touch-none"
+                      onmousedown="startFinDrag(event)"
+                      ontouchstart="startFinDrag(event)"
+                      title="Drag to reorder"
+                    >
+                      <svg class="w-4 h-4 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16" />
+                      </svg>
                     </div>
-                </div>
+
+                    <!-- 2. Category Name -->
+                    <div class="order-2 col-span-6 ${isWideCard ? "lg:order-2 lg:col-span-1" : "sm:order-2 sm:col-span-6"} flex items-center min-w-0">
+                      <input
+                        type="text"
+                        value="${safeFieldName}"
+                        onchange="updateFinanceField('${opt.id}', '${f.id}', 'name', this.value)"
+                        class="w-full bg-transparent text-xs md:text-sm font-bold text-gray-900 dark:text-gray-100 outline-none px-1.5 py-1 rounded border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary focus:bg-white dark:focus:bg-gray-900 transition truncate"
+                        placeholder="Category Name"
+                      />
+                    </div>
+
+                    <!-- 3. Computed Line Total (Top right on Mobile/Split, Column 6 on Wide Desktop) -->
+                    <div class="order-3 col-span-4 ${isWideCard ? "lg:order-6 lg:col-span-1" : "sm:order-3 sm:col-span-4"} flex flex-col justify-center items-end min-w-0 px-1">
+                      <span
+                        id="field_total_${opt.id}_${f.id}"
+                        class="font-mono tabular-nums text-xs font-black ${
+                          fieldDisp > 0
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-400 dark:text-gray-500"
+                        } truncate"
+                        title="Calculated line total including tax"
+                      >
+                        ${dispCurrency} ${fieldDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+
+                    <!-- 4. Delete Category Button (Far right on both Mobile and Desktop) -->
+                    <div class="order-4 col-span-1 ${isWideCard ? "lg:order-8 lg:col-span-1" : "sm:order-4 sm:col-span-1"} flex items-center justify-end">
+                      <button
+                        type="button"
+                        onclick="removeFinanceCategory('${opt.id}', '${f.id}')"
+                        class="text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 p-1.5 rounded-lg transition cursor-pointer focus:outline-none"
+                        title="Delete Category"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+
+                    <!-- 5. Billing Type (Total vs /Pax) -->
+                    <div class="order-5 col-span-3 ${isWideCard ? "lg:order-3 lg:col-span-1" : "sm:order-5 sm:col-span-2"}">
+                      <select
+                        onchange="updateFinanceField('${opt.id}', '${f.id}', 'costType', this.value)"
+                        class="w-full h-8 text-xs font-extrabold border rounded-lg px-1.5 outline-none cursor-pointer transition-colors ${costTypeColorClass}"
+                        title="Billing Basis: Total Group Cost or Per-Pax Cost"
+                      >
+                        <option value="total" ${!isPerPax ? "selected" : ""}>Total</option>
+                        <option value="per_pax" ${isPerPax ? "selected" : ""}>/Pax</option>
+                      </select>
+                    </div>
+
+                    <!-- 6. Currency + Unit Cost Combined Control -->
+                    <div class="order-6 col-span-6 ${isWideCard ? "lg:order-4 lg:col-span-1" : "sm:order-6 sm:col-span-4"} flex items-stretch h-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 focus-within:border-primary overflow-hidden">
+                      <select
+                        onchange="updateFinanceField('${opt.id}', '${f.id}', 'currency', this.value)"
+                        class="bg-gray-100 dark:bg-gray-800 text-[11px] font-black text-gray-700 dark:text-gray-200 px-1.5 border-r border-gray-300 dark:border-gray-700 outline-none cursor-pointer shrink-0"
+                        title="Input Currency"
+                      >
+                        ${getCurrencyOptions(f.currency)}
+                      </select>
+                      <input
+                        type="text"
+                        value="${displayCostStr}"
+                        oninput="formatMoneyInput(this, false); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)"
+                        onblur="formatMoneyInput(this, true); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)"
+                        class="w-full min-w-0 bg-transparent text-xs font-bold font-mono tabular-nums text-gray-900 dark:text-white px-2 outline-none text-right"
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <!-- 7. Tax Percentage -->
+                    <div class="order-7 col-span-3 ${isWideCard ? "lg:order-5 lg:col-span-1" : "sm:order-7 sm:col-span-2"} flex items-center h-8 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-lg px-2 focus-within:border-primary">
+                      <span class="text-[11px] font-bold text-gray-400 select-none">+</span>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value="${f.tax || ""}"
+                        oninput="updateFinanceField('${opt.id}', '${f.id}', 'tax', this.value)"
+                        onchange="updateFinanceField('${opt.id}', '${f.id}', 'tax', this.value)"
+                        class="hide-spinners w-full min-w-0 bg-transparent text-xs font-bold font-mono tabular-nums text-gray-900 dark:text-white outline-none text-right px-0.5"
+                        placeholder="0"
+                        title="Tax / Service Charge %"
+                      />
+                      <span class="text-[11px] font-bold text-gray-400 select-none">%</span>
+                    </div>
+
+                    <!-- 8. Remarks / Notes -->
+                    <div class="order-8 col-span-12 ${isWideCard ? "lg:order-7 lg:col-span-1" : "sm:order-8 sm:col-span-4"} flex items-center">
+                      <input
+                        type="text"
+                        value="${safeRemarks}"
+                        onchange="updateFinanceField('${opt.id}', '${f.id}', 'remarks', this.value)"
+                        class="w-full h-8 bg-white/70 dark:bg-gray-900/60 text-xs font-medium text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 rounded-lg px-2.5 border border-gray-200 dark:border-gray-700 focus:border-primary focus:bg-white dark:focus:bg-gray-950 outline-none transition"
+                        placeholder="Remarks / vendor notes..."
+                      />
+                    </div>
+                  </div>`;
+                })
+                .join("")}
+
+              <!-- Add Category Button -->
+              <div class="pt-1">
+                <button
+                  type="button"
+                  onclick="addFinanceCategory('${opt.id}')"
+                  class="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary dark:hover:border-primary rounded-xl text-gray-600 dark:text-gray-300 hover:text-primary dark:hover:text-green-400 text-xs font-bold hover:bg-green-50/40 dark:hover:bg-green-950/20 transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  <span>Add Custom Category</span>
+                </button>
+              </div>
             </div>
-            
-            <div class="p-2 md:p-3 bg-green-50/80 dark:bg-green-900/20 shrink-0 flex flex-col gap-1.5 ${isLocalCollapsed ? "border-t-2 border-gray-200 dark:border-gray-700" : "border-t-2 border-green-100 dark:border-green-900/50"}">
-                <div class="${isLocalCollapsed ? "hidden-force" : "flex"} justify-between items-center pb-2 border-b-2 border-green-200/50 dark:border-green-800/50 mb-1">
-                    <span class="font-bold text-xs md:text-sm text-green-800 dark:text-green-300 uppercase tracking-widest">Currency for Totals</span>
-                    <select onchange="updateFinanceOption('${opt.id}', 'displayCurrency', this.value)" class="w-[90px] text-xs font-bold px-2 py-1 bg-white dark:bg-gray-950 border-2 border-green-300 dark:border-green-700 rounded focus:outline-none cursor-pointer shadow-md text-green-900 dark:text-green-100">${getCurrencyOptions(opt.displayCurrency)}</select>
+
+            <!-- Option Footer Totals Bar -->
+            <div class="px-3.5 py-2.5 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="font-bold text-gray-500 dark:text-gray-400">${(opt.fields || []).length} budget ${(opt.fields || []).length === 1 ? "category" : "categories"}</span>
+              <div class="flex items-center gap-4 ml-auto">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-gray-500 dark:text-gray-400 font-bold">Total:</span>
+                  <span id="total_footer_${opt.id}" class="font-mono tabular-nums font-black text-green-700 dark:text-green-400">${dispCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="font-black text-xs md:text-sm text-green-800 dark:text-green-300 uppercase tracking-widest">Total Estimated</span>
-                    <span id="total_${opt.id}" class="font-black text-base md:text-lg text-green-700 dark:text-green-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-green-200 dark:border-green-800 shadow-md leading-none">${opt.displayCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-gray-500 dark:text-gray-400 font-bold">Per Pax:</span>
+                  <span id="cpp_footer_${opt.id}" class="font-mono tabular-nums font-black text-emerald-700 dark:text-emerald-400">${dispCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
-                <div class="flex justify-between items-center">
-                    <span class="font-black text-xs md:text-sm text-emerald-800 dark:text-emerald-400 uppercase tracking-widest">Cost Per Pax</span>
-                    <span id="cpp_${opt.id}" class="font-black text-base md:text-lg text-emerald-700 dark:text-emerald-400 bg-white dark:bg-gray-900 px-2 py-1 rounded border-2 border-emerald-200 dark:border-emerald-800 shadow-md leading-none">${opt.displayCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
+              </div>
             </div>
+          </div>
         </div>`;
     });
   }
@@ -1286,7 +1717,7 @@ function renderFinanceOptions() {
 function openFinanceRatesModal() {
   const list = document.getElementById("financeRatesList");
   let html =
-    '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override the live exchange rates used for calculations. You can input the rate in either direction.</p>';
+    '<p class="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-tight">Override live exchange rates used for trip budget calculations. Enter the rate in either direction.</p>';
   const predefined = [
     "MYR",
     "USD",
@@ -1310,19 +1741,35 @@ function openFinanceRatesModal() {
     const live = globalFinanceRates[c] || 0;
     let customToSgd = "";
     let customFromSgd = "";
+    const hasCustom = Boolean(
+      financeConfig.customRates && financeConfig.customRates[c],
+    );
 
-    if (financeConfig.customRates && financeConfig.customRates[c]) {
+    if (hasCustom) {
       const val = financeConfig.customRates[c];
       customToSgd = val;
-      customFromSgd = parseFloat((1 / val).toFixed(2));
+      customFromSgd = parseFloat((1 / val).toFixed(4));
     }
 
-    let liveToSgdText = live > 0 ? live.toFixed(2) : "N/A";
-    let liveFromSgdText = live > 0 ? (1 / live).toFixed(2) : "N/A";
+    let liveToSgdText =
+      live > 0 ? (live >= 0.01 ? live.toFixed(4) : live.toFixed(6)) : "N/A";
+    let liveFromSgdText =
+      live > 0
+        ? 1 / live >= 100
+          ? (1 / live).toFixed(2)
+          : (1 / live).toFixed(4)
+        : "N/A";
 
     html += `
-    <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-2 mb-2">
-        <div class="font-black text-sm text-gray-800 dark:text-gray-200 border-b-2 border-gray-200 dark:border-gray-700 pb-1 mb-1">${c}</div>
+    <div class="bg-gray-50 dark:bg-gray-900/50 p-2.5 rounded-lg border-2 ${hasCustom ? "border-green-400 dark:border-green-700" : "border-gray-200 dark:border-gray-700"} shadow-sm flex flex-col gap-2 mb-2">
+        <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-1 mb-0.5">
+          <span class="font-black text-sm text-gray-800 dark:text-gray-200">${c}</span>
+          ${
+            hasCustom
+              ? `<button type="button" onclick="handleRateChange('${c}', 'to_sgd', '')" class="text-[11px] font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer">Reset to Live</button>`
+              : `<span class="text-[10px] font-semibold text-gray-400">Live Rate</span>`
+          }
+        </div>
         
         <div class="flex items-center justify-between">
             <div class="font-black text-xs text-gray-500 w-14 shrink-0">1 ${c}</div>
@@ -1331,7 +1778,7 @@ function openFinanceRatesModal() {
                 <input type="number" step="0.000001" id="rate_${c}_to_sgd" placeholder="Live: ${liveToSgdText}" value="${customToSgd}" 
                     oninput="handleRateInputSync('${c}', 'to_sgd', this.value)" 
                     onchange="handleRateChange('${c}', 'to_sgd', this.value)" 
-                    class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-md placeholder-gray-400">
+                    class="w-full text-xs font-bold font-mono tabular-nums p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary text-gray-900 dark:text-white transition placeholder-gray-400 text-right">
             </div>
             <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">SGD</div>
         </div>
@@ -1343,7 +1790,7 @@ function openFinanceRatesModal() {
                 <input type="number" step="0.000001" id="rate_sgd_to_${c}" placeholder="Live: ${liveFromSgdText}" value="${customFromSgd}" 
                     oninput="handleRateInputSync('${c}', 'from_sgd', this.value)" 
                     onchange="handleRateChange('${c}', 'from_sgd', this.value)" 
-                    class="w-full text-sm font-bold p-1.5 border-2 border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-gray-900 dark:text-white transition shadow-md placeholder-gray-400">
+                    class="w-full text-xs font-bold font-mono tabular-nums p-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-950 focus:outline-none focus:border-primary text-gray-900 dark:text-white transition placeholder-gray-400 text-right">
             </div>
             <div class="font-black text-xs text-gray-500 w-10 shrink-0 text-right">${c}</div>
         </div>
@@ -1370,9 +1817,9 @@ function handleRateInputSync(currency, mode, value) {
   } else {
     const inverse = 1 / val;
     if (mode === "to_sgd" && inputFromSgd) {
-      inputFromSgd.value = parseFloat(inverse.toFixed(2));
+      inputFromSgd.value = parseFloat(inverse.toFixed(4));
     } else if (mode === "from_sgd" && inputToSgd) {
-      inputToSgd.value = parseFloat(inverse.toFixed(2));
+      inputToSgd.value = parseFloat(inverse.toFixed(6));
     }
   }
 }
@@ -1381,7 +1828,7 @@ function handleRateChange(currency, mode, value) {
   const val = parseFloat(value);
   handleRateInputSync(currency, mode, value);
 
-  if (isNaN(val) || val <= 0 || value.trim() === "") {
+  if (isNaN(val) || val <= 0 || String(value).trim() === "") {
     if (financeConfig.customRates) delete financeConfig.customRates[currency];
   } else {
     const finalToSgdVal = mode === "to_sgd" ? val : 1 / val;
@@ -1391,6 +1838,10 @@ function handleRateChange(currency, mode, value) {
 
   financeOptions.forEach((o) => updateTotals(o.id));
   renderFinanceOptions();
+  const modal = document.getElementById("financeRatesModal");
+  if (modal && !modal.classList.contains("hidden-force")) {
+    openFinanceRatesModal();
+  }
   queueFinanceUpdate();
 }
 
@@ -1411,8 +1862,7 @@ function toggleIndividualFinanceCollapse(id) {
 function cycleFinanceOptionWidth(optId) {
   const opt = financeOptions.find((o) => o.id === optId);
   if (opt) {
-    opt.widthSpan = (opt.widthSpan || 2) + 1;
-    if (opt.widthSpan > 3) opt.widthSpan = 1;
+    opt.widthSpan = opt.widthSpan === 3 ? 2 : 3;
     queueFinanceUpdate(optId);
     renderFinanceOptions();
   }
@@ -1421,13 +1871,16 @@ function cycleFinanceOptionWidth(optId) {
 function updateFinanceOption(optId, key, value) {
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
-  if (key === "title") opt.title = value;
-  else if (key === "pax") {
+  if (key === "title") {
+    opt.title = value;
+    renderFinanceOptions();
+  } else if (key === "pax") {
     opt.pax = parseInt(value) || 0;
     updateTotals(optId);
   } else if (key === "displayCurrency") {
     opt.displayCurrency = value;
     updateTotals(optId);
+    renderFinanceOptions();
   }
   queueFinanceUpdate(optId);
 }
@@ -1461,25 +1914,58 @@ function updateTotals(optId) {
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
   const pax = getActivePax(opt);
+  const dispCurrency = opt.displayCurrency || "SGD";
+  const dispRate = getActualRate(dispCurrency);
   let totalSgd = 0;
-  opt.fields.forEach((f) => {
+
+  (opt.fields || []).forEach((f) => {
     const rate = getActualRate(f.currency);
-    const rawCost =
-      f.costType === "per_pax"
-        ? (parseFloat(f.cost) || 0) * pax
-        : parseFloat(f.cost) || 0;
-    totalSgd += rawCost * (1 + (parseFloat(f.tax) || 0) / 100) * rate;
+    const baseCost = parseFloat(f.cost) || 0;
+    const taxPct = parseFloat(f.tax) || 0;
+    const rawCost = f.costType === "per_pax" ? baseCost * pax : baseCost;
+    const fieldSgd = rawCost * (1 + taxPct / 100) * rate;
+    totalSgd += fieldSgd;
+
+    const fieldDisp = fieldSgd / dispRate;
+    const fieldTotEl = document.getElementById(`field_total_${opt.id}_${f.id}`);
+    if (fieldTotEl) {
+      fieldTotEl.textContent = `${dispCurrency} ${fieldDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      fieldTotEl.className = `font-mono tabular-nums text-xs font-black ${
+        fieldDisp > 0
+          ? "text-gray-900 dark:text-white"
+          : "text-gray-400 dark:text-gray-500"
+      } truncate`;
+    }
   });
-  const dispRate = getActualRate(opt.displayCurrency);
+
   const totalDisp = totalSgd / dispRate;
   const cppDisp = pax > 0 ? totalDisp / pax : 0;
+  const cppSgd = pax > 0 ? totalSgd / pax : 0;
+
+  const fmtDisp = `${dispCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const fmtCpp = `${dispCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const totEl = document.getElementById(`total_${opt.id}`);
   const cppEl = document.getElementById(`cpp_${opt.id}`);
-  if (totEl)
-    totEl.textContent = `${opt.displayCurrency} ${totalDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  if (cppEl)
-    cppEl.textContent = `${opt.displayCurrency} ${cppDisp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (totEl) totEl.textContent = fmtDisp;
+  if (cppEl) cppEl.textContent = fmtCpp;
+
+  const totSgdSub = document.getElementById(`total_sgd_sub_${opt.id}`);
+  const cppSgdSub = document.getElementById(`cpp_sgd_sub_${opt.id}`);
+  if (totSgdSub) {
+    totSgdSub.textContent = `≈ SGD ${totalSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  if (cppSgdSub) {
+    cppSgdSub.textContent = `≈ SGD ${cppSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / pax`;
+  }
+
+  const totFooterEl = document.getElementById(`total_footer_${opt.id}`);
+  const cppFooterEl = document.getElementById(`cpp_footer_${opt.id}`);
+  if (totFooterEl) totFooterEl.textContent = fmtDisp;
+  if (cppFooterEl) cppFooterEl.textContent = fmtCpp;
+
+  const pillTotEl = document.getElementById(`pill_total_${opt.id}`);
+  if (pillTotEl) pillTotEl.textContent = fmtDisp;
 }
 
 function addFinanceOption(title = "New Option", reRender = true) {
@@ -1506,6 +1992,9 @@ function addFinanceOption(title = "New Option", reRender = true) {
     });
   });
   financeOptions.unshift(newOpt);
+  if (activeOptionFilterId !== "all") {
+    activeOptionFilterId = newOpt.id;
+  }
   queueFinanceUpdate(newOpt.id);
   if (reRender) renderFinanceOptions();
 }
@@ -1521,6 +2010,9 @@ function duplicateFinanceOption(id) {
   copy.isDeleted = false;
   copy.fields.forEach((f) => (f.id = generateFinanceUUID()));
   financeOptions.unshift(copy);
+  if (activeOptionFilterId !== "all") {
+    activeOptionFilterId = copy.id;
+  }
   queueFinanceUpdate(copy.id);
   renderFinanceOptions();
 }
@@ -1541,6 +2033,7 @@ async function removeFinanceOption(id) {
     opt.isDeleted = true;
     opt.ts = Date.now();
     if (financeConfig.finalOptionId === id) financeConfig.finalOptionId = null;
+    if (activeOptionFilterId === id) activeOptionFilterId = "all";
     queueFinanceUpdate(id);
     renderAllFinanceTabs();
   }
@@ -3491,10 +3984,10 @@ function renderFeeTracker(targetScrollPoc = null) {
 
   if (cont)
     cont.innerHTML = `
-<!-- STICKY SEARCH BAR: Always visible at top of Fee Tracker -->
-<div class="sticky top-0 z-30 bg-gray-50/95 dark:bg-gray-900/95 backdrop-blur-md pt-0.5 pb-2 -mt-2 -mx-2 px-2 md:-mt-4 md:-mx-4 md:px-4 border-b border-gray-200/80 dark:border-gray-800/80 mb-3 shadow-xs">
+<!-- STICKY SEARCH BAR: Always visible at top of Fee Tracker with zero gap against page selector bar -->
+<div class="sticky top-0 z-30 bg-white dark:bg-gray-900 py-2 -mx-2 px-2 md:-mx-4 md:px-4 border-b-2 border-gray-200 dark:border-gray-800 mb-3 shadow-sm">
     <div class="relative flex items-center">
-        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, "&quot;")}" placeholder="Fuzzy search families (name, NRIC, order #)..." class="w-full py-2 pl-9 pr-9 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-xs font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
+        <input type="text" id="feeSearchInput" oninput="handleFeeSearch()" value="${finSearchQuery.replace(/"/g, "&quot;")}" placeholder="Fuzzy search families (name, NRIC, order #)..." class="w-full py-2 pl-9 pr-9 border-2 border-gray-300 dark:border-gray-700 rounded-xl text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary shadow-sm transition">
         <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
         <button onclick="clearSearch('feeSearchInput', 'handleFeeSearch')" class="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none cursor-pointer ${finSearchQuery ? '' : 'hidden-force'}" title="Clear search"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
     </div>
