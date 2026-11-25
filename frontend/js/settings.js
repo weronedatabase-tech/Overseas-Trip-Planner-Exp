@@ -111,15 +111,15 @@ function buildSettingsUI() {
 
    <div class="bg-white dark:bg-gray-900 p-3 md:p-4 rounded-xl shadow-md border-2 border-gray-200 dark:border-gray-800 lg:col-span-1">
     <h3 class="text-sm font-black text-gray-900 dark:text-white mb-0.5 tracking-tight">Trip Dates Configuration</h3>
-    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Used for passport validity checks.</p>
+    <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Auto-populated from Trip Setup. Update dates here if needed.</p>
     <div class="grid grid-cols-2 gap-2 mb-2">
       <div>
         <label class="block text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider mb-1">Start Date</label>
-        <input type="date" id="tripStartDate" value="${appSettings.tripStartDate || ""}" class="w-full p-1.5 border-2 border-gray-300 dark:border-gray-700 rounded-md text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark]">
+        <input type="date" id="tripStartDate" value="${normalizeDateInputValue(appSettings.tripStartDate)}" class="w-full p-1.5 border-2 border-gray-300 dark:border-gray-700 rounded-md text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark]">
       </div>
       <div>
         <label class="block text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider mb-1">End Date</label>
-        <input type="date" id="tripEndDate" value="${appSettings.tripEndDate || ""}" class="w-full p-1.5 border-2 border-gray-300 dark:border-gray-700 rounded-md text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark]">
+        <input type="date" id="tripEndDate" value="${normalizeDateInputValue(appSettings.tripEndDate)}" class="w-full p-1.5 border-2 border-gray-300 dark:border-gray-700 rounded-md text-sm font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark]">
       </div>
     </div>
     <button onclick="saveTripConfiguration(this)" class="w-full px-2 py-1.5 text-sm bg-primary text-white font-bold rounded-md shadow-md transition flex justify-center items-center hover:bg-green-600 focus:outline-none"><span class="btn-text">Save Dates</span><div class="btn-spinner spinner-white hidden-force ml-1.5 !w-3 !h-3 border-2"></div></button>
@@ -320,10 +320,39 @@ function buildSettingsUI() {
   }
 }
 
+function normalizeDateInputValue(val) {
+  const s = String(val || "").trim();
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const isoMatch = s.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+  return "";
+}
+
+function syncTripDateConfigInputs(startDate, endDate) {
+  const normStart = normalizeDateInputValue(startDate);
+  const normEnd = normalizeDateInputValue(endDate);
+  const startEl = document.getElementById("tripStartDate");
+  const endEl = document.getElementById("tripEndDate");
+  if (startEl) startEl.value = normStart;
+  if (endEl) endEl.value = normEnd;
+}
+
 async function saveTripConfiguration(btn) {
+  const sDate = normalizeDateInputValue(document.getElementById("tripStartDate").value);
+  const eDate = normalizeDateInputValue(document.getElementById("tripEndDate").value);
+  if (sDate && eDate && eDate < sDate) {
+    showToast("End date cannot be earlier than start date.", true);
+    return;
+  }
   setBtnLoading(btn, true);
-  const sDate = document.getElementById("tripStartDate").value;
-  const eDate = document.getElementById("tripEndDate").value;
   try {
     const res = await apiCall("saveTripSettings", {
       title: appSettings.tripTitle,
@@ -331,8 +360,16 @@ async function saveTripConfiguration(btn) {
       start: sDate,
       end: eDate,
     });
-    appSettings.tripStartDate = res.start;
-    appSettings.tripEndDate = res.end;
+    appSettings.tripStartDate = normalizeDateInputValue(
+      res && res.start !== undefined ? res.start : sDate,
+    );
+    appSettings.tripEndDate = normalizeDateInputValue(
+      res && res.end !== undefined ? res.end : eDate,
+    );
+    try {
+      localStorage.setItem("appSettings", JSON.stringify(appSettings));
+    } catch (e) {}
+    syncTripDateConfigInputs(appSettings.tripStartDate, appSettings.tripEndDate);
     showToast("Trip dates saved successfully.");
   } catch (e) {
     showToast(e.message, true);
@@ -365,7 +402,40 @@ async function saveSortingSettings(btn) {
 
 function initiateRegistrationToggle(btn) {
   if (!appSettings.registrationOpen) {
-    document.getElementById("tripYearInput").value = new Date().getFullYear();
+    const titleInput = document.getElementById("tripTitleInput");
+    const yearInput = document.getElementById("tripYearInput");
+    const startInput = document.getElementById("tripStartInput");
+    const endInput = document.getElementById("tripEndInput");
+    const datesHint = document.getElementById("tripSetupDatesHint");
+
+    const existingStart = normalizeDateInputValue(appSettings.tripStartDate);
+    const existingEnd = normalizeDateInputValue(appSettings.tripEndDate);
+    const hasExistingDates = Boolean(existingStart && existingEnd);
+
+    if (titleInput) {
+      titleInput.value = appSettings.tripTitle || "MYG Overseas Trip";
+    }
+    if (yearInput) {
+      yearInput.value = appSettings.tripYear || new Date().getFullYear();
+    }
+    if (startInput) {
+      startInput.value = existingStart;
+      startInput.disabled = hasExistingDates;
+      startInput.classList.toggle("opacity-70", hasExistingDates);
+      startInput.classList.toggle("cursor-not-allowed", hasExistingDates);
+    }
+    if (endInput) {
+      endInput.value = existingEnd;
+      endInput.disabled = hasExistingDates;
+      endInput.classList.toggle("opacity-70", hasExistingDates);
+      endInput.classList.toggle("cursor-not-allowed", hasExistingDates);
+    }
+    if (datesHint) {
+      datesHint.textContent = hasExistingDates
+        ? "Trip dates are already recorded. To change them, update them under Trip Dates Configuration in Settings."
+        : "These dates will auto-populate under Trip Dates Configuration (used to flag passports expiring within 6 months).";
+    }
+
     document.getElementById("tripSetupModal").classList.remove("hidden-force");
   } else {
     executeToggleRegistration(false, "", "", "", "", btn);
@@ -377,10 +447,14 @@ function cancelTripSetup() {
 }
 
 async function confirmTripSetup(btn) {
-  const start = document.getElementById("tripStartInput").value;
-  const end = document.getElementById("tripEndInput").value;
+  const start = normalizeDateInputValue(document.getElementById("tripStartInput").value);
+  const end = normalizeDateInputValue(document.getElementById("tripEndInput").value);
   if (!start || !end) {
     showToast("Please select both start and end dates.", true);
+    return;
+  }
+  if (end < start) {
+    showToast("End date cannot be earlier than start date.", true);
     return;
   }
   document.getElementById("tripSetupModal").classList.add("hidden-force");
@@ -390,8 +464,8 @@ async function confirmTripSetup(btn) {
       "MYG Overseas Trip",
     String(document.getElementById("tripYearInput").value).trim() ||
       new Date().getFullYear().toString(),
-    document.getElementById("tripStartInput").value,
-    document.getElementById("tripEndInput").value,
+    start,
+    end,
     btn,
   );
 }
@@ -417,20 +491,44 @@ async function executeToggleRegistration(
       tripEnd: end,
     });
     appSettings.registrationOpen = newState;
-    localStorage.setItem("appSettings", JSON.stringify(appSettings));
-    if (start) appSettings.tripStartDate = start;
-    if (end) appSettings.tripEndDate = end;
+    if (newState) {
+      const savedTitle = (res && res.tripTitle) || title || appSettings.tripTitle || "";
+      const savedYear = (res && res.tripYear) || year || appSettings.tripYear || "";
+      const savedStart = normalizeDateInputValue((res && res.tripStart) || start || appSettings.tripStartDate);
+      const savedEnd = normalizeDateInputValue((res && res.tripEnd) || end || appSettings.tripEndDate);
 
-    const headerTripName = document.getElementById("deskTripName");
-    if (newState && res.tripTitle && res.tripYear) {
-      if (headerTripName) {
-        headerTripName.textContent = `${res.tripTitle} ${res.tripYear}`;
-        headerTripName.classList.remove("hidden-force");
-      }
-    } else {
-      if (headerTripName) headerTripName.classList.add("hidden-force");
+      if (savedTitle) appSettings.tripTitle = savedTitle;
+      if (savedYear) appSettings.tripYear = savedYear;
+      if (savedStart) appSettings.tripStartDate = savedStart;
+      if (savedEnd) appSettings.tripEndDate = savedEnd;
+
+      // Auto-populate the Trip Dates Configuration inputs immediately
+      syncTripDateConfigInputs(appSettings.tripStartDate, appSettings.tripEndDate);
     }
 
+    try {
+      localStorage.setItem("appSettings", JSON.stringify(appSettings));
+    } catch (e) {}
+
+    const tripLabel = [appSettings.tripTitle, appSettings.tripYear]
+      .filter(Boolean)
+      .join(" ");
+    const headerTripName = document.getElementById("deskTripName");
+    const mobTripName = document.getElementById("mobTripName");
+    if (tripLabel) {
+      if (headerTripName) {
+        headerTripName.textContent = tripLabel;
+        headerTripName.classList.remove("hidden-force");
+      }
+      if (mobTripName) {
+        mobTripName.textContent = tripLabel;
+        mobTripName.classList.remove("hidden-force");
+      }
+    }
+
+    if (typeof applyHydrationDOMUpdates === "function") {
+      applyHydrationDOMUpdates();
+    }
     applyAdminVisuals();
     showToast(newState ? "Registration Opened" : "Registration Closed");
   } catch (e) {

@@ -270,6 +270,7 @@ case 'fetchMinutes': result = fetchMinutes(); break;
 case 'syncMinutes': result = syncMinutes(data.updates, data.takenBy); break;
 case 'setTripFile': result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl); break;
 case 'archiveAndReset': result = archiveAndReset(data.newArchiveId, data.archivedBy); break;
+case 'deleteArchivedTrip': result = deleteArchivedTrip(data.targetArchiveId, data.targetSheetId, data.callerNric); break;
 default: throw new Error("Unknown action.");
 }
 return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
@@ -1427,9 +1428,9 @@ function saveTripSettings(title, year, start, end) {
 const props = PropertiesService.getScriptProperties();
 if(title) props.setProperty('TRIP_TITLE', title);
 if(year) props.setProperty('TRIP_YEAR', year);
-if(start) props.setProperty('TRIP_START_DATE', start);
-if(end) props.setProperty('TRIP_END_DATE', end);
-return { status: 'success', title, year, start, end };
+if(start !== undefined && start !== null) props.setProperty('TRIP_START_DATE', String(start || '').trim());
+if(end !== undefined && end !== null) props.setProperty('TRIP_END_DATE', String(end || '').trim());
+return { status: 'success', title, year, start: String(start || '').trim(), end: String(end || '').trim() };
 }
 
 function toggleEdits(status) { PropertiesService.getScriptProperties().setProperty('ALLOW_EDITS', status ? 'true' : 'false'); return { status: 'success' }; }
@@ -1601,6 +1602,41 @@ try {
   archives = [];
 }
 return { status: 'success', archives: archives };
+}
+
+function deleteArchivedTrip(targetArchiveId, targetSheetId, callerNric) {
+if (String(callerNric || '').trim().toUpperCase() !== 'ADMIN') {
+  return { status: 'error', message: 'Only Main Admin can remove archived trips from the app.' };
+}
+const cleanId = String(targetArchiveId || '').trim();
+const cleanSheetId = String(targetSheetId || '').trim();
+if (!cleanId && !cleanSheetId) {
+  return { status: 'error', message: 'Missing archive identifier.' };
+}
+// SAFETY GUARANTEE: Never call DriveApp or trash/delete any Google Drive file or folder.
+// Only remove the metadata index entry from Script Properties.
+const props = PropertiesService.getScriptProperties();
+let archives = [];
+try {
+  archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
+  if (!Array.isArray(archives)) archives = [];
+} catch (e) {
+  archives = [];
+}
+const beforeCount = archives.length;
+const filtered = archives.filter(function(item) {
+  if (!item) return false;
+  if (cleanId && String(item.id || '').trim() === cleanId) return false;
+  if (cleanSheetId && String(item.sheetId || '').trim() === cleanSheetId) return false;
+  return true;
+});
+props.setProperty('ARCHIVED_TRIPS', JSON.stringify(filtered));
+return {
+  status: 'success',
+  removedCount: beforeCount - filtered.length,
+  remainingCount: filtered.length,
+  driveFilesUntouched: true
+};
 }
 
 function archiveAndReset(customArchiveId, archivedBy) {

@@ -995,6 +995,10 @@
           `;
 
         const idEsc = escapeHtml(a.archiveId).replace(/'/g, "\\'");
+        const isMainAdmin =
+          typeof currentUser !== "undefined" &&
+          currentUser &&
+          String(currentUser.nric || "").trim().toUpperCase() === "ADMIN";
 
         return `
           <article class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-amber-400 dark:hover:border-amber-600 rounded-xl p-4 flex flex-col justify-between gap-3.5 transition-colors">
@@ -1011,9 +1015,24 @@
                     <span>${escapeHtml(archivedLine)}</span>
                   </div>
                 </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70 shrink-0">
-                  Read-Only
-                </span>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/70">
+                    Read-Only
+                  </span>
+                  ${
+                    isMainAdmin
+                      ? `<button
+                          type="button"
+                          onclick="ArchiveMode.openDeleteArchiveModal('${idEsc}')"
+                          title="Remove archive from app (Google Drive files are kept safe)"
+                          aria-label="Remove archive from app"
+                          class="p-1.5 rounded-lg text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-transparent hover:border-red-200 dark:hover:border-red-900/60 transition cursor-pointer"
+                        >
+                          <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>`
+                      : ""
+                  }
+                </div>
               </div>
 
               ${statsStripHtml}
@@ -1082,6 +1101,224 @@
     await renderArchivedTripsSection(archiveTargetContainerId, true);
   }
 
+  let pendingDeleteArchive = null;
+
+  function ensureDeleteArchiveModal() {
+    let modal = document.getElementById("deleteArchiveModal");
+    if (modal) return modal;
+
+    modal = document.createElement("div");
+    modal.id = "deleteArchiveModal";
+    modal.className =
+      "fixed inset-0 bg-black/60 z-[210] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity";
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border-2 border-gray-200 dark:border-gray-700 m-auto overflow-hidden">
+        <div class="p-5 space-y-3.5">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-900/70 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-trash-can text-base"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <h3 class="text-base font-black text-gray-900 dark:text-white tracking-tight">Remove Archive from App</h3>
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                This removes the archive entry and read-only view from the app list.
+              </p>
+            </div>
+          </div>
+
+          <div id="deleteArchiveTargetCard" class="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/60 p-3"></div>
+
+          <div class="rounded-xl border border-emerald-200 dark:border-emerald-900/70 bg-emerald-50/70 dark:bg-emerald-950/30 p-3 flex items-start gap-2.5">
+            <i class="fa-solid fa-shield-halved text-emerald-600 dark:text-emerald-400 text-sm mt-0.5 shrink-0"></i>
+            <p class="text-[11px] font-semibold text-emerald-900 dark:text-emerald-200 leading-relaxed">
+              <strong>Google Drive files will NOT be deleted.</strong> Your archived spreadsheet, trip folder, receipts, and documents remain safely intact in Google Drive.
+            </p>
+          </div>
+
+          <div>
+            <label for="deleteArchiveConfirmInput" class="block text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+              Type <span class="font-mono text-red-600 dark:text-red-400">DELETE</span> to confirm
+            </label>
+            <input
+              type="text"
+              id="deleteArchiveConfirmInput"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Type DELETE"
+              oninput="ArchiveMode.onDeleteConfirmInput()"
+              class="w-full px-3 py-2 text-xs font-bold font-mono tracking-wider rounded-lg border-2 border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <div class="px-5 py-3 bg-gray-50 dark:bg-gray-950/60 border-t border-gray-200 dark:border-gray-800 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            id="deleteArchiveCancelBtn"
+            onclick="ArchiveMode.closeDeleteArchiveModal()"
+            class="px-4 py-2 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="deleteArchiveConfirmBtn"
+            disabled
+            onclick="ArchiveMode.confirmDeleteArchive(this)"
+            class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-sm flex items-center justify-center cursor-pointer"
+          >
+            <span class="btn-text">Remove from App</span>
+            <div class="btn-spinner spinner-white hidden-force ml-1.5 !w-3 !h-3 border-2"></div>
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeDeleteArchiveModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.classList.contains("hidden-force")) {
+        closeDeleteArchiveModal();
+      }
+    });
+
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function openDeleteArchiveModal(archiveId) {
+    if (isReadOnly()) {
+      if (typeof showToast === "function") {
+        showToast("Exit read-only archive view before managing archives.", true);
+      }
+      return;
+    }
+    const isMainAdmin =
+      typeof currentUser !== "undefined" &&
+      currentUser &&
+      String(currentUser.nric || "").trim().toUpperCase() === "ADMIN";
+    if (!isMainAdmin) {
+      if (typeof showToast === "function") {
+        showToast("Only Main Admin can remove archived trips.", true);
+      }
+      return;
+    }
+
+    const found = (cachedArchivedTrips || []).find((a) => a.archiveId === archiveId);
+    if (!found) {
+      if (typeof showToast === "function") {
+        showToast("Archived trip could not be found.", true);
+      }
+      return;
+    }
+
+    pendingDeleteArchive = found;
+    const modal = ensureDeleteArchiveModal();
+    const card = document.getElementById("deleteArchiveTargetCard");
+    const input = document.getElementById("deleteArchiveConfirmInput");
+    const confirmBtn = document.getElementById("deleteArchiveConfirmBtn");
+
+    const tripLabel = [found.tripTitle || "Untitled Trip", found.tripYear || ""]
+      .filter(Boolean)
+      .join(" ");
+    const dateRange =
+      found.startDate && found.endDate
+        ? `${formatDisplayDate(found.startDate)} – ${formatDisplayDate(found.endDate)}`
+        : found.startDate
+          ? formatDisplayDate(found.startDate)
+          : "";
+    const archivedInfo = [
+      found.archivedAt ? `Archived ${formatDisplayDate(found.archivedAt)}` : "Archived",
+      found.archivedBy ? `by ${found.archivedBy}` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (card) {
+      card.innerHTML = `
+        <div class="text-sm font-black text-gray-900 dark:text-white truncate">${escapeHtml(tripLabel)}</div>
+        <div class="text-[11px] font-medium text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
+          ${dateRange ? `<span><i class="fa-regular fa-calendar mr-1"></i>${escapeHtml(dateRange)}</span>` : ""}
+          <span>${escapeHtml(archivedInfo)}</span>
+        </div>
+      `;
+    }
+
+    if (input) {
+      input.value = "";
+    }
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+    }
+
+    modal.classList.remove("hidden-force");
+    if (input) setTimeout(() => input.focus(), 40);
+  }
+
+  function closeDeleteArchiveModal() {
+    pendingDeleteArchive = null;
+    const modal = document.getElementById("deleteArchiveModal");
+    if (modal) modal.classList.add("hidden-force");
+    const input = document.getElementById("deleteArchiveConfirmInput");
+    if (input) input.value = "";
+  }
+
+  function onDeleteConfirmInput() {
+    const input = document.getElementById("deleteArchiveConfirmInput");
+    const confirmBtn = document.getElementById("deleteArchiveConfirmBtn");
+    if (!input || !confirmBtn) return;
+    confirmBtn.disabled = input.value.trim() !== "DELETE";
+  }
+
+  async function confirmDeleteArchive(btn) {
+    if (!pendingDeleteArchive) return;
+    const input = document.getElementById("deleteArchiveConfirmInput");
+    if (!input || input.value.trim() !== "DELETE") return;
+
+    const target = pendingDeleteArchive;
+    const cancelBtn = document.getElementById("deleteArchiveCancelBtn");
+    if (typeof setBtnLoading === "function") setBtnLoading(btn, true);
+    if (btn) btn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+
+    try {
+      await apiCall("deleteArchivedTrip", {
+        targetArchiveId: target.archiveId,
+        targetSheetId: target.sheetId || "",
+        callerNric: (typeof currentUser !== "undefined" && currentUser && currentUser.nric) || "",
+      });
+
+      const active = getActiveArchive();
+      if (active && active.archiveId === target.archiveId) {
+        setActiveArchive(null);
+      }
+
+      if (Array.isArray(cachedArchivedTrips)) {
+        cachedArchivedTrips = cachedArchivedTrips.filter(
+          (item) =>
+            item.archiveId !== target.archiveId &&
+            !(target.sheetId && item.sheetId && item.sheetId === target.sheetId)
+        );
+      }
+
+      closeDeleteArchiveModal();
+      await refreshArchives();
+
+      if (typeof showToast === "function") {
+        showToast("Archive removed from app. Google Drive files were not touched.");
+      }
+    } catch (err) {
+      if (typeof showToast === "function") {
+        showToast(err.message || "Failed to remove archive.", true);
+      }
+      if (btn) btn.disabled = input.value.trim() !== "DELETE";
+    } finally {
+      if (typeof setBtnLoading === "function") setBtnLoading(btn, false);
+      if (cancelBtn) cancelBtn.disabled = false;
+    }
+  }
+
   window.ArchiveMode = {
     getActiveArchive,
     isReadOnly,
@@ -1100,6 +1337,10 @@
     onFilterChange,
     clearFilters,
     refreshArchives,
+    openDeleteArchiveModal,
+    closeDeleteArchiveModal,
+    onDeleteConfirmInput,
+    confirmDeleteArchive,
     escapeHtml,
     formatDisplayDate,
   };

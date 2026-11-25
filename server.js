@@ -17,6 +17,7 @@ const port = 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const ARCHIVES_DIR = path.join(DATA_DIR, 'archived_trips');
 const ARCHIVES_INDEX_FILE = path.join(ARCHIVES_DIR, 'index.json');
+const DELETED_ARCHIVES_FILE = path.join(ARCHIVES_DIR, 'deleted_archives.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const EXTRACTIONS_DIR = path.join(UPLOADS_DIR, 'extractions');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -92,19 +93,90 @@ function saveArchiveSnapshot(archiveId, snapshot) {
   fs.writeFileSync(filePath, JSON.stringify(snapshot, null, 2), 'utf-8');
 }
 
-function deleteArchiveSnapshot(archiveId) {
+function loadDeletedArchives() {
   try {
-    const filePath = resolveArchiveFilePath(archiveId);
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (fs.existsSync(DELETED_ARCHIVES_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(DELETED_ARCHIVES_FILE, 'utf-8'));
+      if (Array.isArray(parsed)) return parsed;
     }
+  } catch (e) {
+    console.error('Error loading deleted archives list:', e);
+  }
+  return [];
+}
+
+function saveDeletedArchives(list) {
+  try {
+    if (!fs.existsSync(ARCHIVES_DIR)) fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
+    fs.writeFileSync(DELETED_ARCHIVES_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving deleted archives list:', e);
+  }
+}
+
+function recordDeletedArchive(archiveId, sheetId) {
+  const cleanId = String(archiveId || '').trim();
+  const cleanSheetId = String(sheetId || '').trim();
+  if (!cleanId && !cleanSheetId) return;
+  const list = loadDeletedArchives();
+  const exists = list.some(
+    (entry) =>
+      entry &&
+      ((cleanId && entry.id === cleanId) || (cleanSheetId && entry.sheetId === cleanSheetId))
+  );
+  if (!exists) {
+    list.push({
+      id: cleanId,
+      sheetId: cleanSheetId,
+      deletedAt: new Date().toISOString()
+    });
+    saveDeletedArchives(list);
+  }
+}
+
+function isArchiveTombstoned(item, deletedList) {
+  if (!item || !Array.isArray(deletedList) || deletedList.length === 0) return false;
+  const itemId = String(item.id || item.archiveId || '').trim();
+  const itemSheetId = String(item.sheetId || '').trim();
+  return deletedList.some((d) => {
+    if (!d) return false;
+    if (d.id && itemId && d.id === itemId) return true;
+    if (d.sheetId && itemSheetId && d.sheetId === itemSheetId) return true;
+    return false;
+  });
+}
+
+function deleteArchiveSnapshot(archiveId, sheetId = '') {
+  try {
+    const cleanId = String(archiveId || '').trim();
+    const cleanSheetId = String(sheetId || '').trim();
     const index = loadArchivesIndex();
-    const filtered = index.filter((x) => x && x.id !== archiveId);
+    const removedIds = new Set();
+    if (cleanId && isValidArchiveId(cleanId)) removedIds.add(cleanId);
+
+    const filtered = index.filter((x) => {
+      if (!x) return false;
+      const matchesId = cleanId && x.id === cleanId;
+      const matchesSheet = cleanSheetId && x.sheetId && x.sheetId === cleanSheetId;
+      if (matchesId || matchesSheet) {
+        if (x.id && isValidArchiveId(x.id)) removedIds.add(x.id);
+        return false;
+      }
+      return true;
+    });
+
+    removedIds.forEach((id) => {
+      const filePath = resolveArchiveFilePath(id);
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+
     if (filtered.length !== index.length) {
       saveArchivesIndex(filtered);
     }
   } catch (e) {
-    console.warn('Failed to roll back archive snapshot:', archiveId, e.message);
+    console.warn('Failed to remove archive snapshot:', archiveId, e.message);
   }
 }
 
@@ -570,6 +642,7 @@ const MUTATION_DOMAIN_MAP = {
   addHelpline: { domain: 'settings', prefixes: ['getSettings'] },
   removeHelpline: { domain: 'settings', prefixes: ['getSettings'] },
   archiveAndReset: { domain: 'settings', prefixes: ['ALL'] },
+  deleteArchivedTrip: { domain: 'settings', prefixes: [] },
   clearCache: { domain: 'settings', prefixes: ['ALL'] },
   uploadDriveFile: { domain: 'files', prefixes: ['getSettings'] },
   createDriveFolder: { domain: 'files', prefixes: ['getSettings'] },
@@ -689,12 +762,13 @@ app.post('/api', async (req, res) => {
   // List all archived trips (merges local snapshots + remote GAS archived trips if deployed)
   if (action === 'listArchivedTrips') {
     try {
-      const localList = loadArchivesIndex();
+      const deletedList = loadDeletedArchives();
+      const localList = loadArchivesIndex().filter((item) => !isArchiveTombstoned(item, deletedList));
       let remoteList = [];
       try {
         const remoteRes = await callGasJson(API_URL, { action: 'listArchivedTrips' });
         if (remoteRes && remoteRes.status === 'success' && Array.isArray(remoteRes.archives)) {
-          remoteList = remoteRes.archives;
+          remoteList = remoteRes.archives.filter((item) => !isArchiveTombstoned(item, deletedList));
         }
       } catch (e) {}
 
@@ -733,6 +807,71 @@ app.post('/api', async (req, res) => {
     } catch (err) {
       console.error('listArchivedTrips error:', err);
       return res.status(500).json({ status: 'error', message: 'Failed to load archived trips.' });
+    }
+  }
+
+  // Safely remove an archived trip from the app index & local snapshot ONLY.
+  // SAFETY GUARANTEE: Never deletes or modifies any files or folders in Google Drive.
+  if (action === 'deleteArchivedTrip' && !effectiveArchiveId) {
+    try {
+      const callerNric = String((payload && payload.callerNric) || '').trim().toUpperCase();
+      if (callerNric !== 'ADMIN') {
+        return res.status(403).json({
+          status: 'error',
+          message: 'Only Main Admin can remove archived trips from the app.'
+        });
+      }
+
+      const targetArchiveId = String((payload && payload.targetArchiveId) || '').trim();
+      const targetSheetId = String((payload && payload.targetSheetId) || '').trim();
+      if (!targetArchiveId && !targetSheetId) {
+        return res.status(400).json({ status: 'error', message: 'Missing archive identifier.' });
+      }
+      if (targetArchiveId && !isValidArchiveId(targetArchiveId)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid archive identifier.' });
+      }
+
+      // Resolve any associated sheetId from local index before deleting local record
+      let resolvedSheetId = targetSheetId;
+      if (!resolvedSheetId && targetArchiveId) {
+        const idxEntry = loadArchivesIndex().find((x) => x && x.id === targetArchiveId);
+        if (idxEntry && idxEntry.sheetId) resolvedSheetId = String(idxEntry.sheetId).trim();
+      }
+
+      // 1. Remove local read-only snapshot JSON and index entry (zero Google Drive deletion)
+      deleteArchiveSnapshot(targetArchiveId, resolvedSheetId);
+
+      // 2. Record tombstone locally so it stays removed even if Apps Script is not yet redeployed
+      recordDeletedArchive(targetArchiveId, resolvedSheetId);
+
+      // 3. Remove metadata entry from Apps Script ARCHIVED_TRIPS property (never touches DriveApp)
+      try {
+        await callGasJson(API_URL, {
+          action: 'deleteArchivedTrip',
+          targetArchiveId,
+          targetSheetId: resolvedSheetId,
+          callerNric
+        });
+      } catch (gasErr) {
+        console.warn('GAS deleteArchivedTrip warning (local tombstone still active):', gasErr.message);
+      }
+
+      broadcastSyncEvent({
+        type: 'sync:update',
+        action: 'deleteArchivedTrip',
+        domain: 'settings',
+        clientId: clientId || null,
+        ts: Date.now()
+      });
+
+      return res.json({
+        status: 'success',
+        removedArchiveId: targetArchiveId,
+        driveFilesUntouched: true
+      });
+    } catch (err) {
+      console.error('deleteArchivedTrip error:', err);
+      return res.status(500).json({ status: 'error', message: err.message || 'Failed to remove archived trip.' });
     }
   }
 
