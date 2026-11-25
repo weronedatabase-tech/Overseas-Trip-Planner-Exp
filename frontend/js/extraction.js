@@ -102,7 +102,7 @@ async function showExtractionPopup(type) {
             </button>
             <div class="p-5 md:p-6 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
                 <h2 id="extractionTitle" class="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight">Data Extraction</h2>
-                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Select participants to exclude</p>
+                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Select participants to exclude &middot; MS Excel (.xlsx)</p>
             </div>
             <div class="p-5 md:p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                 <div class="relative">
@@ -121,7 +121,7 @@ async function showExtractionPopup(type) {
                 <button type="button" onclick="document.getElementById('extractionModal').classList.add('hidden-force')" class="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition">Cancel</button>
                 <button type="button" onclick="performExtraction()" class="px-5 py-2.5 rounded-xl font-black text-sm text-white shadow-md transition flex items-center gap-2 bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    Extract to Drive
+                    Extract Excel (.xlsx)
                 </button>
             </div>
         </div>`;
@@ -305,6 +305,45 @@ function removeExtractExcluded(nric) {
   renderExtractExcluded();
 }
 
+function getCurrentExtractFolderId() {
+  if (
+    typeof currentDrivePath !== "undefined" &&
+    Array.isArray(currentDrivePath) &&
+    currentDrivePath.length > 0
+  ) {
+    return currentDrivePath[currentDrivePath.length - 1].id || "root";
+  }
+  return "root";
+}
+
+function getOrCreateExtractOverlay() {
+  let overlay = document.getElementById("extractOverlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "extractOverlay";
+    overlay.className =
+      "fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col justify-center items-center backdrop-blur-sm hidden-force text-gray-800 dark:text-white";
+    overlay.innerHTML =
+      '<div class="loader !w-10 !h-10 border-primary mb-4"></div><div class="font-bold tracking-widest uppercase text-sm">Generating MS Excel (.xlsx)...</div>';
+    document.body.appendChild(overlay);
+  }
+  return overlay;
+}
+
+function handleExtractionSuccess(res) {
+  showToast("MS Excel (.xlsx) extraction successful!");
+  if (
+    Array.isArray(res.folders) &&
+    Array.isArray(res.files) &&
+    typeof renderDriveContents === "function"
+  ) {
+    renderDriveContents(res.folders, res.files);
+  } else if (typeof refreshCurrentDriveFolder === "function") {
+    refreshCurrentDriveFolder(null);
+  }
+  showExtractionResultPopup(res);
+}
+
 function performExtraction() {
   if (!extractGlobalRoster) {
     showToast("Roster data not loaded yet.");
@@ -313,49 +352,28 @@ function performExtraction() {
 
   document.getElementById("extractionModal").classList.add("hidden-force");
 
-  let overlay = document.getElementById("extractOverlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "extractOverlay";
-    overlay.className =
-      "fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col justify-center items-center backdrop-blur-sm hidden-force text-gray-800 dark:text-white";
-    overlay.innerHTML =
-      '<div class="loader !w-10 !h-10 border-primary mb-4"></div><div class="font-bold tracking-widest uppercase text-sm">Extracting to Drive...</div>';
-    document.body.appendChild(overlay);
-  }
+  const overlay = getOrCreateExtractOverlay();
   overlay.classList.remove("hidden-force");
 
   const excluded = Array.from(extractExcludedNrics);
+  const folderId = getCurrentExtractFolderId();
 
   apiCall("extractData", {
     extractType: currentExtractType,
     excludedNrics: excluded,
+    folderId: folderId,
   })
     .then((res) => {
       overlay.classList.add("hidden-force");
       if (res.status === "success") {
-        showToast("Excel extraction successful!");
-        if (
-          typeof currentDrivePath !== "undefined" &&
-          currentDrivePath.length <= 1
-        ) {
-          if (
-            Array.isArray(res.folders) &&
-            Array.isArray(res.files) &&
-            typeof renderDriveContents === "function"
-          ) {
-            renderDriveContents(res.folders, res.files);
-          } else if (typeof refreshCurrentDriveFolder === "function") {
-            refreshCurrentDriveFolder(null);
-          }
-        }
+        handleExtractionSuccess(res);
       } else {
         showToast("Extraction failed: " + res.message, "error");
       }
     })
     .catch((err) => {
       overlay.classList.add("hidden-force");
-      showToast("Error extracting data.", "error");
+      showToast("Error extracting data: " + (err.message || "Unknown error"), "error");
     });
 }
 let customSelectedColumns = ["fullName", "nric"];
@@ -483,11 +501,11 @@ async function showCustomExtractionPopup() {
             </button>
             <div class="p-5 md:p-6 border-b-2 border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shrink-0">
                 <h2 class="text-lg md:text-xl font-black text-gray-900 dark:text-white tracking-tight">Custom Extraction</h2>
-                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Configure your Excel File</p>
+                <p class="text-xs font-bold text-gray-500 mt-1 uppercase tracking-widest">Configure your MS Excel (.xlsx) File</p>
             </div>
             <div class="p-5 md:p-6 flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
                 <div>
-                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Excel File Name</label>
+                    <label class="block text-xs font-black text-gray-400 uppercase tracking-widest mb-1.5">Excel File Name (.xlsx)</label>
                     <input type="text" id="customSheetName" placeholder="e.g. Flight Details" class="w-full py-2.5 px-3 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-sm font-semibold bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary shadow-sm transition">
                 </div>
                 
@@ -516,7 +534,7 @@ async function showCustomExtractionPopup() {
                 <button type="button" onclick="document.getElementById('customExtractionModal').classList.add('hidden-force')" class="px-5 py-2.5 rounded-xl font-bold text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 transition">Cancel</button>
                 <button type="button" onclick="performCustomExtraction()" class="px-5 py-2.5 rounded-xl font-black text-sm text-white shadow-md transition flex items-center gap-2 bg-primary hover:bg-primary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    Extract to Drive
+                    Extract Excel (.xlsx)
                 </button>
             </div>
         </div>`;
@@ -679,52 +697,341 @@ function performCustomExtraction() {
     .getElementById("customExtractionModal")
     .classList.add("hidden-force");
 
-  let overlay = document.getElementById("extractOverlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "extractOverlay";
-    overlay.className =
-      "fixed inset-0 bg-white/80 dark:bg-black/80 z-[200] flex flex-col justify-center items-center backdrop-blur-sm hidden-force text-gray-800 dark:text-white";
-    overlay.innerHTML =
-      '<div class="loader !w-10 !h-10 border-primary mb-4"></div><div class="font-bold tracking-widest uppercase text-sm">Extracting to Drive...</div>';
-    document.body.appendChild(overlay);
-  }
+  const overlay = getOrCreateExtractOverlay();
   overlay.classList.remove("hidden-force");
 
   const config = {
     sheetName: sheetName,
     columns: customSelectedColumns,
   };
+  const folderId = getCurrentExtractFolderId();
 
   apiCall("extractData", {
     extractType: "custom",
     excludedNrics: [],
     customConfig: config,
+    folderId: folderId,
   })
     .then((res) => {
       overlay.classList.add("hidden-force");
       if (res.status === "success") {
-        showToast("Excel extraction successful!");
-        if (
-          typeof currentDrivePath !== "undefined" &&
-          currentDrivePath.length <= 1
-        ) {
-          if (
-            Array.isArray(res.folders) &&
-            Array.isArray(res.files) &&
-            typeof renderDriveContents === "function"
-          ) {
-            renderDriveContents(res.folders, res.files);
-          } else if (typeof refreshCurrentDriveFolder === "function") {
-            refreshCurrentDriveFolder(null);
-          }
-        }
+        handleExtractionSuccess(res);
       } else {
         showToast("Extraction failed: " + res.message, "error");
       }
     })
     .catch((err) => {
       overlay.classList.add("hidden-force");
-      showToast("Error extracting data.", "error");
+      showToast("Error extracting data: " + (err.message || "Unknown error"), "error");
     });
+}
+
+// ==========================================
+// POST-EXTRACTION RESULT POPUP (LINK, DOWNLOAD & SHARE)
+// ==========================================
+let lastExtractedFile = null;
+const EXCEL_MIME_TYPE =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+function base64ToExcelBlob(base64Data, mimeType = EXCEL_MIME_TYPE) {
+  const binaryStr = atob(base64Data);
+  const len = binaryStr.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType || EXCEL_MIME_TYPE });
+}
+
+function getOrCreateExtractionResultModal() {
+  let modal = document.getElementById("extractionResultModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "extractionResultModal";
+    modal.className =
+      "fixed inset-0 bg-black/60 z-[150] flex justify-center items-center p-4 backdrop-blur-sm hidden-force";
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border-2 border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden my-auto animate-slide-up relative">
+        <button type="button" onclick="closeExtractionResultPopup()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none z-10 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 transition" aria-label="Close">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
+        <div class="p-5 border-b-2 border-gray-200 dark:border-gray-800 bg-green-50/70 dark:bg-green-950/20 flex items-center gap-3.5 pr-14">
+          <div class="w-11 h-11 rounded-xl bg-green-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h2 class="text-base md:text-lg font-black text-gray-900 dark:text-white tracking-tight leading-tight">Extraction Complete</h2>
+            <p class="text-[11px] font-bold text-green-700 dark:text-green-400 uppercase tracking-widest mt-0.5">MS Excel (.xlsx) Ready</p>
+          </div>
+        </div>
+
+        <div class="p-5 flex flex-col gap-4">
+          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700">
+            <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-file-excel text-base"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">File Name</div>
+              <div id="extractResultFileName" class="text-xs md:text-sm font-bold text-gray-900 dark:text-white break-all leading-snug"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">File Link</label>
+              <button type="button" id="btnCopyExtractLink" onclick="copyExtractedFileLink()" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline focus:outline-none">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                <span id="lblCopyExtractLink">Copy Link</span>
+              </button>
+            </div>
+            <a id="extractResultLink" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100/70 dark:hover:bg-blue-900/40 transition group">
+              <svg class="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              <span id="extractResultLinkText" class="text-xs font-semibold break-all line-clamp-2 flex-1 underline decoration-blue-400/60 group-hover:decoration-blue-600"></span>
+              <svg class="w-4 h-4 shrink-0 text-blue-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </a>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button type="button" id="btnDownloadExtracted" onclick="downloadExtractedFile()" class="w-full py-3 px-4 rounded-xl font-black text-sm text-white bg-green-600 hover:bg-green-700 active:scale-[0.98] shadow-md transition flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+              <span>Download</span>
+            </button>
+            <button type="button" id="btnShareExtracted" onclick="shareExtractedFile()" class="w-full py-3 px-4 rounded-xl font-black text-sm text-white bg-blue-600 hover:bg-blue-700 active:scale-[0.98] shadow-md transition flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              <i class="fa-solid fa-share-nodes text-sm"></i>
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="px-5 py-3.5 border-t-2 border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/60 flex justify-end">
+          <button type="button" onclick="closeExtractionResultPopup()" class="px-5 py-2 rounded-xl font-bold text-xs md:text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition">Done</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeExtractionResultPopup();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.key === "Escape" &&
+        !modal.classList.contains("hidden-force")
+      ) {
+        closeExtractionResultPopup();
+      }
+    });
+  }
+  return modal;
+}
+
+function closeExtractionResultPopup() {
+  const modal = document.getElementById("extractionResultModal");
+  if (modal) modal.classList.add("hidden-force");
+}
+
+function showExtractionResultPopup(res) {
+  const fileName =
+    res && res.fileName
+      ? String(res.fileName)
+      : "Extraction.xlsx";
+  const downloadUrl = res && res.downloadUrl ? String(res.downloadUrl) : "";
+  const absoluteDownloadUrl = downloadUrl
+    ? new URL(downloadUrl, window.location.origin).href
+    : "";
+  const fileId = res && res.fileId ? String(res.fileId) : "";
+  const fileUrl =
+    (res && res.fileUrl ? String(res.fileUrl) : "") ||
+    (fileId ? `https://drive.google.com/file/d/${fileId}/view` : "") ||
+    absoluteDownloadUrl;
+
+  lastExtractedFile = {
+    fileName,
+    fileUrl,
+    fileId,
+    downloadUrl,
+    absoluteDownloadUrl,
+    fileData: res && res.fileData ? res.fileData : "",
+    mimeType: (res && res.mimeType) || EXCEL_MIME_TYPE,
+  };
+
+  const modal = getOrCreateExtractionResultModal();
+  const nameEl = document.getElementById("extractResultFileName");
+  const linkEl = document.getElementById("extractResultLink");
+  const linkTextEl = document.getElementById("extractResultLinkText");
+  const copyLbl = document.getElementById("lblCopyExtractLink");
+
+  if (nameEl) nameEl.textContent = fileName;
+  if (linkEl) linkEl.href = fileUrl || "#";
+  if (linkTextEl) linkTextEl.textContent = fileUrl || "Link unavailable";
+  if (copyLbl) copyLbl.textContent = "Copy Link";
+
+  modal.classList.remove("hidden-force");
+}
+
+async function copyTextFallback(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand("copy");
+  document.body.removeChild(ta);
+  return ok;
+}
+
+async function copyExtractedFileLink() {
+  if (!lastExtractedFile || !lastExtractedFile.fileUrl) {
+    showToast("No file link available to copy.", true);
+    return;
+  }
+  try {
+    await copyTextFallback(lastExtractedFile.fileUrl);
+    const copyLbl = document.getElementById("lblCopyExtractLink");
+    if (copyLbl) {
+      copyLbl.textContent = "Copied!";
+      setTimeout(() => {
+        if (copyLbl) copyLbl.textContent = "Copy Link";
+      }, 2000);
+    }
+    showToast("File link copied to clipboard!");
+  } catch (e) {
+    showToast("Could not copy link.", true);
+  }
+}
+
+function downloadExtractedFile() {
+  if (!lastExtractedFile) {
+    showToast("No extracted file available.", true);
+    return;
+  }
+
+  const { fileName, downloadUrl, fileData, fileId, mimeType } =
+    lastExtractedFile;
+
+  // Prefer server attachment endpoint for reliable download across iOS Safari, Android Chrome, and desktop
+  if (downloadUrl) {
+    const a = document.createElement("a");
+    a.href = downloadUrl;
+    a.download = fileName;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Downloading Excel file...");
+    return;
+  }
+
+  if (fileData) {
+    try {
+      const blob = base64ToExcelBlob(fileData, mimeType);
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = fileName;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+      showToast("Downloading Excel file...");
+      return;
+    } catch (e) {
+      console.error("Blob download failed:", e);
+    }
+  }
+
+  if (fileId) {
+    const a = document.createElement("a");
+    a.href = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showToast("Downloading Excel file...");
+    return;
+  }
+
+  showToast("Download unavailable for this file.", true);
+}
+
+async function shareExtractedFile() {
+  if (!lastExtractedFile) {
+    showToast("No extracted file available to share.", true);
+    return;
+  }
+
+  const { fileName, fileUrl, downloadUrl, absoluteDownloadUrl, fileData, mimeType } =
+    lastExtractedFile;
+  const shareLink = fileUrl || absoluteDownloadUrl;
+
+  if (navigator.share) {
+    // 1. Try sharing the actual MS Excel (.xlsx) file via native phone apps
+    try {
+      let blob = null;
+      if (fileData) {
+        blob = base64ToExcelBlob(fileData, mimeType);
+      } else if (downloadUrl) {
+        const resp = await fetch(downloadUrl);
+        if (resp.ok) blob = await resp.blob();
+      }
+
+      if (blob) {
+        const excelFile = new File([blob], fileName, {
+          type: mimeType || EXCEL_MIME_TYPE,
+        });
+        if (
+          typeof navigator.canShare === "function" &&
+          navigator.canShare({ files: [excelFile] })
+        ) {
+          await navigator.share({
+            title: fileName,
+            files: [excelFile],
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        return; // User closed the share sheet
+      }
+      // Fall through to link sharing if the OS/browser restricts .xlsx binary file sharing
+      console.warn("File share fallback to link share:", err);
+    }
+
+    // 2. Fallback: Share the file link via native phone apps
+    try {
+      await navigator.share({
+        title: fileName,
+        text: fileName,
+        url: shareLink,
+      });
+      return;
+    } catch (err) {
+      if (err && err.name === "AbortError") {
+        return;
+      }
+      console.warn("Link share failed:", err);
+    }
+  }
+
+  // 3. Desktop/unsupported browser fallback: copy link
+  if (shareLink) {
+    try {
+      await copyTextFallback(shareLink);
+      showToast("Link copied! Open on mobile to share directly via phone apps.");
+    } catch (e) {
+      showToast("Sharing is not supported on this browser.", true);
+    }
+  } else {
+    showToast("Sharing is not supported on this browser.", true);
+  }
 }

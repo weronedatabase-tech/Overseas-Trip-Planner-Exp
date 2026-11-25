@@ -562,6 +562,9 @@
           else navigateTo("dashboard.html");
           return;
         }
+        if (typeof renderLandingHelpline === "function") {
+          renderLandingHelpline();
+        }
         if (typeof renderLandingInfographic === "function") {
           renderLandingInfographic();
         }

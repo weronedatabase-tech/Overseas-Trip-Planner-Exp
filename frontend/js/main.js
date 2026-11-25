@@ -983,6 +983,7 @@ function applyHydrationDOMUpdates() {
   renderHeaderLegend();
   renderHeaderHelpline();
   renderLandingHelpline();
+  renderProfileHelpline();
   renderLandingInfographic();
 }
 
@@ -1044,30 +1045,19 @@ function renderLandingInfographic() {
 }
 
 function renderHeaderHelpline() {
-  if (
-    !appSettings ||
-    !appSettings.helpline ||
-    appSettings.helpline.length === 0
-  )
-    return;
   const headerTitleContainers = document.querySelectorAll(
     "header > div:first-child",
   );
   headerTitleContainers.forEach((container) => {
     let existing = container.querySelector(".header-helpline-box");
     if (existing) existing.remove();
-
-    let html = `<div class="header-helpline-box mt-1 flex flex-wrap gap-2 items-center">`;
-    appSettings.helpline.forEach((h) => {
-      html += `<div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700"><span>${h.name}</span> ${renderPhoneLink(h.phone)}</div>`;
-    });
-    html += `</div>`;
-    container.insertAdjacentHTML("beforeend", html);
   });
 }
 
 function renderLandingHelpline() {
-  const landingView = document.getElementById("viewLanding");
+  const landingView =
+    document.getElementById("viewLanding") ||
+    document.getElementById("viewRegister");
   if (!landingView) return;
 
   let existing = document.getElementById("landingHelplineBox");
@@ -1092,6 +1082,40 @@ function renderLandingHelpline() {
   html += `</div></div>`;
   landingView.insertAdjacentHTML("beforeend", html);
 }
+
+function renderProfileHelpline() {
+  const wrapper =
+    document.getElementById("profileHelplineWrapper") ||
+    document.getElementById("section-my-profile");
+  if (!wrapper) return;
+
+  let existing = document.getElementById("profileHelplineBox");
+  if (existing) existing.remove();
+
+  if (
+    !appSettings ||
+    !appSettings.helpline ||
+    appSettings.helpline.length === 0
+  )
+    return;
+
+  let html = `<div id="profileHelplineBox" class="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-md border-2 border-gray-200 dark:border-gray-800 text-center animate-slide-up mt-4">
+        <h3 class="text-lg font-bold mb-3 text-gray-900 dark:text-white uppercase tracking-tight">Need Help?</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 font-semibold">Contact the following people for assistance.</p>
+        <div class="flex flex-col gap-3">`;
+
+  appSettings.helpline.forEach((h) => {
+    html += `<div class="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-xl shadow-md"><span class="font-bold text-sm">${h.name}</span>${renderPhoneLink(h.phone)}</div>`;
+  });
+
+  html += `</div></div>`;
+  if (wrapper.id === "profileHelplineWrapper") {
+    wrapper.innerHTML = html;
+  } else {
+    wrapper.insertAdjacentHTML("beforeend", html);
+  }
+}
+window.renderProfileHelpline = renderProfileHelpline;
 
 async function silentHydration() {
   if (isHydrated) return;

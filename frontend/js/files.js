@@ -11,6 +11,17 @@ document.addEventListener("click", (e) => {
       menu.classList.add("hidden-force");
     }
   }
+  const extractMenu = document.getElementById("driveExtractMenu");
+  if (extractMenu && !extractMenu.classList.contains("hidden-force")) {
+    const extractBtn = document.getElementById("btnDriveExtract");
+    if (
+      extractBtn &&
+      !extractBtn.contains(e.target) &&
+      !extractMenu.contains(e.target)
+    ) {
+      extractMenu.classList.add("hidden-force");
+    }
+  }
 });
 
 function buildFilesUI() {
@@ -34,7 +45,7 @@ function buildFilesUI() {
      </button>
 
      <div class="relative inline-block text-left z-30">
-       <button type="button" id="btnDriveExtract" onclick="document.getElementById('driveExtractMenu').classList.toggle('hidden-force')" class="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 flex items-center gap-1 font-bold text-xs md:text-sm active:scale-95" title="Extract Data">
+       <button type="button" id="btnDriveExtract" onclick="toggleDriveExtractMenu(event)" class="p-1.5 rounded-lg text-purple-600 hover:bg-purple-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 flex items-center gap-1 font-bold text-xs md:text-sm active:scale-95" title="Extract Data to MS Excel">
           <svg class="w-5 h-5 md:w-6 md:h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           <span class="hidden md:inline pointer-events-none">Extract</span>
        </button>
@@ -117,7 +128,21 @@ function toggleDriveAddMenu(event) {
   if (event) {
     event.stopPropagation();
   }
+  const extractMenu = document.getElementById("driveExtractMenu");
+  if (extractMenu) extractMenu.classList.add("hidden-force");
   const menu = document.getElementById("driveAddMenu");
+  if (menu) {
+    menu.classList.toggle("hidden-force");
+  }
+}
+
+function toggleDriveExtractMenu(event) {
+  if (event) {
+    event.stopPropagation();
+  }
+  const addMenu = document.getElementById("driveAddMenu");
+  if (addMenu) addMenu.classList.add("hidden-force");
+  const menu = document.getElementById("driveExtractMenu");
   if (menu) {
     menu.classList.toggle("hidden-force");
   }

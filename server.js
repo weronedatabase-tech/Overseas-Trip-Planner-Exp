@@ -3,6 +3,7 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 
@@ -15,8 +16,26 @@ const port = 3000;
 
 const DATA_DIR = path.join(__dirname, 'data');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
+const EXTRACTIONS_DIR = path.join(UPLOADS_DIR, 'extractions');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+if (!fs.existsSync(EXTRACTIONS_DIR)) fs.mkdirSync(EXTRACTIONS_DIR, { recursive: true });
+
+const extractedFiles = new Map();
+const EXCEL_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function cleanupOldExtractions() {
+  const maxAgeMs = 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  for (const [id, entry] of extractedFiles.entries()) {
+    if (now - entry.createdAt > maxAgeMs) {
+      try {
+        if (fs.existsSync(entry.filePath)) fs.unlinkSync(entry.filePath);
+      } catch (e) {}
+      extractedFiles.delete(id);
+    }
+  }
+}
 
 const OVERRIDES_FILE = path.join(DATA_DIR, 'receipts_overrides.json');
 const TRIP_FILES_FILE = path.join(DATA_DIR, 'trip_files.json');
@@ -250,6 +269,24 @@ const CACHEABLE_ACTIONS = [
   'fetchReceipts',
   'getProfile'
 ];
+
+app.get('/api/extractions/:id', (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+    return res.status(400).json({ status: 'error', message: 'Invalid extraction ID' });
+  }
+  const entry = extractedFiles.get(id);
+  if (!entry || !fs.existsSync(entry.filePath)) {
+    return res.status(404).json({ status: 'error', message: 'Extracted file not found or expired' });
+  }
+  const safeAsciiName = entry.fileName.replace(/[^\x20-\x7E]/g, '_').replace(/"/g, "'");
+  res.setHeader('Content-Type', EXCEL_MIME_TYPE);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${safeAsciiName}"; filename*=UTF-8''${encodeURIComponent(entry.fileName)}`
+  );
+  return res.sendFile(entry.filePath);
+});
 
 app.post('/api/upload-file', async (req, res) => {
   try {
@@ -490,6 +527,8 @@ app.post('/api', async (req, res) => {
       const excludedNrics = Array.isArray(p.excludedNrics) ? p.excludedNrics : [];
       const customConfig = p.customConfig || {};
 
+      const folderId = p.folderId || 'root';
+
       const fetchGasJson = async (act, extra = {}) => {
         const resp = await fetch(API_URL, {
           method: 'POST',
@@ -500,11 +539,18 @@ app.post('/api', async (req, res) => {
         return await resp.json();
       };
 
-      const [settingsRes, rosterRes, logRes] = await Promise.all([
+      const [settingsRes, rosterRes, logRes, beforeDriveRes] = await Promise.all([
         fetchGasJson('getSettings').catch(() => ({})),
         fetchGasJson('fetchAdminRoster').catch(() => ({ roster: [] })),
-        fetchGasJson('fetchLogistics').catch(() => ({ rooms: [], pairings: [] }))
+        fetchGasJson('fetchLogistics').catch(() => ({ rooms: [], pairings: [] })),
+        fetchGasJson('getDriveContents', { folderId }).catch(() => ({ files: [] }))
       ]);
+
+      const existingFileIds = new Set(
+        Array.isArray(beforeDriveRes && beforeDriveRes.files)
+          ? beforeDriveRes.files.map(f => f.id)
+          : []
+      );
 
       const tripTitle = (settingsRes && settingsRes.tripTitle) || 'TOT';
       const tripYear = (settingsRes && settingsRes.tripYear) || new Date().getFullYear().toString();
@@ -594,6 +640,8 @@ app.post('/api', async (req, res) => {
       };
 
       const workbook = new ExcelJS.Workbook();
+      workbook.creator = 'Overseas Trip';
+      workbook.created = new Date();
       let baseFileName = 'Extraction';
 
       if (extractType === 'insurance') {
@@ -649,12 +697,24 @@ app.post('/api', async (req, res) => {
         }
 
         const colWidths = [6, 40, 12, 18, 18, 18, 18, 29, 22, 29];
+        const usedTabNames = new Set();
         for (const b in buses) {
           let tabName = 'Unassigned';
           if (b.toLowerCase() !== 'unassigned') {
             const clean = b.replace(/bus/i, '').trim();
             tabName = 'Bus ' + clean;
           }
+          tabName = tabName.replace(/[\\/*?:[\]]/g, '_').trim().slice(0, 31) || 'Sheet';
+          if (usedTabNames.has(tabName.toLowerCase())) {
+            let suffix = 2;
+            let candidate = `${tabName.slice(0, 27)} (${suffix})`;
+            while (usedTabNames.has(candidate.toLowerCase())) {
+              suffix++;
+              candidate = `${tabName.slice(0, 27)} (${suffix})`;
+            }
+            tabName = candidate;
+          }
+          usedTabNames.add(tabName.toLowerCase());
           const sheet = workbook.addWorksheet(tabName);
           sheet.columns = colWidths.map(w => ({ width: w }));
 
@@ -793,19 +853,32 @@ app.post('/api', async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Invalid extraction type.' });
       }
 
-      const excelFileName = baseFileName.toLowerCase().endsWith('.xlsx')
-        ? baseFileName
-        : `${baseFileName}.xlsx`;
-      const buffer = await workbook.xlsx.writeBuffer();
-      const base64Data = Buffer.from(buffer).toString('base64');
+      const sanitizedBase = String(baseFileName || 'Extraction')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\.(xlsx|xls|csv)$/i, '')
+        .trim() || 'Extraction';
+      const excelFileName = `${sanitizedBase}.xlsx`;
+      const rawBuffer = await workbook.xlsx.writeBuffer();
+      const buffer = Buffer.from(rawBuffer);
+      const base64Data = buffer.toString('base64');
+
+      cleanupOldExtractions();
+      const downloadId = `${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+      const localFilePath = path.join(EXTRACTIONS_DIR, `${downloadId}.xlsx`);
+      fs.writeFileSync(localFilePath, buffer);
+      extractedFiles.set(downloadId, {
+        filePath: localFilePath,
+        fileName: excelFileName,
+        createdAt: Date.now()
+      });
 
       const uploadResp = await fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'uploadDriveFile',
-          folderId: p.folderId || 'root',
+          folderId: folderId,
           fileName: excelFileName,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          mimeType: EXCEL_MIME_TYPE,
           fileData: base64Data
         }),
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -815,6 +888,23 @@ app.post('/api', async (req, res) => {
       if (uploadJson && uploadJson.status === 'error') {
         return res.json(uploadJson);
       }
+
+      let matchedFile = uploadJson && uploadJson.uploadedFile ? uploadJson.uploadedFile : null;
+      if (!matchedFile && uploadJson && Array.isArray(uploadJson.files)) {
+        const lowerTarget = excelFileName.toLowerCase();
+        matchedFile =
+          uploadJson.files.find(f => f.name === excelFileName && !existingFileIds.has(f.id)) ||
+          uploadJson.files.find(f => !existingFileIds.has(f.id) && String(f.name || '').toLowerCase() === lowerTarget) ||
+          uploadJson.files.find(f => !existingFileIds.has(f.id)) ||
+          uploadJson.files.find(f => f.name === excelFileName) ||
+          uploadJson.files.find(f => String(f.name || '').toLowerCase() === lowerTarget) ||
+          null;
+      }
+
+      const fileId = matchedFile && matchedFile.id ? matchedFile.id : '';
+      const fileUrl = (matchedFile && matchedFile.url)
+        ? matchedFile.url
+        : (fileId ? `https://drive.google.com/file/d/${fileId}/view` : '');
 
       broadcastSyncEvent({
         type: 'sync:update',
@@ -826,7 +916,12 @@ app.post('/api', async (req, res) => {
 
       return res.json({
         status: 'success',
+        fileId,
         fileName: excelFileName,
+        fileUrl,
+        downloadUrl: `/api/extractions/${downloadId}`,
+        mimeType: EXCEL_MIME_TYPE,
+        fileData: base64Data,
         folders: uploadJson ? uploadJson.folders : undefined,
         files: uploadJson ? uploadJson.files : undefined
       });

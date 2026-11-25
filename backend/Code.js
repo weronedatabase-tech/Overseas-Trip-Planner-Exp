@@ -1450,7 +1450,7 @@ return { status: 'success', currentFolderId: folder.getId(), currentFolderName: 
 } catch (e) { return { status: 'error', message: e.message }; }
 }
 
-function uploadDriveFile(fId, fName, mime, data) { try { let folder = fId === 'root' ? getTripFolder() : DriveApp.getFolderById(fId); let blob = Utilities.newBlob(Utilities.base64Decode(data), mime, fName); folder.createFile(blob); Utilities.sleep(1500); return getDriveContents(fId); } catch (e) { return { status: 'error', message: e.message }; } }
+function uploadDriveFile(fId, fName, mime, data) { try { let folder = fId === 'root' ? getTripFolder() : DriveApp.getFolderById(fId); let blob = Utilities.newBlob(Utilities.base64Decode(data), mime, fName); const createdFile = folder.createFile(blob); Utilities.sleep(1500); const contents = getDriveContents(fId); if (contents && contents.status === 'success') { contents.uploadedFile = { id: createdFile.getId(), name: createdFile.getName(), url: createdFile.getUrl(), mimeType: createdFile.getMimeType() }; } return contents; } catch (e) { return { status: 'error', message: e.message }; } }
 function createDriveFolder(pId, fName) { try { let parent = pId === 'root' ? getTripFolder() : DriveApp.getFolderById(pId); parent.createFolder(fName); Utilities.sleep(1500); return getDriveContents(pId); } catch (e) { return { status: 'error', message: e.message }; } }
 function createGoogleDoc(fId, fName, type) { try { let folder = fId === 'root' ? getTripFolder() : DriveApp.getFolderById(fId); let fileId; if (type === 'doc') fileId = DocumentApp.create(fName).getId(); else if (type === 'sheet') fileId = SpreadsheetApp.create(fName).getId(); else fileId = SlidesApp.create(fName).getId(); DriveApp.getFileById(fileId).moveTo(folder); Utilities.sleep(1500); return getDriveContents(fId); } catch (e) { return { status: 'error', message: e.message }; } }
 function renameDriveItem(id, isFolder, newName, currFid) { try { newName = String(newName || '').trim(); if(isFolder) DriveApp.getFolderById(id).setName(newName); else DriveApp.getFileById(id).setName(newName); Utilities.sleep(1000); return getDriveContents(currFid); } catch (e) { return { status: 'error', message: e.message }; } }
@@ -1988,6 +1988,8 @@ function extractData(extractType, excludedNrics, customConfig) {
       sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
     }
 
+    let fileUrl = '';
+    let finalFileName = exportFileName;
     if (fileId) {
       SpreadsheetApp.flush();
       const tempSheetId = fileId;
@@ -2004,18 +2006,20 @@ function extractData(extractType, excludedNrics, customConfig) {
       }
       const excelName = exportFileName.toLowerCase().endsWith(".xlsx")
         ? exportFileName
-        : exportFileName + ".xlsx";
+        : exportFileName.replace(/\.(xls|csv)$/i, "") + ".xlsx";
       const xlsxBlob = response.getBlob()
         .setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         .setName(excelName);
       const excelFile = folder.createFile(xlsxBlob);
       fileId = excelFile.getId();
+      fileUrl = excelFile.getUrl();
+      finalFileName = excelFile.getName();
       try {
         DriveApp.getFileById(tempSheetId).setTrashed(true);
       } catch (cleanErr) {}
     }
     
-    return { status: 'success', fileId: fileId };
+    return { status: 'success', fileId: fileId, fileName: finalFileName, fileUrl: fileUrl };
   } catch(e) {
     return { status: 'error', message: e.message };
   }

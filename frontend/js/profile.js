@@ -743,10 +743,15 @@ function renderProfileFullView() {
     profilesHtml +
     receiptsHtml +
     paymentHtml +
+    `<div id="profileHelplineWrapper"></div>` +
     "</div>" +
     myGroupSortedHtml +
     myAttendanceHtml +
     navHtml;
+
+  if (typeof window.renderProfileHelpline === "function") {
+    window.renderProfileHelpline();
+  }
 }
 
 function generatePaymentPortalHtml() {
