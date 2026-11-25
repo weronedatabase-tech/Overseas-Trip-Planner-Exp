@@ -1607,16 +1607,40 @@ function archiveAndReset(customArchiveId, archivedBy) {
 const props = PropertiesService.getScriptProperties(); const dbId = getDbId();
 let folderId = '';
 let folderName = '';
+let revokedAccountsCount = 0;
+
+// 1. Revoke ALL accounts granted via the app under Drive Access Management
 try {
-  if (dbId) {
-    const folder = getTripFolder();
-    folderId = folder.getId();
-    folderName = folder.getName();
-    const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}');
-    for (let email in accessObj) {
-      try { if (accessObj[email] === 'editor') folder.removeEditor(email); else folder.removeViewer(email); } catch(e) { }
+  const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}');
+  const grantedEmails = Object.keys(accessObj || {});
+  let folder = null;
+  try {
+    folder = getTripFolder();
+    if (folder) {
+      folderId = folder.getId();
+      folderName = folder.getName();
     }
+  } catch (folderErr) {}
+
+  let dbFile = null;
+  if (dbId) {
+    try { dbFile = DriveApp.getFileById(dbId); } catch (fileErr) {}
   }
+
+  grantedEmails.forEach(function(rawEmail) {
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (!email) return;
+    let revoked = false;
+    if (folder) {
+      try { folder.removeEditor(email); revoked = true; } catch (e) {}
+      try { folder.removeViewer(email); revoked = true; } catch (e) {}
+    }
+    if (dbFile) {
+      try { dbFile.removeEditor(email); revoked = true; } catch (e) {}
+      try { dbFile.removeViewer(email); revoked = true; } catch (e) {}
+    }
+    if (revoked) revokedAccountsCount++;
+  });
 } catch (e) {}
 
 let archivedRecord = null;
@@ -1661,8 +1685,37 @@ if (dbId) {
   } catch (e) {}
 }
 
-['DB_SHEET_ID', 'TRIP_TITLE', 'TRIP_YEAR', 'TRIP_START_DATE', 'TRIP_END_DATE', 'COMMITTEE_LIST', 'ATTENDANCE_JUNCTURES', 'APP_GRANTED_ACCESS', 'TRIP_INFOGRAPHIC_ID', 'TRIP_INFOGRAPHIC_NAME', 'TRIP_INFOGRAPHIC_URL', 'TRIP_INFODOC_ID', 'TRIP_INFODOC_NAME', 'TRIP_INFODOC_URL'].forEach(k => props.deleteProperty(k));
-props.setProperty('REGISTRATION_OPEN', 'false'); props.setProperty('ALLOW_EDITS', 'false');
+// 2. Wipe all trip-specific properties so the entire app is reset and ready for a new overseas trip
+[
+  'DB_SHEET_ID',
+  'TRIP_TITLE',
+  'TRIP_YEAR',
+  'TRIP_START_DATE',
+  'TRIP_END_DATE',
+  'COMMITTEE_LIST',
+  'HELPLINE_CONTACTS',
+  'ATTENDANCE_JUNCTURES',
+  'APP_GRANTED_ACCESS',
+  'TRIP_INFOGRAPHIC_ID',
+  'TRIP_INFOGRAPHIC_NAME',
+  'TRIP_INFOGRAPHIC_URL',
+  'TRIP_INFODOC_ID',
+  'TRIP_INFODOC_NAME',
+  'TRIP_INFODOC_URL'
+].forEach(k => props.deleteProperty(k));
+
+try {
+  props.getKeys().forEach(function(k) {
+    if (String(k).indexOf('IC_JUNCTURES_') === 0) {
+      props.deleteProperty(k);
+    }
+  });
+} catch (e) {}
+
+props.setProperty('REGISTRATION_OPEN', 'false');
+props.setProperty('ALLOW_EDITS', 'false');
+props.setProperty('APP_GRANTED_ACCESS', '{}');
+
 const cache = CacheService.getScriptCache();
 // Wipe caches related to this trip instance
 try {
@@ -1671,7 +1724,7 @@ let keys = [];
 types.forEach(t => { keys.push(t + "_" + dbId); keys.push(t + "_" + dbId + "_count"); for(let i=0; i<15; i++) keys.push(t + "_" + dbId + "_" + i); });
 cache.removeAll(keys);
 } catch(e) {}
-return { status: 'success', archivedTrip: archivedRecord };
+return { status: 'success', archivedTrip: archivedRecord, revokedAccountsCount: revokedAccountsCount };
 }
 function deleteParticipant(nric) {
   const ss = getDatabase();

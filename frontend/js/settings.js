@@ -42,51 +42,46 @@ function buildSettingsUI() {
   const tabSettings = document.getElementById("tab-settings");
   if (!tabSettings) return;
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    const active =
+      window.ArchiveMode && typeof window.ArchiveMode.getActiveArchive === "function"
+        ? window.ArchiveMode.getActiveArchive()
+        : null;
     const esc = (s) =>
       String(s == null ? "" : s)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
-    const projects = Array.isArray(appSettings.projectGroups) ? appSettings.projectGroups : [];
-    const junctures = Array.isArray(appSettings.junctures) ? appSettings.junctures : [];
-    const committee = Array.isArray(appSettings.committee) ? appSettings.committee : [];
-    const helpline = Array.isArray(appSettings.helpline) ? appSettings.helpline : [];
+    const tripLabel = active
+      ? [active.tripTitle || "Archived Trip", active.tripYear || ""].filter(Boolean).join(" ")
+      : "Archived Trip";
     tabSettings.innerHTML = `
-      <div class="max-w-4xl mx-auto space-y-3 pb-10">
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 md:p-5">
-          <h3 class="text-base font-black text-gray-900 dark:text-white">Archived Trip Configuration (Read-Only)</h3>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Settings cannot be changed for an archived trip.</p>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Trip Title</div>
-              <div class="text-sm font-black text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripTitle || "—")} ${esc(appSettings.tripYear || "")}</div>
-            </div>
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Start Date</div>
-              <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripStartDate || "—")}</div>
-            </div>
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">End Date</div>
-              <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripEndDate || "—")}</div>
-            </div>
+      <div class="max-w-xl mx-auto mt-8 pb-10">
+        <div class="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-800 rounded-xl p-6 text-center shadow-md space-y-3">
+          <div class="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/70 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto">
+            <i class="fa-solid fa-lock text-lg"></i>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Projects (${projects.length})</div>
-              <div class="flex flex-wrap gap-1.5">${projects.length ? projects.map((p) => `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">${esc(p)}</span>`).join("") : '<span class="text-xs text-gray-400">None</span>'}</div>
-            </div>
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Attendance Junctures (${junctures.length})</div>
-              <div class="flex flex-wrap gap-1.5">${junctures.length ? junctures.map((j) => `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">${esc(j)}</span>`).join("") : '<span class="text-xs text-gray-400">None</span>'}</div>
-            </div>
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Committee (${committee.length})</div>
-              <div class="space-y-1 text-xs">${committee.length ? committee.map((c) => `<div class="font-semibold text-gray-800 dark:text-gray-200">${esc(c.name || c.nric || c)}</div>`).join("") : '<span class="text-gray-400">None</span>'}</div>
-            </div>
-            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Helpline (${helpline.length})</div>
-              <div class="space-y-1 text-xs">${helpline.length ? helpline.map((h) => `<div class="font-semibold text-gray-800 dark:text-gray-200">${esc(h.name)} &middot; ${esc(h.phone)}</div>`).join("") : '<span class="text-gray-400">None</span>'}</div>
-            </div>
+          <h3 class="text-base font-black text-gray-900 dark:text-white tracking-tight">Settings Disabled in Archive View</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+            You are currently viewing <span class="font-bold text-gray-800 dark:text-gray-200">${esc(tripLabel)}</span> in read-only archive mode. Exit the archived trip view to access Settings again.
+          </p>
+          <div class="pt-2 flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              data-archive-allow="true"
+              onclick="ArchiveMode.exitArchive('settings.html', false)"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-primary text-white hover:bg-green-700 transition cursor-pointer shadow-sm"
+            >
+              <i class="fa-solid fa-right-from-bracket text-[11px]"></i>
+              <span>Exit Archive &amp; Access Settings</span>
+            </button>
+            <button
+              type="button"
+              data-archive-allow="true"
+              onclick="navigateTo('roster.html')"
+              class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition cursor-pointer"
+            >
+              <span>Back to Archived Roster</span>
+            </button>
           </div>
         </div>
       </div>
@@ -836,9 +831,14 @@ async function archiveSystem(btn) {
     showToast("Read-only mode: archived trips cannot be modified.", true);
     return;
   }
+  const grantedEmails = Object.keys((appSettings && appSettings.driveAccessList) || {});
+  const driveNote =
+    grantedEmails.length > 0
+      ? `\n• Revoke Drive Access Management rights for ${grantedEmails.length} account(s)`
+      : `\n• Revoke any app-granted Drive Access Management accounts`;
   if (
     !(await appConfirm(
-      "⚠️ ARE YOU SURE?\n\nThis archives the trip (viewable read-only in Settings → Archived Trips) and resets the active system for a new trip.",
+      `⚠️ ARE YOU SURE?\n\nThis will:\n• Archive the current trip (viewable read-only under Archived Trips below)${driveNote}\n• Reset the entire app so it is ready to create a new overseas trip`,
       "Archive & Reset System",
       "Archive & Reset",
       "Cancel",
@@ -846,23 +846,75 @@ async function archiveSystem(btn) {
     ))
   )
     return;
-  showToast("Archiving trip snapshot & resetting...", false);
+  showToast("Archiving trip, revoking Drive access & resetting app...", false);
   setBtnLoading(btn, true);
   try {
-    await apiCall("archiveAndReset", {
+    const res = await apiCall("archiveAndReset", {
       archivedBy: (currentUser && currentUser.name) || "Admin",
+      driveAccessEmails: grantedEmails,
     });
-    if (window.ArchiveMode && typeof window.ArchiveMode.resetAllModuleCaches === "function") {
-      window.ArchiveMode.resetAllModuleCaches();
+
+    if (window.ArchiveMode && typeof window.ArchiveMode.clearAllTripBrowserCaches === "function") {
+      window.ArchiveMode.clearAllTripBrowserCaches();
+    } else {
+      localStorage.removeItem("appSettings");
     }
-    localStorage.removeItem("appSettings");
-    showToast("Trip archived! View it below under Archived Trips.");
-    if (typeof window.refreshSettingsRealtime === "function") {
-      await window.refreshSettingsRealtime();
+
+    // Hydrate freshly reset appSettings so UI is immediately ready for a brand new overseas trip
+    let fresh = res && res.freshSettings ? res.freshSettings : null;
+    if (!fresh) {
+      try {
+        const cfg = await apiCall("getSettings", { force: true });
+        if (cfg && cfg.status !== "error") fresh = cfg;
+      } catch (e) {}
     }
+    appSettings = {
+      ...(fresh || {}),
+      registrationOpen: false,
+      allowEdits: false,
+      driveAccessList: {},
+      tripTitle: "",
+      tripYear: "",
+      tripStartDate: "",
+      tripEndDate: "",
+      tripInfographicId: "",
+      tripInfographicName: "",
+      tripInfographicUrl: "",
+      tripInfoDocId: "",
+      tripInfoDocName: "",
+      tripInfoDocUrl: "",
+      committee: (fresh && Array.isArray(fresh.committee)) ? fresh.committee : [],
+      helpline: (fresh && Array.isArray(fresh.helpline)) ? fresh.helpline : [],
+      junctures: (fresh && Array.isArray(fresh.junctures)) ? fresh.junctures : ["Morning Assembly"],
+      projectGroups: (fresh && Array.isArray(fresh.projectGroups)) ? fresh.projectGroups : (appSettings.projectGroups || []),
+      projectColors: (fresh && fresh.projectColors) ? fresh.projectColors : (appSettings.projectColors || {}),
+      sortingRules: (fresh && Array.isArray(fresh.sortingRules)) ? fresh.sortingRules : (appSettings.sortingRules || ["project", "family", "role", "name"]),
+      customViewsOrder: (fresh && Array.isArray(fresh.customViewsOrder)) ? fresh.customViewsOrder : (appSettings.customViewsOrder || ["reset_filter", "medical.html", "diet.html", "expired.html", "other.html"]),
+    };
+    try {
+      localStorage.setItem("appSettings", JSON.stringify(appSettings));
+    } catch (e) {}
+
+    if (typeof applyHydrationDOMUpdates === "function") {
+      applyHydrationDOMUpdates();
+    }
+
+    // Rebuild Settings UI with completely reset state and freshly loaded Archived Trips section
+    buildSettingsUI();
     if (window.ArchiveMode && typeof window.ArchiveMode.refreshArchives === "function") {
       await window.ArchiveMode.refreshArchives();
     }
+
+    const revokedCount =
+      res && Array.isArray(res.revokedDriveAccounts)
+        ? res.revokedDriveAccounts.length
+        : grantedEmails.length;
+    showToast(
+      revokedCount > 0
+        ? `Trip archived, ${revokedCount} Drive account(s) revoked, and app reset for a new trip.`
+        : "Trip archived and app reset! Ready to create a new overseas trip.",
+    );
+
     const sec = document.getElementById("archivedTripsSettingsSection");
     if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {

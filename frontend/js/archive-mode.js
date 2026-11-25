@@ -180,6 +180,38 @@
     } catch (e) {}
   }
 
+  function clearAllTripBrowserCaches() {
+    cachedArchivedTrips = null;
+    resetAllModuleCaches();
+    const localKeysToClear = [
+      "appSettings",
+      "cachedAdminRoster",
+      "cachedLogistics",
+      "activeGroupsList",
+      "activeBusesList",
+      "myg_sheetList",
+    ];
+    localKeysToClear.forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch (e) {}
+    });
+    const sessionKeysToClear = [
+      "cachedAdminRoster",
+      "cachedLogistics",
+      STORAGE_KEY,
+    ];
+    sessionKeysToClear.forEach((k) => {
+      try {
+        sessionStorage.removeItem(k);
+      } catch (e) {}
+    });
+    try {
+      if (typeof activeGroupsList !== "undefined") activeGroupsList = [];
+      if (typeof activeBusesList !== "undefined") activeBusesList = [];
+    } catch (e) {}
+  }
+
   async function fetchArchivedTripsList(force = false) {
     if (!force && Array.isArray(cachedArchivedTrips)) {
       return cachedArchivedTrips;
@@ -216,7 +248,7 @@
       return null;
     }
 
-    if ((page === "settings.html" || page === "dashboard.html") && !urlArchiveId) {
+    if (page === "dashboard.html" && !urlArchiveId) {
       if (getActiveArchive()) {
         setActiveArchive(null);
         resetAllModuleCaches();
@@ -417,17 +449,9 @@
             type="button"
             data-archive-allow="true"
             onclick="ArchiveMode.exitArchive('settings.html', true)"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-gray-900 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition cursor-pointer"
+            class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition cursor-pointer"
           >
-            <i class="fa-solid fa-arrow-left text-[10px]"></i>
-            <span>All Archives</span>
-          </button>
-          <button
-            type="button"
-            data-archive-allow="true"
-            onclick="ArchiveMode.exitArchive('roster.html')"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition cursor-pointer"
-          >
+            <i class="fa-solid fa-right-from-bracket text-[10px]"></i>
             <span>Exit Archive</span>
           </button>
         </div>
@@ -670,10 +694,29 @@
         }
       });
 
-      // Keep Settings accessible so admins can easily return to All Archives
+      // Disable Settings navigation while viewing an archived trip
       const navSettings = document.getElementById("nav-settings");
       if (navSettings && currentUser && currentUser.role === "admin") {
         navSettings.classList.remove("hidden-force");
+        navSettings.classList.add(
+          "opacity-40",
+          "cursor-not-allowed",
+          "select-none",
+          "hover:bg-transparent",
+          "dark:hover:bg-transparent"
+        );
+        navSettings.setAttribute("aria-disabled", "true");
+        navSettings.setAttribute("data-archive-disabled", "true");
+        navSettings.setAttribute(
+          "title",
+          "Settings is disabled while viewing an archived trip. Exit archive view to access Settings."
+        );
+        if (!navSettings.querySelector(".archive-lock-badge")) {
+          const lockIcon = document.createElement("i");
+          lockIcon.className =
+            "fa-solid fa-lock text-[10px] ml-auto hidden md:inline archive-lock-badge text-gray-400";
+          navSettings.appendChild(lockIcon);
+        }
       }
 
       startObserver();
@@ -682,7 +725,19 @@
     } else {
       const navSettings = document.getElementById("nav-settings");
       if (navSettings && currentUser && currentUser.role === "admin") {
-        navSettings.classList.remove("hidden-force");
+        navSettings.classList.remove(
+          "hidden-force",
+          "opacity-40",
+          "cursor-not-allowed",
+          "select-none",
+          "hover:bg-transparent",
+          "dark:hover:bg-transparent"
+        );
+        navSettings.removeAttribute("aria-disabled");
+        navSettings.removeAttribute("data-archive-disabled");
+        navSettings.removeAttribute("title");
+        const lockIcon = navSettings.querySelector(".archive-lock-badge");
+        if (lockIcon) lockIcon.remove();
       }
     }
   }
@@ -1036,6 +1091,7 @@
     switchArchive,
     exitArchive,
     resetAllModuleCaches,
+    clearAllTripBrowserCaches,
     fetchArchivedTripsList,
     syncUI,
     renderArchiveBanner,

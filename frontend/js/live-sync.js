@@ -237,6 +237,19 @@
     if (type === "cache:cleared") {
       refreshActivePageData();
     }
+
+    // 10. ARCHIVE & RESET BROADCAST
+    if (action === "archiveAndReset") {
+      if (window.ArchiveMode && typeof window.ArchiveMode.clearAllTripBrowserCaches === "function") {
+        window.ArchiveMode.clearAllTripBrowserCaches();
+      }
+      if (typeof window.refreshSettingsRealtime === "function") {
+        window.refreshSettingsRealtime();
+      }
+      if (window.ArchiveMode && typeof window.ArchiveMode.refreshArchives === "function") {
+        window.ArchiveMode.refreshArchives();
+      }
+    }
   }
 
   // LOGISTICS HANDLER

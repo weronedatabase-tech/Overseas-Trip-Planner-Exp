@@ -727,6 +727,42 @@ app.post('/api', async (req, res) => {
         archivedBy: (payload && payload.archivedBy) || 'Admin'
       });
 
+      // 1. Explicitly revoke ALL accounts granted via Drive Access Management BEFORE resetting
+      const snapshotAccess =
+        (captured.snapshot &&
+          captured.snapshot.settings &&
+          captured.snapshot.settings.driveAccessList) ||
+        {};
+      const payloadEmails = Array.isArray(payload && payload.driveAccessEmails)
+        ? payload.driveAccessEmails
+        : [];
+      const grantedEmails = Array.from(
+        new Set(
+          [...Object.keys(snapshotAccess), ...payloadEmails]
+            .map((e) => String(e || '').trim().toLowerCase())
+            .filter(Boolean)
+        )
+      );
+
+      let revokedDriveAccounts = [];
+      if (grantedEmails.length > 0) {
+        try {
+          const revokeRes = await callGasJson(API_URL, {
+            action: 'massDriveAccess',
+            actionType: 'remove',
+            emails: grantedEmails
+          });
+          if (revokeRes && revokeRes.results && Array.isArray(revokeRes.results.success)) {
+            revokedDriveAccounts = revokeRes.results.success;
+          } else {
+            revokedDriveAccounts = grantedEmails;
+          }
+        } catch (revokeErr) {
+          console.warn('GAS massDriveAccess revoke during archiveAndReset warning:', revokeErr.message);
+        }
+      }
+
+      // 2. Archive & reset the backend GAS database and properties
       let gasData = { status: 'success' };
       try {
         gasData = await callGasJson(API_URL, {
@@ -753,10 +789,58 @@ app.post('/api', async (req, res) => {
         }
       }
 
-      // Clear local trip-specific overrides now that they are safely frozen in the archive snapshot
+      // 3. Clear ALL local trip-specific overrides and server caches
       saveReceiptOverrides({});
       saveTripFiles({});
+      cache.clear();
       invalidateCacheForAction('archiveAndReset');
+
+      // 4. Fetch freshly reset settings so the client immediately reflects a clean slate
+      let freshSettings = null;
+      try {
+        const cfg = await callGasJson(API_URL, { action: 'getSettings' });
+        if (cfg && cfg.status !== 'error') {
+          freshSettings = mergeSettingsWithTripFiles({
+            ...cfg,
+            registrationOpen: false,
+            allowEdits: false,
+            driveAccessList: {},
+            tripInfographicId: '',
+            tripInfographicName: '',
+            tripInfographicUrl: '',
+            tripInfoDocId: '',
+            tripInfoDocName: '',
+            tripInfoDocUrl: ''
+          });
+        }
+      } catch (e) {}
+
+      if (!freshSettings) {
+        freshSettings = {
+          status: 'success',
+          registrationOpen: false,
+          allowEdits: false,
+          committee: [],
+          helpline: [],
+          projectGroups: captured.snapshot?.settings?.projectGroups || [],
+          projectColors: captured.snapshot?.settings?.projectColors || {},
+          activeProjects: [],
+          junctures: ['Morning Assembly'],
+          sortingRules: captured.snapshot?.settings?.sortingRules || ['project', 'family', 'role', 'name'],
+          customViewsOrder: captured.snapshot?.settings?.customViewsOrder || ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
+          driveAccessList: {},
+          tripTitle: '',
+          tripYear: '',
+          tripStartDate: '',
+          tripEndDate: '',
+          tripInfographicId: '',
+          tripInfographicName: '',
+          tripInfographicUrl: '',
+          tripInfoDocId: '',
+          tripInfoDocName: '',
+          tripInfoDocUrl: ''
+        };
+      }
 
       broadcastSyncEvent({
         type: 'sync:update',
@@ -768,7 +852,9 @@ app.post('/api', async (req, res) => {
 
       return res.json({
         status: 'success',
-        archivedTrip: captured.meta
+        archivedTrip: captured.meta,
+        revokedDriveAccounts,
+        freshSettings
       });
     } catch (err) {
       console.error('archiveAndReset snapshot error:', err);

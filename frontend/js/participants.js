@@ -400,9 +400,11 @@ function applyLogisticsToRoster(logisticsData) {
 
 async function loadParticipantsData() {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
+  const inArchiveMode =
+    typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
 
-  // 1. Instant Cache Hydration from sessionStorage / localStorage
-  if (!adminRosterData || adminRosterData.length === 0) {
+  // 1. Instant Cache Hydration from sessionStorage / localStorage (live mode only)
+  if (!inArchiveMode && (!adminRosterData || adminRosterData.length === 0)) {
     try {
       const cached =
         sessionStorage.getItem("cachedAdminRoster") ||
@@ -441,10 +443,12 @@ async function loadParticipantsData() {
 
     if (rostRes && Array.isArray(rostRes.roster) && rostRes.roster.length > 0) {
       adminRosterData = rostRes.roster;
-      try {
-        sessionStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
-        localStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
-      } catch (e) {}
+      if (!inArchiveMode) {
+        try {
+          sessionStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+          localStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+        } catch (e) {}
+      }
 
       applyCaregiverLabels(adminRosterData);
       window.adminRosterData = adminRosterData;
@@ -462,13 +466,15 @@ async function loadParticipantsData() {
 
       if (window.populateLogisticsDropdown) window.populateLogisticsDropdown();
 
-      // Apply cached logistics if available while waiting for background refresh
-      try {
-        const cachedLog =
-          sessionStorage.getItem("cachedLogistics") ||
-          localStorage.getItem("cachedLogistics");
-        if (cachedLog) applyLogisticsToRoster(JSON.parse(cachedLog));
-      } catch (e) {}
+      // Apply cached logistics if available while waiting for background refresh (live mode only)
+      if (!inArchiveMode) {
+        try {
+          const cachedLog =
+            sessionStorage.getItem("cachedLogistics") ||
+            localStorage.getItem("cachedLogistics");
+          if (cachedLog) applyLogisticsToRoster(JSON.parse(cachedLog));
+        } catch (e) {}
+      }
 
       if (typeof processDisplayNames === "function")
         processDisplayNames(adminRosterData);
@@ -482,14 +488,39 @@ async function loadParticipantsData() {
       apiCall("fetchLogistics")
         .then((logRes) => {
           if (logRes && adminRosterData && adminRosterData.length > 0) {
-            try {
-              sessionStorage.setItem("cachedLogistics", JSON.stringify(logRes));
-            } catch (e) {}
+            if (!inArchiveMode) {
+              try {
+                sessionStorage.setItem("cachedLogistics", JSON.stringify(logRes));
+              } catch (e) {}
+            }
             applyLogisticsToRoster(logRes);
             renderRosterTable();
           }
         })
         .catch((err) => console.warn("Background fetchLogistics notice:", err));
+    } else if (rostRes && Array.isArray(rostRes.roster) && rostRes.roster.length === 0) {
+      adminRosterData = [];
+      window.adminRosterData = [];
+      if (!inArchiveMode) {
+        try {
+          sessionStorage.removeItem("cachedAdminRoster");
+          localStorage.removeItem("cachedAdminRoster");
+          sessionStorage.removeItem("cachedLogistics");
+          localStorage.removeItem("cachedLogistics");
+        } catch (e) {}
+      }
+      const tbody = document.getElementById("rosterBody");
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
+          <div class="flex flex-col items-center justify-center gap-3">
+            <svg class="w-12 h-12 text-gray-400 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <p class="text-gray-600 dark:text-gray-300 font-medium text-base">No participants found yet</p>
+            <button onclick="loadParticipantsData()" class="mt-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold shadow-sm transition-colors cursor-pointer">
+              Retry Loading Roster
+            </button>
+          </div>
+        </td></tr>`;
+      }
     } else if (!adminRosterData || adminRosterData.length === 0) {
       const tbody = document.getElementById("rosterBody");
       if (tbody) {

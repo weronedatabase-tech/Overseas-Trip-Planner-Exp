@@ -1416,9 +1416,24 @@ window.navigateTo = async function (url) {
   let targetUrl = url;
   const targetPage = targetUrl.split("?")[0];
 
-  // Navigating to Settings (settings.html), Dashboard (dashboard.html), or Login (index.html) exits archive mode cleanly
+  // Settings is disabled while viewing an archived trip — admin must exit archive view first
   if (
-    (targetPage === "settings.html" || targetPage === "dashboard.html" || targetPage === "index.html") &&
+    targetPage === "settings.html" &&
+    typeof window.isArchiveReadOnly === "function" &&
+    window.isArchiveReadOnly()
+  ) {
+    if (typeof showToast === "function") {
+      showToast(
+        "Settings is disabled while viewing an archived trip. Exit archive view first.",
+        true,
+      );
+    }
+    return;
+  }
+
+  // Navigating to Dashboard (dashboard.html) or Login (index.html) exits archive mode cleanly
+  if (
+    (targetPage === "dashboard.html" || targetPage === "index.html") &&
     !targetUrl.includes("archive=") &&
     typeof window.isArchiveReadOnly === "function" &&
     window.isArchiveReadOnly()
