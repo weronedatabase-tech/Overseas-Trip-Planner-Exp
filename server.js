@@ -92,6 +92,22 @@ function saveArchiveSnapshot(archiveId, snapshot) {
   fs.writeFileSync(filePath, JSON.stringify(snapshot, null, 2), 'utf-8');
 }
 
+function deleteArchiveSnapshot(archiveId) {
+  try {
+    const filePath = resolveArchiveFilePath(archiveId);
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    const index = loadArchivesIndex();
+    const filtered = index.filter((x) => x && x.id !== archiveId);
+    if (filtered.length !== index.length) {
+      saveArchivesIndex(filtered);
+    }
+  } catch (e) {
+    console.warn('Failed to roll back archive snapshot:', archiveId, e.message);
+  }
+}
+
 const ARCHIVE_READONLY_ACTIONS = new Set([
   'getSettings',
   'fetchAdminRoster',
@@ -763,11 +779,12 @@ app.post('/api', async (req, res) => {
       }
 
       // 2. Archive & reset the backend GAS database and properties
+      // Note: pass newArchiveId (never archiveId) so GAS does not interpret this as a write against an existing read-only archive.
       let gasData = { status: 'success' };
       try {
         gasData = await callGasJson(API_URL, {
           action: 'archiveAndReset',
-          archiveId: captured.meta.id,
+          newArchiveId: captured.meta.id,
           archivedBy: captured.meta.archivedBy
         });
       } catch (e) {
@@ -775,10 +792,11 @@ app.post('/api', async (req, res) => {
       }
 
       if (gasData && gasData.status === 'error') {
+        deleteArchiveSnapshot(captured.meta.id);
         return res.json(gasData);
       }
 
-      // Attach any sheet/folder metadata returned by GAS back into our archive record
+      // Attach any sheet/folder metadata returned by GAS back into our archive record and snapshot
       if (gasData && gasData.archivedTrip) {
         const index = loadArchivesIndex();
         const entry = index.find((x) => x.id === captured.meta.id);
@@ -786,6 +804,11 @@ app.post('/api', async (req, res) => {
           if (gasData.archivedTrip.sheetId) entry.sheetId = gasData.archivedTrip.sheetId;
           if (gasData.archivedTrip.folderId) entry.folderId = gasData.archivedTrip.folderId;
           saveArchivesIndex(index);
+        }
+        if (captured.snapshot && captured.snapshot.meta) {
+          if (gasData.archivedTrip.sheetId) captured.snapshot.meta.sheetId = gasData.archivedTrip.sheetId;
+          if (gasData.archivedTrip.folderId) captured.snapshot.meta.folderId = gasData.archivedTrip.folderId;
+          saveArchiveSnapshot(captured.meta.id, captured.snapshot);
         }
       }
 

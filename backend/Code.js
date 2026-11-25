@@ -269,7 +269,7 @@ case 'syncReceipts': result = syncReceipts(data.updates); break;
 case 'fetchMinutes': result = fetchMinutes(); break;
 case 'syncMinutes': result = syncMinutes(data.updates, data.takenBy); break;
 case 'setTripFile': result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl); break;
-case 'archiveAndReset': result = archiveAndReset(data.archiveId, data.archivedBy); break;
+case 'archiveAndReset': result = archiveAndReset(data.newArchiveId, data.archivedBy); break;
 default: throw new Error("Unknown action.");
 }
 return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
