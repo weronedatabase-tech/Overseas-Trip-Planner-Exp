@@ -769,28 +769,20 @@ function getOrCreateExtractionResultModal() {
         </div>
 
         <div class="p-5 flex flex-col gap-4">
-          <div class="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700">
-            <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center shrink-0">
-              <i class="fa-solid fa-file-excel text-base"></i>
-            </div>
-            <div class="min-w-0 flex-1">
+          <div class="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 border-2 border-gray-200 dark:border-gray-700 flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-2">
               <div class="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">File Name</div>
-              <div id="extractResultFileName" class="text-xs md:text-sm font-bold text-gray-900 dark:text-white break-all leading-snug"></div>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between mb-1.5">
-              <label class="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">File Link</label>
               <button type="button" id="btnCopyExtractLink" onclick="copyExtractedFileLink()" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline focus:outline-none">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                 <span id="lblCopyExtractLink">Copy Link</span>
               </button>
             </div>
-            <a id="extractResultLink" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border-2 border-blue-200 dark:border-blue-800/60 text-blue-700 dark:text-blue-300 hover:bg-blue-100/70 dark:hover:bg-blue-900/40 transition group">
-              <svg class="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
-              <span id="extractResultLinkText" class="text-xs font-semibold break-all line-clamp-2 flex-1 underline decoration-blue-400/60 group-hover:decoration-blue-600"></span>
-              <svg class="w-4 h-4 shrink-0 text-blue-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            <a id="extractResultLink" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2.5 group focus:outline-none">
+              <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-file-excel text-base"></i>
+              </div>
+              <span id="extractResultFileName" class="text-xs md:text-sm font-bold text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 underline decoration-blue-400/70 group-hover:decoration-blue-500 break-all leading-snug flex-1"></span>
+              <svg class="w-4 h-4 shrink-0 text-blue-500 dark:text-blue-400 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
             </a>
           </div>
 
@@ -859,12 +851,10 @@ function showExtractionResultPopup(res) {
   const modal = getOrCreateExtractionResultModal();
   const nameEl = document.getElementById("extractResultFileName");
   const linkEl = document.getElementById("extractResultLink");
-  const linkTextEl = document.getElementById("extractResultLinkText");
   const copyLbl = document.getElementById("lblCopyExtractLink");
 
   if (nameEl) nameEl.textContent = fileName;
   if (linkEl) linkEl.href = fileUrl || "#";
-  if (linkTextEl) linkTextEl.textContent = fileUrl || "Link unavailable";
   if (copyLbl) copyLbl.textContent = "Copy Link";
 
   modal.classList.remove("hidden-force");

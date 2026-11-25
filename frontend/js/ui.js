@@ -7,7 +7,7 @@ function showToast(msg, isError = false) {
     toastTimeout = null;
   }
   t.textContent = msg;
-  t.className = `fixed top-12 left-1/2 transform -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-2xl z-[100] transition-all duration-300 text-sm font-bold border select-none cursor-pointer touch-manipulation ${
+  t.className = `fixed top-12 left-1/2 transform -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-2xl z-[300] transition-all duration-300 text-sm font-bold border select-none cursor-pointer touch-manipulation ${
     isError
       ? "bg-red-600 text-white border-red-700"
       : "bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-700 dark:border-gray-200"
