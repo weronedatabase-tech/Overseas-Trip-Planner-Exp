@@ -30,12 +30,13 @@ function formatYMD(dateVal) {
 function buildMinutesUI() {
   const tabMin = document.getElementById("tab-minutes");
   if (!tabMin) return;
+  const isRO = typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
   tabMin.innerHTML = `
 <div class="flex flex-col h-full w-full relative">
    <div class="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b-2 border-gray-200 dark:border-gray-800 p-3 shrink-0 flex flex-col md:flex-row justify-between items-center shadow-md rounded-t-xl md:rounded-none gap-3">
        <div class="flex items-center gap-2 w-full md:w-auto">
            <h3 class="text-sm md:text-base font-black text-gray-900 dark:text-white tracking-tight">Meeting Notes</h3>
-           <span id="minutesSyncStatus" class="ml-2 text-[11px] font-bold text-gray-400 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider">Synced</span>
+           <span id="minutesSyncStatus" class="ml-2 text-[11px] font-bold ${isRO ? "text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800" : "text-gray-400 bg-gray-100 dark:bg-gray-800"} px-1.5 py-0.5 rounded shadow-inner uppercase tracking-wider">${isRO ? "Read-Only" : "Synced"}</span>
        </div>
        
        <div class="flex w-full md:w-auto items-center gap-2 justify-end">
@@ -44,10 +45,14 @@ function buildMinutesUI() {
                <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                <button onclick="clearSearch('minutesSearchInput', 'handleMinutesSearch')" class="absolute right-2 top-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
            </div>
-           <button onclick="addMinuteNote()" class="w-auto bg-primary text-white text-xs md:text-xs font-bold px-3 py-2 rounded-md hover:bg-green-600 transition flex items-center justify-center shadow-md focus:outline-none shrink-0">
+           ${
+             isRO
+               ? ""
+               : `<button onclick="addMinuteNote()" class="archive-hide w-auto bg-primary text-white text-xs md:text-xs font-bold px-3 py-2 rounded-md hover:bg-green-600 transition flex items-center justify-center shadow-md focus:outline-none shrink-0">
                <svg class="w-3.5 h-3.5 md:mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
                <span class="hidden md:inline">New Note</span>
-           </button>
+           </button>`
+           }
        </div>
    </div>
 
@@ -102,6 +107,7 @@ function handleMinutesSearch() {
 }
 
 function addMinuteNote() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -140,6 +146,7 @@ function addMinuteNote() {
 }
 
 async function deleteMinuteNote(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Delete this meeting note?",
@@ -166,6 +173,7 @@ async function deleteMinuteNote(id) {
 }
 
 function handleMinuteInput(id, field, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const note = minutesMap.get(id);
   if (note) {
     note[field] = value;
@@ -183,6 +191,7 @@ function handleMinuteInput(id, field, value) {
 }
 
 function queueMinuteUpdate(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   pendingMinutesUpdates.set(id, minutesMap.get(id));
   updateMinutesSyncUI("saving");
 
@@ -228,6 +237,7 @@ async function executeMinutesSync() {
 }
 
 window.pollMinutesNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const tab = document.getElementById("tab-minutes");
   if (
     !tab ||
@@ -266,7 +276,15 @@ window.pollMinutesNow = async function () {
 
 function startMinutesPolling() {
   if (minutesPollInterval) clearInterval(minutesPollInterval);
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   minutesPollInterval = setInterval(window.pollMinutesNow, 8000);
+}
+
+function stopMinutesPolling() {
+  if (minutesPollInterval) {
+    clearInterval(minutesPollInterval);
+    minutesPollInterval = null;
+  }
 }
 
 function renderAllMinutes() {
@@ -362,6 +380,7 @@ function updateNoteDOM(note) {
 }
 
 function createNoteDOM(note) {
+  const isRO = typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
   const div = document.createElement("div");
   div.id = `min-card-${note.id}`;
   div.className =
@@ -377,26 +396,30 @@ function createNoteDOM(note) {
   div.innerHTML = `
    <div class="flex justify-between items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 md:p-3 border-b-2 border-gray-100 dark:border-gray-700 shrink-0">
        <div class="flex items-center gap-2">
-           <input type="date" value="${formatYMD(note.date)}" 
+           <input type="date" value="${formatYMD(note.date)}" ${isRO ? "readonly disabled" : ""}
                class="note-date min-w-[120px] [color-scheme:light] dark:[color-scheme:dark] text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 shadow-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
                onchange="handleMinuteInput('${note.id}', 'date', this.value)">
            <span id="min-by-${note.id}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${timeStr} by ${(note.updatedBy || "").toUpperCase()}</span>
        </div>
-       <button onclick="deleteMinuteNote('${note.id}')" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 p-1.5 rounded shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none" title="Delete Note">
+       ${
+         isRO
+           ? ""
+           : `<button onclick="deleteMinuteNote('${note.id}')" class="archive-hide text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 p-1.5 rounded shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none" title="Delete Note">
            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-       </button>
+       </button>`
+       }
    </div>
    <div class="p-3">
-       <textarea 
+       <textarea ${isRO ? "readonly" : ""}
            class="note-content w-full bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs md:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y shadow-inner min-h-[100px]"
-           placeholder="Salient points, decisions made, or important notes..."
-           oninput="handleMinuteInput('${note.id}', 'content', this.value)">${note.content}</textarea>
+           placeholder="${isRO ? "No notes recorded." : "Salient points, decisions made, or important notes..."}"
+           oninput="handleMinuteInput('${note.id}', 'content', this.value)">${note.content || ""}</textarea>
    </div>
    <div class="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-3 border-t-2 border-green-100 dark:border-green-900/30 flex items-center gap-2">
        <svg class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-       <input type="text" value="${note.assignedTo}" 
+       <input type="text" value="${note.assignedTo || ""}" ${isRO ? "readonly" : ""}
            class="note-assigned w-full bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800/50 rounded-md px-2 py-1.5 text-xs font-bold text-green-800 dark:text-green-300 placeholder-green-300 dark:placeholder-green-700 focus:outline-none focus:ring-1 focus:ring-primary shadow-md"
-           placeholder="Tag follow-ups (e.g. John, Alice)..."
+           placeholder="${isRO ? "No follow-ups tagged" : "Tag follow-ups (e.g. John, Alice)..."}"
            oninput="handleMinuteInput('${note.id}', 'assignedTo', this.value)">
    </div>
 `;

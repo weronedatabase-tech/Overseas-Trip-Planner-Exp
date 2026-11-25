@@ -15,11 +15,339 @@ const wss = new WebSocketServer({ server });
 const port = 3000;
 
 const DATA_DIR = path.join(__dirname, 'data');
+const ARCHIVES_DIR = path.join(DATA_DIR, 'archived_trips');
+const ARCHIVES_INDEX_FILE = path.join(ARCHIVES_DIR, 'index.json');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 const EXTRACTIONS_DIR = path.join(UPLOADS_DIR, 'extractions');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+if (!fs.existsSync(ARCHIVES_DIR)) fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 if (!fs.existsSync(EXTRACTIONS_DIR)) fs.mkdirSync(EXTRACTIONS_DIR, { recursive: true });
+
+const DEFAULT_GAS_API_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
+
+function sanitizeGasApiUrl(candidateUrl) {
+  if (!candidateUrl || typeof candidateUrl !== 'string') return DEFAULT_GAS_API_URL;
+  try {
+    const parsed = new URL(candidateUrl.trim());
+    if (
+      parsed.protocol === 'https:' &&
+      parsed.hostname === 'script.google.com' &&
+      parsed.pathname.startsWith('/macros/s/')
+    ) {
+      return parsed.toString();
+    }
+  } catch (e) {}
+  return DEFAULT_GAS_API_URL;
+}
+
+function isValidArchiveId(id) {
+  return typeof id === 'string' && /^[a-zA-Z0-9_-]{4,80}$/.test(id);
+}
+
+function resolveArchiveFilePath(archiveId) {
+  if (!isValidArchiveId(archiveId)) return null;
+  const baseDir = path.resolve(ARCHIVES_DIR);
+  const target = path.resolve(baseDir, `${archiveId}.json`);
+  if (!target.startsWith(baseDir + path.sep)) return null;
+  return target;
+}
+
+function loadArchivesIndex() {
+  try {
+    if (fs.existsSync(ARCHIVES_INDEX_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(ARCHIVES_INDEX_FILE, 'utf-8'));
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) {
+    console.error('Error loading archives index:', e);
+  }
+  return [];
+}
+
+function saveArchivesIndex(list) {
+  try {
+    if (!fs.existsSync(ARCHIVES_DIR)) fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
+    fs.writeFileSync(ARCHIVES_INDEX_FILE, JSON.stringify(list, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Error saving archives index:', e);
+  }
+}
+
+function loadArchiveSnapshot(archiveId) {
+  const filePath = resolveArchiveFilePath(archiveId);
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+  } catch (e) {
+    console.error('Error loading archive snapshot:', archiveId, e);
+    return null;
+  }
+}
+
+function saveArchiveSnapshot(archiveId, snapshot) {
+  const filePath = resolveArchiveFilePath(archiveId);
+  if (!filePath) throw new Error('Invalid archive ID');
+  if (!fs.existsSync(ARCHIVES_DIR)) fs.mkdirSync(ARCHIVES_DIR, { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(snapshot, null, 2), 'utf-8');
+}
+
+const ARCHIVE_READONLY_ACTIONS = new Set([
+  'getSettings',
+  'fetchAdminRoster',
+  'fetchLogistics',
+  'fetchPairingsOnly',
+  'fetchRoomsOnly',
+  'fetchAttendanceData',
+  'fetchFinance',
+  'fetchReceipts',
+  'fetchMinutes',
+  'getDriveContents',
+  'getProfile',
+  'getPublicTrainees',
+  'getArchivedTripMeta',
+  'extractData'
+]);
+
+async function callGasJson(apiUrl, bodyObj) {
+  const safeUrl = sanitizeGasApiUrl(apiUrl);
+  const resp = await fetch(safeUrl, {
+    method: 'POST',
+    body: JSON.stringify(bodyObj),
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    redirect: 'follow'
+  });
+  const text = await resp.text();
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return { status: 'error', message: 'Invalid response from Google Apps Script' };
+  }
+}
+
+async function snapshotDriveRecursive(apiUrl, startFolderId = 'root') {
+  const foldersById = {};
+  let totalFiles = 0;
+  let rootFolderId = startFolderId;
+  let rootFolderName = 'Trip Folder';
+  const visited = new Set();
+  const MAX_FOLDERS = 40;
+  const MAX_DEPTH = 4;
+
+  const queue = [{ id: startFolderId, depth: 0 }];
+  while (queue.length > 0 && visited.size < MAX_FOLDERS) {
+    const batch = queue.splice(0, 3);
+    await Promise.all(
+      batch.map(async ({ id, depth }) => {
+        if (visited.has(id)) return;
+        visited.add(id);
+        try {
+          const res = await callGasJson(apiUrl, {
+            action: 'getDriveContents',
+            folderId: id
+          });
+          if (res && res.status === 'success') {
+            const entry = {
+              status: 'success',
+              currentFolderId: res.currentFolderId || id,
+              currentFolderName: res.currentFolderName || 'Folder',
+              folders: Array.isArray(res.folders) ? res.folders : [],
+              files: Array.isArray(res.files) ? res.files : []
+            };
+            foldersById[id] = entry;
+            if (entry.currentFolderId && entry.currentFolderId !== id) {
+              foldersById[entry.currentFolderId] = entry;
+            }
+            if (id === 'root') {
+              rootFolderId = entry.currentFolderId;
+              rootFolderName = entry.currentFolderName;
+            }
+            totalFiles += entry.files.length;
+            if (depth < MAX_DEPTH) {
+              entry.folders.forEach((sub) => {
+                if (sub && sub.id && !visited.has(sub.id) && visited.size + queue.length < MAX_FOLDERS) {
+                  queue.push({ id: sub.id, depth: depth + 1 });
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Archive drive folder snapshot warning:', id, e.message);
+        }
+      })
+    );
+  }
+
+  return { rootFolderId, rootFolderName, foldersById, totalFiles };
+}
+
+function buildArchiveStats(roster, logistics, settings, receipts, minutes, totalFiles) {
+  const safeRoster = Array.isArray(roster) ? roster : [];
+  const safeRooms = Array.isArray(logistics?.rooms)
+    ? logistics.rooms.filter((r) => !r.isDeleted)
+    : [];
+  const safeJunctures = Array.isArray(settings?.junctures) ? settings.junctures : [];
+  const regularJunctures = safeJunctures.filter((j) => !String(j).startsWith('__BUS__'));
+  const busJunctures = safeJunctures.filter((j) => String(j).startsWith('__BUS__'));
+  const activeReceipts = Array.isArray(receipts)
+    ? receipts.filter((r) => !r.isDeleted && r.categoryId !== 'TRIP_FEE')
+    : [];
+  const totalSpendSgd = activeReceipts.reduce(
+    (sum, r) => sum + (parseFloat(r.sgdAmount) || 0),
+    0
+  );
+  const activeMinutes = Array.isArray(minutes)
+    ? minutes.filter((m) => !m.isDeleted)
+    : [];
+
+  return {
+    participants: safeRoster.length,
+    trainees: safeRoster.filter((p) => p.role === 'TRAINEE').length,
+    caregivers: safeRoster.filter((p) => p.role === 'CAREGIVER').length,
+    volunteers: safeRoster.filter((p) => p.role === 'VOLUNTEER').length,
+    rooms: safeRooms.length,
+    junctures: regularJunctures.length,
+    busJunctures: busJunctures.length,
+    receipts: activeReceipts.length,
+    totalSpendSgd: Math.round(totalSpendSgd * 100) / 100,
+    minutes: activeMinutes.length,
+    files: totalFiles || 0
+  };
+}
+
+async function captureActiveTripSnapshot(apiUrl, extraMeta = {}) {
+  const safeUrl = sanitizeGasApiUrl(apiUrl);
+  const [settingsRaw, rosterRes, logisticsRes, financeRes, receiptsRaw, minutesRes] = await Promise.all([
+    callGasJson(safeUrl, { action: 'getSettings' }).catch(() => ({})),
+    callGasJson(safeUrl, { action: 'fetchAdminRoster' }).catch(() => ({ roster: [] })),
+    callGasJson(safeUrl, { action: 'fetchLogistics' }).catch(() => ({ participants: [], pairings: [], rooms: [] })),
+    callGasJson(safeUrl, { action: 'fetchFinance' }).catch(() => ({ data: { config: {}, options: [] }, rates: { SGD: 1 } })),
+    callGasJson(safeUrl, { action: 'fetchReceipts' }).catch(() => ({ receipts: [] })),
+    callGasJson(safeUrl, { action: 'fetchMinutes' }).catch(() => ({ minutes: [] }))
+  ]);
+
+  const settings = mergeSettingsWithTripFiles(settingsRaw || {});
+  const roster = Array.isArray(rosterRes?.roster) ? rosterRes.roster : [];
+  const logistics = {
+    status: 'success',
+    participants: Array.isArray(logisticsRes?.participants) ? logisticsRes.participants : [],
+    pairings: Array.isArray(logisticsRes?.pairings) ? logisticsRes.pairings : [],
+    rooms: Array.isArray(logisticsRes?.rooms) ? logisticsRes.rooms : []
+  };
+  const finance = {
+    status: 'success',
+    data: financeRes?.data || { config: {}, options: [] },
+    rates: financeRes?.rates || { SGD: 1 }
+  };
+  const receipts = mergeReceiptsWithOverrides(
+    Array.isArray(receiptsRaw?.receipts) ? receiptsRaw.receipts : [],
+    loadReceiptOverrides()
+  );
+  const minutes = Array.isArray(minutesRes?.minutes) ? minutesRes.minutes : [];
+
+  // Capture attendance for all regular and adhoc bus junctures
+  const attendance = {};
+  const allJunctures = Array.isArray(settings.junctures) ? settings.junctures : [];
+  for (let i = 0; i < allJunctures.length; i += 4) {
+    const chunk = allJunctures.slice(i, i + 4);
+    await Promise.all(
+      chunk.map(async (juncture) => {
+        try {
+          const attRes = await callGasJson(safeUrl, {
+            action: 'fetchAttendanceData',
+            juncture
+          });
+          attendance[juncture] = (attRes && attRes.data) ? attRes.data : {};
+        } catch (e) {
+          attendance[juncture] = {};
+        }
+      })
+    );
+  }
+
+  // Capture Drive folder tree
+  const drive = await snapshotDriveRecursive(safeUrl, 'root');
+
+  const archivedAt = new Date().toISOString();
+  const archiveId = `arch_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+  const tripTitle = String(settings.tripTitle || extraMeta.tripTitle || 'Overseas Trip').trim() || 'Overseas Trip';
+  const tripYear = String(settings.tripYear || extraMeta.tripYear || new Date().getFullYear()).trim();
+
+  const stats = buildArchiveStats(roster, logistics, settings, receipts, minutes, drive.totalFiles);
+
+  const meta = {
+    id: archiveId,
+    tripTitle,
+    tripYear,
+    tripStartDate: settings.tripStartDate || '',
+    tripEndDate: settings.tripEndDate || '',
+    archivedAt,
+    archivedBy: String(extraMeta.archivedBy || 'Admin'),
+    source: 'snapshot',
+    sheetId: extraMeta.sheetId || settings.sheetId || '',
+    folderId: drive.rootFolderId && drive.rootFolderId !== 'root' ? drive.rootFolderId : '',
+    folderName: drive.rootFolderName || `${tripTitle} ${tripYear}`.trim(),
+    stats
+  };
+
+  const snapshot = {
+    meta,
+    settings: {
+      ...settings,
+      registrationOpen: false,
+      allowEdits: false,
+      isArchived: true,
+      archiveId,
+      archivedAt
+    },
+    roster,
+    logistics,
+    attendance,
+    finance,
+    receipts,
+    minutes,
+    drive: {
+      rootFolderId: drive.rootFolderId,
+      rootFolderName: drive.rootFolderName,
+      foldersById: drive.foldersById
+    }
+  };
+
+  saveArchiveSnapshot(archiveId, snapshot);
+
+  const index = loadArchivesIndex();
+  index.unshift(meta);
+  saveArchivesIndex(index);
+
+  return { meta, snapshot };
+}
+
+function buildArchivedProfile(snapshot, nric) {
+  const targetNric = String(nric || '').trim().toUpperCase();
+  const roster = Array.isArray(snapshot?.roster) ? snapshot.roster : [];
+  const logistics = snapshot?.logistics || {};
+  const match = roster.find((p) => String(p.nric || '').trim().toUpperCase() === targetNric);
+  if (!match) {
+    return { status: 'error', message: 'Participant not found in archived trip.' };
+  }
+  const poc = String(match.pocNric || match.nric || '').trim().toUpperCase();
+  const family = roster.filter((p) => {
+    const pNric = String(p.nric || '').trim().toUpperCase();
+    const pPoc = String(p.pocNric || p.nric || '').trim().toUpperCase();
+    return pNric === targetNric || (poc && pPoc === poc);
+  });
+  const lp = Array.isArray(logistics.participants)
+    ? logistics.participants.find((p) => String(p.nric || '').trim().toUpperCase() === targetNric)
+    : null;
+  return {
+    status: 'success',
+    family,
+    logisticsGroup: lp?.logisticsGroup || match.logisticsGroup || '',
+    isGroupIC: Boolean(lp?.isGroupIC || match.isGroupIC),
+    groupMembers: [],
+    icJunctures: []
+  };
+}
 
 const extractedFiles = new Map();
 const EXCEL_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -290,7 +618,10 @@ app.get('/api/extractions/:id', (req, res) => {
 
 app.post('/api/upload-file', async (req, res) => {
   try {
-    const { fileName, mimeType, fileData, API_URL } = req.body;
+    const { fileName, mimeType, fileData, API_URL, archiveId } = req.body || {};
+    if (archiveId) {
+      return res.status(403).json({ status: 'error', message: 'Archived trips are read-only and cannot be modified.' });
+    }
     if (!fileData) {
       return res.status(400).json({ status: 'error', message: 'No file data provided' });
     }
@@ -304,7 +635,8 @@ app.post('/api/upload-file', async (req, res) => {
     let driveUrl = localUrl;
     if (API_URL) {
       try {
-        const driveRes = await fetch(API_URL, {
+        const safeApiUrl = sanitizeGasApiUrl(API_URL);
+        const driveRes = await fetch(safeApiUrl, {
           method: 'POST',
           body: JSON.stringify({
             action: 'uploadDriveFile',
@@ -334,9 +666,256 @@ app.post('/api/upload-file', async (req, res) => {
 });
 
 app.post('/api', async (req, res) => {
-  let { action, payload, API_URL, clientId } = req.body;
-  if (!API_URL) {
-    API_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
+  let { action, payload, API_URL, clientId, archiveId } = req.body || {};
+  API_URL = sanitizeGasApiUrl(API_URL);
+  const effectiveArchiveId = String(archiveId || (payload && payload.archiveId) || '').trim();
+
+  // List all archived trips (merges local snapshots + remote GAS archived trips if deployed)
+  if (action === 'listArchivedTrips') {
+    try {
+      const localList = loadArchivesIndex();
+      let remoteList = [];
+      try {
+        const remoteRes = await callGasJson(API_URL, { action: 'listArchivedTrips' });
+        if (remoteRes && remoteRes.status === 'success' && Array.isArray(remoteRes.archives)) {
+          remoteList = remoteRes.archives;
+        }
+      } catch (e) {}
+
+      const mergedMap = new Map();
+      localList.forEach((item) => {
+        if (item && item.id) mergedMap.set(item.id, { ...item, hasLocalSnapshot: Boolean(resolveArchiveFilePath(item.id) && fs.existsSync(resolveArchiveFilePath(item.id))) });
+      });
+      remoteList.forEach((item) => {
+        if (!item || !item.id) return;
+        const existingById = mergedMap.get(item.id);
+        const existingBySheet = !existingById && item.sheetId
+          ? Array.from(mergedMap.values()).find((x) => x.sheetId && x.sheetId === item.sheetId)
+          : null;
+        if (existingById) {
+          mergedMap.set(item.id, {
+            ...item,
+            ...existingById,
+            sheetId: existingById.sheetId || item.sheetId || '',
+            folderId: existingById.folderId || item.folderId || '',
+            hasLocalSnapshot: existingById.hasLocalSnapshot
+          });
+        } else if (existingBySheet) {
+          existingBySheet.sheetId = existingBySheet.sheetId || item.sheetId || '';
+          existingBySheet.folderId = existingBySheet.folderId || item.folderId || '';
+        } else {
+          mergedMap.set(item.id, { ...item, source: item.source || 'remote', hasLocalSnapshot: false });
+        }
+      });
+
+      const archives = Array.from(mergedMap.values()).sort((a, b) => {
+        const tA = new Date(a.archivedAt || 0).getTime() || 0;
+        const tB = new Date(b.archivedAt || 0).getTime() || 0;
+        return tB - tA;
+      });
+      return res.json({ status: 'success', archives });
+    } catch (err) {
+      console.error('listArchivedTrips error:', err);
+      return res.status(500).json({ status: 'error', message: 'Failed to load archived trips.' });
+    }
+  }
+
+  // Handle archiveAndReset: capture full read-only snapshot BEFORE resetting live trip
+  if (action === 'archiveAndReset' && !effectiveArchiveId) {
+    try {
+      const captured = await captureActiveTripSnapshot(API_URL, {
+        archivedBy: (payload && payload.archivedBy) || 'Admin'
+      });
+
+      let gasData = { status: 'success' };
+      try {
+        gasData = await callGasJson(API_URL, {
+          action: 'archiveAndReset',
+          archiveId: captured.meta.id,
+          archivedBy: captured.meta.archivedBy
+        });
+      } catch (e) {
+        console.warn('GAS archiveAndReset warning:', e.message);
+      }
+
+      if (gasData && gasData.status === 'error') {
+        return res.json(gasData);
+      }
+
+      // Attach any sheet/folder metadata returned by GAS back into our archive record
+      if (gasData && gasData.archivedTrip) {
+        const index = loadArchivesIndex();
+        const entry = index.find((x) => x.id === captured.meta.id);
+        if (entry) {
+          if (gasData.archivedTrip.sheetId) entry.sheetId = gasData.archivedTrip.sheetId;
+          if (gasData.archivedTrip.folderId) entry.folderId = gasData.archivedTrip.folderId;
+          saveArchivesIndex(index);
+        }
+      }
+
+      // Clear local trip-specific overrides now that they are safely frozen in the archive snapshot
+      saveReceiptOverrides({});
+      saveTripFiles({});
+      invalidateCacheForAction('archiveAndReset');
+
+      broadcastSyncEvent({
+        type: 'sync:update',
+        action: 'archiveAndReset',
+        domain: 'settings',
+        clientId: clientId || null,
+        ts: Date.now()
+      });
+
+      return res.json({
+        status: 'success',
+        archivedTrip: captured.meta
+      });
+    } catch (err) {
+      console.error('archiveAndReset snapshot error:', err);
+      return res.status(500).json({ status: 'error', message: err.message || 'Failed to archive trip.' });
+    }
+  }
+
+  // STRICT READ-ONLY ARCHIVE MODE INTERCEPTOR
+  let archiveSnapshotForExtract = null;
+  if (effectiveArchiveId) {
+    if (!isValidArchiveId(effectiveArchiveId)) {
+      return res.status(400).json({ status: 'error', message: 'Invalid archive identifier.' });
+    }
+    if (!ARCHIVE_READONLY_ACTIONS.has(action)) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Archived trips are read-only and cannot be modified.'
+      });
+    }
+
+    const snapshot = loadArchiveSnapshot(effectiveArchiveId);
+    if (snapshot) {
+      if (action === 'getArchivedTripMeta') {
+        return res.json({ status: 'success', archive: snapshot.meta });
+      }
+      if (action === 'getSettings') {
+        return res.json({
+          status: 'success',
+          ...(snapshot.settings || {}),
+          registrationOpen: false,
+          allowEdits: false,
+          isArchived: true,
+          archiveId: effectiveArchiveId,
+          archivedAt: snapshot.meta?.archivedAt || ''
+        });
+      }
+      if (action === 'fetchAdminRoster') {
+        return res.json({ status: 'success', roster: Array.isArray(snapshot.roster) ? snapshot.roster : [] });
+      }
+      if (action === 'fetchLogistics') {
+        return res.json({
+          status: 'success',
+          participants: snapshot.logistics?.participants || [],
+          pairings: snapshot.logistics?.pairings || [],
+          rooms: snapshot.logistics?.rooms || []
+        });
+      }
+      if (action === 'fetchPairingsOnly') {
+        return res.json({ status: 'success', pairings: snapshot.logistics?.pairings || [] });
+      }
+      if (action === 'fetchRoomsOnly') {
+        return res.json({ status: 'success', rooms: snapshot.logistics?.rooms || [] });
+      }
+      if (action === 'fetchAttendanceData') {
+        const juncture = (payload && payload.juncture) || '';
+        const dataMap = (snapshot.attendance && snapshot.attendance[juncture]) || {};
+        return res.json({ status: 'success', data: dataMap });
+      }
+      if (action === 'fetchFinance') {
+        return res.json({
+          status: 'success',
+          data: snapshot.finance?.data || { config: {}, options: [] },
+          rates: snapshot.finance?.rates || { SGD: 1 }
+        });
+      }
+      if (action === 'fetchReceipts') {
+        return res.json({ status: 'success', receipts: Array.isArray(snapshot.receipts) ? snapshot.receipts : [] });
+      }
+      if (action === 'fetchMinutes') {
+        return res.json({ status: 'success', minutes: Array.isArray(snapshot.minutes) ? snapshot.minutes : [] });
+      }
+      if (action === 'getDriveContents') {
+        const reqFolderId = (payload && payload.folderId) || 'root';
+        const foldersMap = snapshot.drive?.foldersById || {};
+        if (foldersMap[reqFolderId]) {
+          return res.json(foldersMap[reqFolderId]);
+        }
+        // Fallback: if folder wasn't cached during snapshot depth limit, try read-only Drive lookup via GAS
+        if (reqFolderId !== 'root') {
+          try {
+            const liveDriveRes = await callGasJson(API_URL, {
+              action: 'getDriveContents',
+              folderId: reqFolderId
+            });
+            if (liveDriveRes && liveDriveRes.status === 'success') {
+              return res.json(liveDriveRes);
+            }
+          } catch (e) {}
+        }
+        return res.json({
+          status: 'success',
+          currentFolderId: snapshot.drive?.rootFolderId || 'root',
+          currentFolderName: snapshot.drive?.rootFolderName || `${snapshot.meta?.tripTitle || 'Archived Trip'} Folder`,
+          folders: [],
+          files: []
+        });
+      }
+      if (action === 'getProfile') {
+        return res.json(buildArchivedProfile(snapshot, payload && payload.nric));
+      }
+      if (action === 'getPublicTrainees') {
+        const trainees = (snapshot.roster || [])
+          .filter((p) => p.role === 'TRAINEE')
+          .map((p) => ({ fullName: p.fullName, shortName: p.shortName, nric: p.nric }));
+        return res.json({ status: 'success', trainees });
+      }
+      if (action === 'extractData') {
+        archiveSnapshotForExtract = snapshot;
+      }
+    } else {
+      // Remote-only archive (stored in GAS ARCHIVED_TRIPS): proxy read-only call with archiveSheetId / archiveFolderId
+      let remoteMeta = null;
+      try {
+        const remoteListRes = await callGasJson(API_URL, { action: 'listArchivedTrips' });
+        if (remoteListRes && Array.isArray(remoteListRes.archives)) {
+          remoteMeta = remoteListRes.archives.find((a) => a.id === effectiveArchiveId) || null;
+        }
+      } catch (e) {}
+      if (!remoteMeta) {
+        return res.status(404).json({ status: 'error', message: 'Archived trip not found.' });
+      }
+      if (action === 'getArchivedTripMeta') {
+        return res.json({ status: 'success', archive: remoteMeta });
+      }
+      if (action !== 'extractData') {
+        const gasRes = await callGasJson(API_URL, {
+          action,
+          ...(payload || {}),
+          archiveId: effectiveArchiveId,
+          archiveSheetId: remoteMeta.sheetId || '',
+          archiveFolderId: remoteMeta.folderId || ''
+        });
+        return res.json(gasRes);
+      }
+      // For extractData on remote-only archive, fetch read-only bundle from GAS
+      const [settingsRes, rosterRes, logRes] = await Promise.all([
+        callGasJson(API_URL, { action: 'getSettings', archiveId: effectiveArchiveId, archiveSheetId: remoteMeta.sheetId || '', archiveFolderId: remoteMeta.folderId || '' }).catch(() => ({})),
+        callGasJson(API_URL, { action: 'fetchAdminRoster', archiveId: effectiveArchiveId, archiveSheetId: remoteMeta.sheetId || '' }).catch(() => ({ roster: [] })),
+        callGasJson(API_URL, { action: 'fetchLogistics', archiveId: effectiveArchiveId, archiveSheetId: remoteMeta.sheetId || '' }).catch(() => ({ rooms: [], pairings: [] }))
+      ]);
+      archiveSnapshotForExtract = {
+        meta: remoteMeta,
+        settings: settingsRes,
+        roster: rosterRes?.roster || [],
+        logistics: logRes || { rooms: [], pairings: [] }
+      };
+    }
   }
 
   // Handle syncReceipts locally + pass to GAS
@@ -539,12 +1118,20 @@ app.post('/api', async (req, res) => {
         return await resp.json();
       };
 
-      const [settingsRes, rosterRes, logRes, beforeDriveRes] = await Promise.all([
-        fetchGasJson('getSettings').catch(() => ({})),
-        fetchGasJson('fetchAdminRoster').catch(() => ({ roster: [] })),
-        fetchGasJson('fetchLogistics').catch(() => ({ rooms: [], pairings: [] })),
-        fetchGasJson('getDriveContents', { folderId }).catch(() => ({ files: [] }))
-      ]);
+      let settingsRes, rosterRes, logRes, beforeDriveRes;
+      if (archiveSnapshotForExtract) {
+        settingsRes = archiveSnapshotForExtract.settings || {};
+        rosterRes = { roster: archiveSnapshotForExtract.roster || [] };
+        logRes = archiveSnapshotForExtract.logistics || { rooms: [], pairings: [] };
+        beforeDriveRes = { files: [] };
+      } else {
+        [settingsRes, rosterRes, logRes, beforeDriveRes] = await Promise.all([
+          fetchGasJson('getSettings').catch(() => ({})),
+          fetchGasJson('fetchAdminRoster').catch(() => ({ roster: [] })),
+          fetchGasJson('fetchLogistics').catch(() => ({ rooms: [], pairings: [] })),
+          fetchGasJson('getDriveContents', { folderId }).catch(() => ({ files: [] }))
+        ]);
+      }
 
       const existingFileIds = new Set(
         Array.isArray(beforeDriveRes && beforeDriveRes.files)
@@ -871,6 +1458,20 @@ app.post('/api', async (req, res) => {
         fileName: excelFileName,
         createdAt: Date.now()
       });
+
+      // In read-only archive mode, provide direct Excel download without mutating Google Drive
+      if (archiveSnapshotForExtract) {
+        return res.json({
+          status: 'success',
+          fileId: '',
+          fileName: excelFileName,
+          fileUrl: '',
+          downloadUrl: `/api/extractions/${downloadId}`,
+          mimeType: EXCEL_MIME_TYPE,
+          fileData: base64Data,
+          archiveReadOnlyExport: true
+        });
+      }
 
       const uploadResp = await fetch(API_URL, {
         method: 'POST',

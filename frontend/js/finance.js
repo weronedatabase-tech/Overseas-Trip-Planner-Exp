@@ -337,6 +337,7 @@ function renderAllFinanceTabs() {
 }
 
 function updateFinanceConfig(key, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     key === "globalPaxMode" ||
     key === "finalOptionId" ||
@@ -411,6 +412,7 @@ function setFinanceSyncButtonState(state) {
 }
 
 function queueFinanceUpdate(optId = null) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (optId) {
     const opt = financeOptions.find((o) => o.id === optId);
     if (opt) {
@@ -488,6 +490,7 @@ async function executeFinanceSync() {
 }
 
 function queueReceiptUpdate(receipt) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   receipt.ts = Date.now();
   pendingReceiptUpdates.set(receipt.id, receipt);
   setFinanceSyncButtonState("saving");
@@ -530,6 +533,7 @@ async function executeReceiptSync() {
 }
 
 window.pollFinanceNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const tab = document.getElementById("tab-finance");
   if (
     !tab ||
@@ -659,7 +663,15 @@ window.pollFinanceNow = async function () {
 
 function startFinancePolling() {
   if (financePollInterval) clearInterval(financePollInterval);
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   financePollInterval = setInterval(window.pollFinanceNow, 10000);
+}
+
+function stopFinancePolling() {
+  if (financePollInterval) {
+    clearInterval(financePollInterval);
+    financePollInterval = null;
+  }
 }
 
 async function manualFinanceSync(btn) {
@@ -1825,6 +1837,7 @@ function handleRateInputSync(currency, mode, value) {
 }
 
 function handleRateChange(currency, mode, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const val = parseFloat(value);
   handleRateInputSync(currency, mode, value);
 
@@ -1869,6 +1882,7 @@ function cycleFinanceOptionWidth(optId) {
 }
 
 function updateFinanceOption(optId, key, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
   if (key === "title") {
@@ -1886,6 +1900,7 @@ function updateFinanceOption(optId, key, value) {
 }
 
 function updateFinanceField(optId, fieldId, key, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
   const field = opt.fields.find((f) => f.id === fieldId);
@@ -1969,6 +1984,7 @@ function updateTotals(optId) {
 }
 
 function addFinanceOption(title = "New Option", reRender = true) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const newOpt = {
     id: generateFinanceUUID(),
     title: title,
@@ -2000,6 +2016,7 @@ function addFinanceOption(title = "New Option", reRender = true) {
 }
 
 function duplicateFinanceOption(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const opt = financeOptions.find((o) => o.id === id);
   if (!opt) return;
   const copy = JSON.parse(JSON.stringify(opt));
@@ -2018,6 +2035,7 @@ function duplicateFinanceOption(id) {
 }
 
 async function removeFinanceOption(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Are you sure you want to remove this budget option?",
@@ -2040,6 +2058,7 @@ async function removeFinanceOption(id) {
 }
 
 function addFinanceCategory(optId) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
   opt.fields.push({
@@ -2056,6 +2075,7 @@ function addFinanceCategory(optId) {
 }
 
 function removeFinanceCategory(optId, fieldId) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const opt = financeOptions.find((o) => o.id === optId);
   if (!opt) return;
   opt.fields = opt.fields.filter((f) => f.id !== fieldId);
@@ -2064,6 +2084,7 @@ function removeFinanceCategory(optId, fieldId) {
 }
 
 function startFinDrag(e) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (e.type === "mousedown" && e.button !== 0) return;
   e.preventDefault();
   const handle = e.currentTarget;
@@ -2303,6 +2324,7 @@ function populateFinReceiptCategories(selectEl) {
 }
 
 function toggleFinReceiptUpload() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const wrapper = document.getElementById("finReceiptFormWrapper");
   const icon = document.getElementById("finReceiptExpandIcon");
   if (!wrapper) return;
@@ -3166,6 +3188,7 @@ window.resetReceiptFilters = resetReceiptFilters;
 window.renderReceiptsBrowser = renderReceiptsBrowser;
 
 function toggleReceiptReimbursed(id, status) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const rec = globalReceipts.find((r) => r.id === id);
   if (rec) {
     rec.isReimbursed = status;
@@ -3178,6 +3201,7 @@ function toggleReceiptReimbursed(id, status) {
 // DELETE RECEIPT MODAL & FLOW
 // ==========================================
 function openDeleteReceiptModal(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const rec = globalReceipts.find((r) => r.id === id);
   if (!rec) return;
   pendingDeleteReceiptId = id;
@@ -3273,6 +3297,7 @@ function deleteReceipt(id) {
 // EDIT RECEIPT MODAL & FLOW
 // ==========================================
 function openEditReceiptModal(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const rec = globalReceipts.find((r) => r.id === id);
   if (!rec) return;
   activeEditingReceipt = rec;
@@ -4053,6 +4078,7 @@ window.updateDeviationLocal = function (poc, size) {
 };
 
 function updateFeeDeviation(poc, field, value) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
   if (!financeConfig.feeDeviations[poc])
     financeConfig.feeDeviations[poc] = { amount: 0, remarks: "" };
@@ -4069,6 +4095,7 @@ function updateFeeDeviation(poc, field, value) {
 }
 
 function toggleFeeReceived(poc, status) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
   financeConfig.feesReceived[poc] = status;
   queueFinanceUpdate();

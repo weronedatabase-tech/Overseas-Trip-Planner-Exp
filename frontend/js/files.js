@@ -64,7 +64,7 @@ function buildFilesUI() {
        </div>
      </div>
      
-     <div class="relative inline-block text-left z-30">
+     <div class="relative inline-block text-left z-30 archive-hide">
        <button type="button" id="btnDriveAdd" onclick="toggleDriveAddMenu(event)" class="p-1.5 rounded-lg text-primary hover:bg-green-50 dark:hover:bg-gray-800 transition focus:outline-none shrink-0 flex items-center gap-1 font-bold text-xs md:text-sm active:scale-95" title="Add New">
           <svg class="w-5 h-5 md:w-6 md:h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
           <span class="hidden md:inline pointer-events-none">Add</span>
@@ -606,21 +606,30 @@ function renderDriveContents(folders, files) {
   const trashIcon = `<svg class="w-4 h-4 text-red-500 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
   const pencilIcon = `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`;
 
+  const isRO = typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
+
   folders.forEach((f) => {
     const safeName = f.name.replace(/'/g, "\\'");
     const isChecked = selectedDriveItems.has(f.id) ? "checked" : "";
     html += `
  <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-primary transition group">
-    <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
+    ${
+      isRO
+        ? ""
+        : `<div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', true, '${safeName}')">
-    </div>
+    </div>`
+    }
     <div onclick="loadDriveFolder('${f.id}', '${safeName}')" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none active:scale-[0.98] px-2 py-1">
         <div class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
           <svg class="w-5 h-5 text-gray-600 dark:text-gray-400" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
         </div>
         <span class="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-primary transition-colors">${f.name}</span>
     </div>
-    <div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+    ${
+      isRO
+        ? ""
+        : `<div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button onclick="actionSingleCopy('${f.id}', true, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Copy Folder">
            ${copyIcon}
         </button>
@@ -633,7 +642,8 @@ function renderDriveContents(folders, files) {
         <button onclick="promptDeleteDriveItem('${f.id}', true, '${safeName}')" class="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 rounded-md transition focus:outline-none shrink-0" title="Delete Folder">
            ${trashIcon}
         </button>
-    </div>
+    </div>`
+    }
  </div>
 `;
   });
@@ -680,9 +690,13 @@ function renderDriveContents(folders, files) {
 
     html += `
  <div class="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 md:p-1.5 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-gray-300 dark:hover:border-gray-500 transition group">
-    <div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
+    ${
+      isRO
+        ? ""
+        : `<div class="flex items-center pl-2 shrink-0" onclick="event.stopPropagation()">
        <input type="checkbox" class="drive-item-checkbox w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary dark:focus:ring-primary dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer" ${isChecked} onchange="toggleDriveItemSelection(event, '${f.id}', false, '${safeName}')">
-    </div>
+    </div>`
+    }
     <div onclick="openDriveFile('${f.url}')" class="flex items-center gap-3 flex-1 min-w-0 cursor-pointer select-none active:scale-[0.98] px-2 py-1">
         <div class="relative w-8 h-8 rounded ${bgClass} flex items-center justify-center shrink-0">
           ${iconHtml}
@@ -690,7 +704,10 @@ function renderDriveContents(folders, files) {
         </div>
         ${nameHtml}
     </div>
-    <div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+    ${
+      isRO
+        ? ""
+        : `<div class="flex items-center gap-0.5 shrink-0 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button onclick="actionSingleCopy('${f.id}', false, '${safeName}')" class="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700 rounded-md transition focus:outline-none shrink-0" title="Copy File">
            ${copyIcon}
         </button>
@@ -703,7 +720,8 @@ function renderDriveContents(folders, files) {
         <button onclick="promptDeleteDriveItem('${f.id}', false, '${safeName}')" class="p-2 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-900/50 rounded-md transition focus:outline-none shrink-0" title="Delete File">
            ${trashIcon}
         </button>
-    </div>
+    </div>`
+    }
  </div>
 `;
   });
@@ -714,6 +732,7 @@ function renderDriveContents(folders, files) {
 function updatePinnedTripFilesUI() {
   const container = document.getElementById("pinnedTripFilesBar");
   if (!container) return;
+  const isRO = typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
 
   const infoId = (appSettings && appSettings.tripInfographicId) || "";
   const infoName = (appSettings && appSettings.tripInfographicName) || "";
@@ -739,11 +758,15 @@ function updatePinnedTripFilesUI() {
         ${infoSet ? (infoName || 'Infographic File') : '<span class="text-gray-400 font-normal italic text-[11px]">Not set</span>'}
       </span>
       <div class="flex items-center gap-1 shrink-0 ml-auto">
-        <button onclick="openTripFilePickerModal('infographic')" class="px-2 py-0.5 text-[11px] font-bold ${infoSet ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Infographic file">
+        ${
+          isRO
+            ? ""
+            : `<button onclick="openTripFilePickerModal('infographic')" class="px-2 py-0.5 text-[11px] font-bold ${infoSet ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800' : 'bg-indigo-600 hover:bg-indigo-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Infographic file">
           ${infoSet ? 'Change' : 'Choose'}
-        </button>
-        ${infoSet && (infoUrl || infoId) ? `<button onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
-        ${infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Landing Infographic">&times;</button>` : ''}
+        </button>`
+        }
+        ${infoSet && (infoUrl || infoId) ? `<button data-archive-allow="true" onclick="openDriveFile('${infoUrl || ('https://drive.google.com/file/d/' + infoId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
+        ${!isRO && infoSet ? `<button onclick="actionClearTripFile('infographic')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Landing Infographic">&times;</button>` : ''}
       </div>
     </div>
 
@@ -758,11 +781,15 @@ function updatePinnedTripFilesUI() {
         ${docSet ? (docName || 'Info Doc File') : '<span class="text-gray-400 font-normal italic text-[11px]">Not set</span>'}
       </span>
       <div class="flex items-center gap-1 shrink-0 ml-auto">
-        <button onclick="openTripFilePickerModal('infoDoc')" class="px-2 py-0.5 text-[11px] font-bold ${docSet ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Info Doc file">
+        ${
+          isRO
+            ? ""
+            : `<button onclick="openTripFilePickerModal('infoDoc')" class="px-2 py-0.5 text-[11px] font-bold ${docSet ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} rounded transition shadow-xs active:scale-95" title="Choose Info Doc file">
           ${docSet ? 'Change' : 'Choose'}
-        </button>
-        ${docSet && (docUrl || docId) ? `<button onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
-        ${docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Profile Trip Info Doc">&times;</button>` : ''}
+        </button>`
+        }
+        ${docSet && (docUrl || docId) ? `<button data-archive-allow="true" onclick="openDriveFile('${docUrl || ('https://drive.google.com/file/d/' + docId + '/view')}')" class="px-1.5 py-0.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition" title="View in Google Drive">View</button>` : ''}
+        ${!isRO && docSet ? `<button onclick="actionClearTripFile('infoDoc')" class="px-1.5 py-0.5 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 rounded transition cursor-pointer" title="Remove as Profile Trip Info Doc">&times;</button>` : ''}
       </div>
     </div>
   </div>

@@ -420,8 +420,12 @@ async function showParticipantSummaryModal(nric) {
             <span class="text-xs font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
           </div>
           <div class="flex gap-2">
-            <button onclick="document.getElementById('gpm-view').classList.add('hidden-force'); document.getElementById('gpm-edit').classList.remove('hidden-force'); if(typeof setupNationalityDropdown === 'function') setupNationalityDropdown('gpmNat');" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>
-            <button onclick="deleteParticipant('${m.nric}')" class="text-red-600 dark:text-red-400 text-xs font-bold bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded transition focus:outline-none border border-red-200 dark:border-red-900/50 shadow-md">Delete</button>
+            ${
+              typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()
+                ? `<span class="text-[11px] font-bold px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Read-Only</span>`
+                : `<button onclick="document.getElementById('gpm-view').classList.add('hidden-force'); document.getElementById('gpm-edit').classList.remove('hidden-force'); if(typeof setupNationalityDropdown === 'function') setupNationalityDropdown('gpmNat');" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>
+            <button onclick="deleteParticipant('${m.nric}')" class="text-red-600 dark:text-red-400 text-xs font-bold bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded transition focus:outline-none border border-red-200 dark:border-red-900/50 shadow-md">Delete</button>`
+            }
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
@@ -525,6 +529,10 @@ async function showParticipantSummaryModal(nric) {
 }
 
 async function submitAdminProfileEdit(btn) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
   if (!window._currentModalParticipant) return;
   setBtnLoading(btn, true);
   try {
@@ -612,6 +620,10 @@ async function submitAdminProfileEdit(btn) {
 }
 
 async function deleteParticipant(nric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
   if (
     !(await appConfirm(
       "Are you sure you want to delete this participant? They will be moved to the Archived Participants tab.",
@@ -985,6 +997,9 @@ function applyHydrationDOMUpdates() {
   renderLandingHelpline();
   renderProfileHelpline();
   renderLandingInfographic();
+  if (window.ArchiveMode && typeof window.ArchiveMode.syncUI === "function") {
+    window.ArchiveMode.syncUI();
+  }
 }
 
 function renderLandingInfographic() {
@@ -1120,6 +1135,36 @@ window.renderProfileHelpline = renderProfileHelpline;
 async function silentHydration() {
   if (isHydrated) return;
 
+  // Check if entering or continuing in Read-Only Archive Mode
+  if (window.ArchiveMode && typeof window.ArchiveMode.bootstrapFromUrl === "function") {
+    await window.ArchiveMode.bootstrapFromUrl();
+  }
+
+  const inArchiveMode =
+    typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly();
+
+  if (inArchiveMode) {
+    try {
+      const config = await apiCall("getSettings");
+      if (config && config.status !== "error") {
+        appSettings = config;
+      }
+      applyHydrationDOMUpdates();
+      isHydrated = true;
+      if (window.initPage) await window.initPage();
+      if (window.ArchiveMode && typeof window.ArchiveMode.syncUI === "function") {
+        window.ArchiveMode.syncUI();
+      }
+    } catch (e) {
+      console.warn("Archived hydration failed:", e);
+      showToast("Could not load archived trip settings.", true);
+    } finally {
+      const viewLoading = document.getElementById("viewLoading");
+      if (viewLoading) viewLoading.classList.add("hidden-force");
+    }
+    return;
+  }
+
   // 1. Instant Cache Hydration (0ms Latency)
   const cachedSettings = localStorage.getItem("appSettings");
   if (cachedSettings) {
@@ -1176,6 +1221,9 @@ async function silentHydration() {
 }
 
 window.refreshSettingsRealtime = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    return;
+  }
   try {
     const config = await apiCall("getSettings", { force: true });
     if (config && config.status !== "error") {
@@ -1256,6 +1304,10 @@ function toBase64(file) {
   });
 }
 async function deleteAdminParticipant(nric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
   if (
     !(await appConfirm(
       "Are you sure you want to delete this participant? Their details will be moved to a separate sheet.",
@@ -1361,18 +1413,71 @@ document.addEventListener("click", function (e) {
 
 // SPA Router
 window.navigateTo = async function (url) {
+  let targetUrl = url;
+  const targetPage = targetUrl.split("?")[0];
+
+  // Navigating to Settings (settings.html), Dashboard (dashboard.html), or Login (index.html) exits archive mode cleanly
   if (
-    window.location.pathname.endsWith(url) ||
-    (window.location.pathname.endsWith("/") && url === "index.html")
-  )
+    (targetPage === "settings.html" || targetPage === "dashboard.html" || targetPage === "index.html") &&
+    !targetUrl.includes("archive=") &&
+    typeof window.isArchiveReadOnly === "function" &&
+    window.isArchiveReadOnly()
+  ) {
+    if (window.ArchiveMode && typeof window.ArchiveMode.exitArchive === "function") {
+      await window.ArchiveMode.exitArchive(targetPage);
+      return;
+    }
+  }
+
+  // While browsing an archived trip, preserve ?archive=<id> across all 6 pages & subpages
+  const activeArch =
+    window.ArchiveMode && typeof window.ArchiveMode.getActiveArchive === "function"
+      ? window.ArchiveMode.getActiveArchive()
+      : null;
+  if (
+    activeArch &&
+    !targetUrl.includes("archive=") &&
+    targetPage !== "settings.html" &&
+    targetPage !== "dashboard.html" &&
+    targetPage !== "index.html" &&
+    targetPage !== "register.html"
+  ) {
+    targetUrl = `${targetPage}?archive=${encodeURIComponent(activeArch.archiveId)}`;
+  }
+
+  const currentFile = window.location.pathname.split("/").pop() || "index.html";
+  const targetQuery = targetUrl.includes("?") ? "?" + targetUrl.split("?")[1] : "";
+  if (currentFile === targetPage && window.location.search === targetQuery) {
     return;
-  history.pushState(null, "", url);
-  await loadPage(url);
+  }
+
+  history.pushState(null, "", targetUrl);
+  await loadPage(targetUrl);
 };
 
-window.addEventListener("popstate", () => {
-  const url = window.location.pathname.split("/").pop() || "index.html";
-  loadPage(url);
+window.addEventListener("popstate", async () => {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  const urlWithQuery = page + window.location.search;
+  if (window.ArchiveMode && typeof window.ArchiveMode.bootstrapFromUrl === "function") {
+    const prevArch = window.ArchiveMode.getActiveArchive();
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("archive") && prevArch) {
+      sessionStorage.removeItem("activeArchiveTrip");
+      window.ArchiveMode.resetAllModuleCaches();
+      try {
+        const cachedLive = localStorage.getItem("appSettings");
+        if (cachedLive) appSettings = JSON.parse(cachedLive);
+      } catch (e) {}
+    } else if (params.get("archive") && (!prevArch || prevArch.archiveId !== params.get("archive"))) {
+      window.ArchiveMode.resetAllModuleCaches();
+      await window.ArchiveMode.bootstrapFromUrl();
+      try {
+        const cfg = await apiCall("getSettings");
+        if (cfg && cfg.status !== "error") appSettings = cfg;
+      } catch (e) {}
+    }
+  }
+  loadPage(urlWithQuery);
 });
 
 window.showLoading = function () {
@@ -1517,6 +1622,9 @@ async function loadPage(url) {
       applyHydrationDOMUpdates();
     if (typeof window.initPage === "function") {
       await window.initPage();
+    }
+    if (window.ArchiveMode && typeof window.ArchiveMode.syncUI === "function") {
+      window.ArchiveMode.syncUI();
     }
   } catch (e) {
     console.error("SPA routing error:", e);

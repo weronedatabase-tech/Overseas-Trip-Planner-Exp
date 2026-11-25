@@ -54,6 +54,9 @@
 
     // Fast direct mutation send over WebSocket
     sendAction(action, payload = {}) {
+      if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+        return false;
+      }
       if (ws && ws.readyState === WebSocket.OPEN) {
         try {
           ws.send(
@@ -163,6 +166,9 @@
   }
 
   function handleIncomingEvent(event) {
+    if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+      return;
+    }
     if (!event || !event.type) return;
 
     if (event.eventId && event.eventId > latestEventId) {

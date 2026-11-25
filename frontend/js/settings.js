@@ -41,6 +41,58 @@ function applyAdminVisuals() {
 function buildSettingsUI() {
   const tabSettings = document.getElementById("tab-settings");
   if (!tabSettings) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    const esc = (s) =>
+      String(s == null ? "" : s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    const projects = Array.isArray(appSettings.projectGroups) ? appSettings.projectGroups : [];
+    const junctures = Array.isArray(appSettings.junctures) ? appSettings.junctures : [];
+    const committee = Array.isArray(appSettings.committee) ? appSettings.committee : [];
+    const helpline = Array.isArray(appSettings.helpline) ? appSettings.helpline : [];
+    tabSettings.innerHTML = `
+      <div class="max-w-4xl mx-auto space-y-3 pb-10">
+        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4 md:p-5">
+          <h3 class="text-base font-black text-gray-900 dark:text-white">Archived Trip Configuration (Read-Only)</h3>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Settings cannot be changed for an archived trip.</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Trip Title</div>
+              <div class="text-sm font-black text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripTitle || "—")} ${esc(appSettings.tripYear || "")}</div>
+            </div>
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Start Date</div>
+              <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripStartDate || "—")}</div>
+            </div>
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">End Date</div>
+              <div class="text-sm font-bold text-gray-900 dark:text-white mt-0.5">${esc(appSettings.tripEndDate || "—")}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Projects (${projects.length})</div>
+              <div class="flex flex-wrap gap-1.5">${projects.length ? projects.map((p) => `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">${esc(p)}</span>`).join("") : '<span class="text-xs text-gray-400">None</span>'}</div>
+            </div>
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Attendance Junctures (${junctures.length})</div>
+              <div class="flex flex-wrap gap-1.5">${junctures.length ? junctures.map((j) => `<span class="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">${esc(j)}</span>`).join("") : '<span class="text-xs text-gray-400">None</span>'}</div>
+            </div>
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Committee (${committee.length})</div>
+              <div class="space-y-1 text-xs">${committee.length ? committee.map((c) => `<div class="font-semibold text-gray-800 dark:text-gray-200">${esc(c.name || c.nric || c)}</div>`).join("") : '<span class="text-gray-400">None</span>'}</div>
+            </div>
+            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-950/60 border border-gray-200 dark:border-gray-800">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-gray-500 mb-1.5">Helpline (${helpline.length})</div>
+              <div class="space-y-1 text-xs">${helpline.length ? helpline.map((h) => `<div class="font-semibold text-gray-800 dark:text-gray-200">${esc(h.name)} &middot; ${esc(h.phone)}</div>`).join("") : '<span class="text-gray-400">None</span>'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
   if (tabSettings)
     tabSettings.innerHTML = `
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -184,6 +236,8 @@ function buildSettingsUI() {
   <p class="text-xs font-bold text-red-600/80 dark:text-red-400 mb-3">Archive current trip to Google Drive and wipe system for a fresh start.</p>
   <button onclick="archiveSystem(this)" class="w-full sm:w-auto bg-red-600 text-white font-bold text-xs py-2 px-4 rounded-lg shadow-md hover:bg-red-700 focus:outline-none flex items-center justify-center"><span class="btn-text">Archive & Reset</span><div class="btn-spinner spinner-white hidden-force ml-1.5 !w-3 !h-3 border-2"></div></button>
   </div>
+
+  <div id="archivedTripsSettingsSection" class="admin-only"></div>
   `;
 
   applyAdminVisuals();
@@ -257,6 +311,18 @@ function buildSettingsUI() {
   }
   renderCommList(appSettings.committee);
   renderHelplineList(appSettings.helpline);
+  if (
+    window.ArchiveMode &&
+    typeof window.ArchiveMode.renderArchivedTripsSection === "function"
+  ) {
+    window.ArchiveMode.renderArchivedTripsSection("archivedTripsSettingsSection", false).then(() => {
+      if (window._scrollToArchivedTrips) {
+        window._scrollToArchivedTrips = false;
+        const sec = document.getElementById("archivedTripsSettingsSection");
+        if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
 }
 
 async function saveTripConfiguration(btn) {
@@ -766,9 +832,13 @@ function renderHelplineList(list) {
 }
 
 async function archiveSystem(btn) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
   if (
     !(await appConfirm(
-      "⚠️ ARE YOU SURE?\n\nThis archives the database and completely resets the system.",
+      "⚠️ ARE YOU SURE?\n\nThis archives the trip (viewable read-only in Settings → Archived Trips) and resets the active system for a new trip.",
       "Archive & Reset System",
       "Archive & Reset",
       "Cancel",
@@ -776,16 +846,28 @@ async function archiveSystem(btn) {
     ))
   )
     return;
-  showToast("Archiving...", false);
+  showToast("Archiving trip snapshot & resetting...", false);
   setBtnLoading(btn, true);
   try {
-    await apiCall("archiveAndReset");
-    showToast("Reset successful!");
-    setTimeout(() => {
-      navigateTo("index.html");
-    }, 2000);
+    await apiCall("archiveAndReset", {
+      archivedBy: (currentUser && currentUser.name) || "Admin",
+    });
+    if (window.ArchiveMode && typeof window.ArchiveMode.resetAllModuleCaches === "function") {
+      window.ArchiveMode.resetAllModuleCaches();
+    }
+    localStorage.removeItem("appSettings");
+    showToast("Trip archived! View it below under Archived Trips.");
+    if (typeof window.refreshSettingsRealtime === "function") {
+      await window.refreshSettingsRealtime();
+    }
+    if (window.ArchiveMode && typeof window.ArchiveMode.refreshArchives === "function") {
+      await window.ArchiveMode.refreshArchives();
+    }
+    const sec = document.getElementById("archivedTripsSettingsSection");
+    if (sec) sec.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
     showToast(e.message, true);
+  } finally {
     setBtnLoading(btn, false);
   }
 }

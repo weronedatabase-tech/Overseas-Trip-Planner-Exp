@@ -49,7 +49,12 @@ if(juncList) JSON.parse(juncList).forEach(j => fetchAttendanceData(j, true));
 // ==========================================
 // CACHING & DATABASE HELPERS
 // ==========================================
+let ACTIVE_ARCHIVE_SHEET_ID = null;
+let ACTIVE_ARCHIVE_FOLDER_ID = null;
+let ACTIVE_ARCHIVE_META = null;
+
 function getDbId() {
+if (ACTIVE_ARCHIVE_SHEET_ID) return ACTIVE_ARCHIVE_SHEET_ID;
 return PropertiesService.getScriptProperties().getProperty('DB_SHEET_ID') || Fallback_Sheet_ID;
 }
 
@@ -179,10 +184,39 @@ if (defaultSheet && ss.getSheets().length > 1) ss.deleteSheet(defaultSheet);
 }
 
 function doPost(e) {
+ACTIVE_ARCHIVE_SHEET_ID = null;
+ACTIVE_ARCHIVE_FOLDER_ID = null;
+ACTIVE_ARCHIVE_META = null;
 try {
 const data = JSON.parse(e.postData.contents);
+const READONLY_ARCHIVE_ACTIONS = [
+  'getSettings',
+  'fetchAdminRoster',
+  'fetchLogistics',
+  'fetchPairingsOnly',
+  'fetchRoomsOnly',
+  'fetchAttendanceData',
+  'fetchFinance',
+  'fetchReceipts',
+  'fetchMinutes',
+  'getDriveContents',
+  'getProfile',
+  'getPublicTrainees'
+];
+if (data.archiveId || data.archiveSheetId) {
+  if (READONLY_ARCHIVE_ACTIONS.indexOf(data.action) === -1) {
+    throw new Error("Archived trips are read-only and cannot be modified.");
+  }
+  const props = PropertiesService.getScriptProperties();
+  const archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
+  const found = archives.find(a => (data.archiveId && a.id === data.archiveId) || (data.archiveSheetId && a.sheetId === data.archiveSheetId));
+  ACTIVE_ARCHIVE_META = found || null;
+  ACTIVE_ARCHIVE_SHEET_ID = (found && found.sheetId) || data.archiveSheetId || null;
+  ACTIVE_ARCHIVE_FOLDER_ID = (found && found.folderId) || data.archiveFolderId || null;
+}
 let result = {};
 switch(data.action) {
+case 'listArchivedTrips': result = listArchivedTrips(); break;
 case 'getSettings': result = getAppConfig(); break;
 case 'login': result = handleLogin(data.password, data.nric); break;
 case 'getProfile': result = getProfile(data.nric); break;
@@ -235,12 +269,16 @@ case 'syncReceipts': result = syncReceipts(data.updates); break;
 case 'fetchMinutes': result = fetchMinutes(); break;
 case 'syncMinutes': result = syncMinutes(data.updates, data.takenBy); break;
 case 'setTripFile': result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl); break;
-case 'archiveAndReset': result = archiveAndReset(); break;
+case 'archiveAndReset': result = archiveAndReset(data.archiveId, data.archivedBy); break;
 default: throw new Error("Unknown action.");
 }
 return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 } catch (error) {
 return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+} finally {
+ACTIVE_ARCHIVE_SHEET_ID = null;
+ACTIVE_ARCHIVE_FOLDER_ID = null;
+ACTIVE_ARCHIVE_META = null;
 }
 }
 
@@ -262,6 +300,36 @@ for (let i = 1; i < data.length; i++) {
 activeProjects = Array.from(projSet);
 }
 } catch(e) {}
+
+if (ACTIVE_ARCHIVE_META) {
+  return {
+    status: 'success',
+    isArchived: true,
+    archiveId: ACTIVE_ARCHIVE_META.id,
+    archivedAt: ACTIVE_ARCHIVE_META.archivedAt || '',
+    registrationOpen: false,
+    allowEdits: false,
+    committee: ACTIVE_ARCHIVE_META.committee || [],
+    helpline: ACTIVE_ARCHIVE_META.helpline || [],
+    projectGroups: ACTIVE_ARCHIVE_META.projectGroups || (props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getProperty('PROJECT_GROUPS')) : []),
+    projectColors: ACTIVE_ARCHIVE_META.projectColors || (props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {}),
+    activeProjects: activeProjects,
+    junctures: ACTIVE_ARCHIVE_META.junctures || ['Morning Assembly'],
+    sortingRules: ACTIVE_ARCHIVE_META.sortingRules || ['project', 'family', 'role', 'name'],
+    customViewsOrder: ACTIVE_ARCHIVE_META.customViewsOrder || ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
+    driveAccessList: {},
+    tripTitle: ACTIVE_ARCHIVE_META.tripTitle || '',
+    tripYear: ACTIVE_ARCHIVE_META.tripYear || '',
+    tripStartDate: ACTIVE_ARCHIVE_META.tripStartDate || '',
+    tripEndDate: ACTIVE_ARCHIVE_META.tripEndDate || '',
+    tripInfographicId: ACTIVE_ARCHIVE_META.tripInfographicId || '',
+    tripInfographicName: ACTIVE_ARCHIVE_META.tripInfographicName || '',
+    tripInfographicUrl: ACTIVE_ARCHIVE_META.tripInfographicUrl || '',
+    tripInfoDocId: ACTIVE_ARCHIVE_META.tripInfoDocId || '',
+    tripInfoDocName: ACTIVE_ARCHIVE_META.tripInfoDocName || '',
+    tripInfoDocUrl: ACTIVE_ARCHIVE_META.tripInfoDocUrl || ''
+  };
+}
 
 return {
 status: 'success', 
@@ -1426,6 +1494,9 @@ function saveCustomViewsOrder(order, callerNric) { PropertiesService.getScriptPr
 // DRIVE & FILE MANAGEMENT
 // ==========================================
 function getTripFolder() {
+if (ACTIVE_ARCHIVE_FOLDER_ID) {
+  return DriveApp.getFolderById(ACTIVE_ARCHIVE_FOLDER_ID);
+}
 const dbId = getDbId();
 if (!dbId) throw new Error("No active trip folder found.");
 const parents = DriveApp.getFileById(dbId).getParents();
@@ -1520,10 +1591,76 @@ function setTripFile(fileType, fileId, fileName, fileUrl) {
   return getAppConfig();
 }
 
-function archiveAndReset() {
+function listArchivedTrips() {
+const props = PropertiesService.getScriptProperties();
+let archives = [];
+try {
+  archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
+  if (!Array.isArray(archives)) archives = [];
+} catch (e) {
+  archives = [];
+}
+return { status: 'success', archives: archives };
+}
+
+function archiveAndReset(customArchiveId, archivedBy) {
 const props = PropertiesService.getScriptProperties(); const dbId = getDbId();
-try { if (dbId) { const folder = getTripFolder(); const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}'); for (let email in accessObj) { try { if (accessObj[email] === 'editor') folder.removeEditor(email); else folder.removeViewer(email); } catch(e) { } } } } catch (e) {}
-if (dbId) { const t = props.getProperty('TRIP_TITLE') || 'Archived Trip'; const y = props.getProperty('TRIP_YEAR') || new Date().getFullYear(); const d = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd"); try { DriveApp.getFileById(dbId).setName(`${t} ${y} (Archived ${d})`); } catch(e){} }
+let folderId = '';
+let folderName = '';
+try {
+  if (dbId) {
+    const folder = getTripFolder();
+    folderId = folder.getId();
+    folderName = folder.getName();
+    const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}');
+    for (let email in accessObj) {
+      try { if (accessObj[email] === 'editor') folder.removeEditor(email); else folder.removeViewer(email); } catch(e) { }
+    }
+  }
+} catch (e) {}
+
+let archivedRecord = null;
+if (dbId) {
+  const t = props.getProperty('TRIP_TITLE') || 'Archived Trip';
+  const y = props.getProperty('TRIP_YEAR') || String(new Date().getFullYear());
+  const d = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  try { DriveApp.getFileById(dbId).setName(`${t} ${y} (Archived ${d})`); } catch(e){}
+
+  archivedRecord = {
+    id: customArchiveId || ('arch_' + new Date().getTime()),
+    tripTitle: t,
+    tripYear: y,
+    tripStartDate: props.getProperty('TRIP_START_DATE') || '',
+    tripEndDate: props.getProperty('TRIP_END_DATE') || '',
+    archivedAt: new Date().toISOString(),
+    archivedBy: archivedBy || 'Admin',
+    source: 'remote',
+    sheetId: dbId,
+    folderId: folderId,
+    folderName: folderName || `${t} ${y}`,
+    committee: props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [],
+    helpline: props.getProperty('HELPLINE_CONTACTS') ? JSON.parse(props.getProperty('HELPLINE_CONTACTS')) : [],
+    projectGroups: props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getProperty('PROJECT_GROUPS')) : [],
+    projectColors: props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {},
+    junctures: props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly'],
+    sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty('SORTING_RULES')) : ['project', 'family', 'role', 'name'],
+    customViewsOrder: props.getProperty('CUSTOM_VIEWS_ORDER') ? JSON.parse(props.getProperty('CUSTOM_VIEWS_ORDER')) : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
+    tripInfographicId: props.getProperty('TRIP_INFOGRAPHIC_ID') || '',
+    tripInfographicName: props.getProperty('TRIP_INFOGRAPHIC_NAME') || '',
+    tripInfographicUrl: props.getProperty('TRIP_INFOGRAPHIC_URL') || '',
+    tripInfoDocId: props.getProperty('TRIP_INFODOC_ID') || '',
+    tripInfoDocName: props.getProperty('TRIP_INFODOC_NAME') || '',
+    tripInfoDocUrl: props.getProperty('TRIP_INFODOC_URL') || ''
+  };
+
+  try {
+    const existingArchives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
+    const updatedArchives = Array.isArray(existingArchives) ? existingArchives : [];
+    updatedArchives.unshift(archivedRecord);
+    props.setProperty('ARCHIVED_TRIPS', JSON.stringify(updatedArchives));
+  } catch (e) {}
+}
+
 ['DB_SHEET_ID', 'TRIP_TITLE', 'TRIP_YEAR', 'TRIP_START_DATE', 'TRIP_END_DATE', 'COMMITTEE_LIST', 'ATTENDANCE_JUNCTURES', 'APP_GRANTED_ACCESS', 'TRIP_INFOGRAPHIC_ID', 'TRIP_INFOGRAPHIC_NAME', 'TRIP_INFOGRAPHIC_URL', 'TRIP_INFODOC_ID', 'TRIP_INFODOC_NAME', 'TRIP_INFODOC_URL'].forEach(k => props.deleteProperty(k));
 props.setProperty('REGISTRATION_OPEN', 'false'); props.setProperty('ALLOW_EDITS', 'false');
 const cache = CacheService.getScriptCache();
@@ -1534,7 +1671,7 @@ let keys = [];
 types.forEach(t => { keys.push(t + "_" + dbId); keys.push(t + "_" + dbId + "_count"); for(let i=0; i<15; i++) keys.push(t + "_" + dbId + "_" + i); });
 cache.removeAll(keys);
 } catch(e) {}
-return { status: 'success' };
+return { status: 'success', archivedTrip: archivedRecord };
 }
 function deleteParticipant(nric) {
   const ss = getDatabase();

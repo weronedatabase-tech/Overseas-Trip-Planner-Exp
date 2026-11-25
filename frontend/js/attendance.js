@@ -62,7 +62,7 @@ function buildAttendanceUI() {
            <button id="btn-mode-multi" onclick="setAttSearchMode('multi')" class="px-2 py-0.5 rounded-sm text-[10px] font-black transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 uppercase tracking-wider">Family</button>
        </div>
 
-       <button id="btn-sync-attendance" onclick="manualSyncAttendance()" class="text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+       <button id="btn-sync-attendance" onclick="manualSyncAttendance()" class="archive-hide text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
           <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
        </button>
      </div>
@@ -71,10 +71,10 @@ function buildAttendanceUI() {
   <div class="grid grid-cols-2 md:grid-cols-4 gap-1.5">
      <div class="flex gap-1">
          <select id="attJunctureSelect" onchange="changeAttendanceContext()" class="w-full p-1 border-2 border-gray-300 dark:border-gray-700 rounded-md font-bold text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm appearance-none truncate"></select>
-         <button onclick="promptNewJuncture()" class="p-1 bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 rounded-md shadow-sm hover:bg-green-100 transition focus:outline-none shrink-0" title="Add Juncture">
+         <button onclick="promptNewJuncture()" class="archive-hide p-1 bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 rounded-md shadow-sm hover:bg-green-100 transition focus:outline-none shrink-0" title="Add Juncture">
              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
          </button>
-         <button onclick="promptDeleteJuncture()" class="p-1 bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 rounded-md shadow-sm hover:bg-red-100 transition focus:outline-none shrink-0" title="Delete Juncture">
+         <button onclick="promptDeleteJuncture()" class="archive-hide p-1 bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 rounded-md shadow-sm hover:bg-red-100 transition focus:outline-none shrink-0" title="Delete Juncture">
              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
          </button>
      </div>
@@ -148,7 +148,7 @@ function buildAttendanceUI() {
             <button id="btn-bus-mode-multi" onclick="setAttSearchMode('multi')" class="px-2 py-0.5 rounded-sm text-[10px] font-black transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 uppercase tracking-wider">Family</button>
           </div>
 
-          <button id="btn-sync-bus" onclick="manualSyncBusAttendance()" class="text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+          <button id="btn-sync-bus" onclick="manualSyncBusAttendance()" class="archive-hide text-[10px] md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-sm bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
             <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
           </button>
 
@@ -163,10 +163,10 @@ function buildAttendanceUI() {
       <div class="grid grid-cols-2 md:grid-cols-4 gap-1.5">
         <div class="flex gap-1">
           <select id="busJunctureSelect" onchange="changeBusContext()" class="w-full p-1 border-2 border-gray-300 dark:border-gray-700 rounded-md font-bold text-[11px] bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-yellow-500 shadow-sm appearance-none truncate"></select>
-          <button onclick="promptNewBusJuncture()" class="p-1 bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 rounded-md shadow-sm hover:bg-green-100 transition focus:outline-none shrink-0" title="Add Bus Juncture">
+          <button onclick="promptNewBusJuncture()" class="archive-hide p-1 bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 rounded-md shadow-sm hover:bg-green-100 transition focus:outline-none shrink-0" title="Add Bus Juncture">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
           </button>
-          <button onclick="promptDeleteBusJuncture()" class="p-1 bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 rounded-md shadow-sm hover:bg-red-100 transition focus:outline-none shrink-0" title="Delete Bus Juncture">
+          <button onclick="promptDeleteBusJuncture()" class="archive-hide p-1 bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 rounded-md shadow-sm hover:bg-red-100 transition focus:outline-none shrink-0" title="Delete Bus Juncture">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
           </button>
         </div>
@@ -229,13 +229,13 @@ function buildAttendanceUI() {
               <option value="ALL">All Buses</option>
               <option value="Bus 1">Bus 1</option>
             </select>
-            <button onclick="addBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded hover:bg-green-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Add Next Bus">
+            <button onclick="addBusOption()" class="archive-hide px-1.5 py-0.5 bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 border border-green-300 dark:border-green-700 rounded hover:bg-green-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Add Next Bus">
               <i class="fa-solid fa-plus"></i>
             </button>
-            <button onclick="renameBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Rename Selected Bus">
+            <button onclick="renameBusOption()" class="archive-hide px-1.5 py-0.5 bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded hover:bg-blue-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Rename Selected Bus">
               <i class="fa-solid fa-pen"></i>
             </button>
-            <button onclick="removeBusOption()" class="px-1.5 py-0.5 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Remove Selected Bus">
+            <button onclick="removeBusOption()" class="archive-hide px-1.5 py-0.5 bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded hover:bg-red-50 dark:hover:bg-gray-700 text-[10px] font-black shadow-2xs shrink-0" title="Remove Selected Bus">
               <i class="fa-solid fa-trash"></i>
             </button>
           </div>
@@ -250,6 +250,7 @@ function buildAttendanceUI() {
 }
 
 async function promptNewJuncture() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const name = await appPrompt(
     "Enter new juncture name (e.g. Day 2: Morning):",
     "",
@@ -722,6 +723,10 @@ function handleAttendanceSearch() {
 }
 
 function toggleAttendanceStatus(nric, forceState) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    if (typeof showToast === "function") showToast("Read-only mode: archived attendance cannot be changed.", true);
+    return;
+  }
   attendanceState[nric] = { status: forceState, ts: Date.now() };
   pendingAttendanceUpdates.add(nric);
 
@@ -854,6 +859,7 @@ async function manualSyncAttendance() {
 }
 
 window.pollAttendanceNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   // If Bus Tracker Modal is open, also poll bus attendance
   const busModal = document.getElementById("busTrackerModal");
   if (busModal && !busModal.classList.contains("hidden-force")) {
@@ -902,7 +908,15 @@ window.pollAttendanceNow = async function () {
 
 function startAttendancePolling() {
   if (attendancePollInterval) clearInterval(attendancePollInterval);
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   attendancePollInterval = setInterval(window.pollAttendanceNow, 8000);
+}
+
+function stopAttendancePolling() {
+  if (attendancePollInterval) {
+    clearInterval(attendancePollInterval);
+    attendancePollInterval = null;
+  }
 }
 
 function setAttSyncButtonState(state, btnId = "btn-sync-attendance") {
@@ -1711,6 +1725,10 @@ window.handleBusCardClick = function (nric, isBoarded, event) {
 };
 
 function toggleBusStatus(nric, shouldBoard) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    if (typeof showToast === "function") showToast("Read-only mode: archived bus attendance cannot be changed.", true);
+    return;
+  }
   if (!adhocBusState.juncture) {
     showBusFlashMessage("Please create or select a bus juncture first.", true);
     return;
@@ -1836,6 +1854,7 @@ window.manualSyncBusAttendance = async function () {
 };
 
 async function pollBusAttendanceNow() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !adhocBusState.juncture ||
     isAdhocBusSyncing ||

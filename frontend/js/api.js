@@ -4,17 +4,44 @@ window.CLIENT_ID =
   "client_" + Date.now() + "_" + Math.random().toString(36).substring(2, 8);
 
 async function apiCall(action, payload = {}, retries = 2) {
+  const activeArchive =
+    typeof window !== "undefined" &&
+    window.ArchiveMode &&
+    typeof window.ArchiveMode.getActiveArchive === "function"
+      ? window.ArchiveMode.getActiveArchive()
+      : null;
+
+  if (activeArchive) {
+    const allowed =
+      window.ArchiveMode &&
+      typeof window.ArchiveMode.isActionAllowedInArchive === "function" &&
+      window.ArchiveMode.isActionAllowedInArchive(action);
+    if (!allowed) {
+      if (typeof showToast === "function") {
+        showToast("Read-only mode: archived trips cannot be modified.", true);
+      }
+      throw new Error("Archived trip is read-only.");
+    }
+  }
+
   for (let i = 0; i <= retries; i++) {
     try {
+      const reqBody = {
+        action: action,
+        payload: payload,
+        clientId: window.CLIENT_ID,
+        API_URL: typeof API_URL !== "undefined" ? API_URL : "",
+      };
+      if (activeArchive && action !== "listArchivedTrips" && action !== "login") {
+        reqBody.archiveId = activeArchive.archiveId;
+        if (activeArchive.sheetId) reqBody.archiveSheetId = activeArchive.sheetId;
+        if (activeArchive.folderId) reqBody.archiveFolderId = activeArchive.folderId;
+      }
+
       // Use proxy on the server to prevent concurrent execution limits and handle caching
       const response = await fetch("/api", {
         method: "POST",
-        body: JSON.stringify({
-          action: action,
-          payload: payload,
-          clientId: window.CLIENT_ID,
-          API_URL: typeof API_URL !== "undefined" ? API_URL : "",
-        }),
+        body: JSON.stringify(reqBody),
         headers: { "Content-Type": "application/json" },
       });
 
@@ -143,6 +170,9 @@ async function apiCall(action, payload = {}, retries = 2) {
   }
 
   async function dispatchRealtimeUpdate(msg) {
+    if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+      return;
+    }
     const domain = msg.domain || "all";
 
     try {

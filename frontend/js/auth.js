@@ -30,6 +30,9 @@ async function attemptLogin(btn) {
 function logout(btn) {
   if (btn) setBtnLoading(btn, true);
   localStorage.removeItem("userSession");
+  try {
+    sessionStorage.removeItem("activeArchiveTrip");
+  } catch (e) {}
   currentUser = null;
   navigateTo("index.html");
 }

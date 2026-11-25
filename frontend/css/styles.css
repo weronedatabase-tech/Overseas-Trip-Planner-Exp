@@ -344,3 +344,24 @@ button,
   pointer-events: none !important;
   visibility: hidden !important;
 }
+
+/* Read-Only Archived Trip Mode */
+body.archive-readonly-mode .archive-hide,
+body.archive-readonly-mode .remove-x {
+  display: none !important;
+}
+
+body.archive-readonly-mode .dnd-draggable,
+body.archive-readonly-mode .dnd-room-draggable,
+body.archive-readonly-mode .dnd-group-draggable,
+body.archive-readonly-mode .dnd-bus-draggable {
+  cursor: default !important;
+}
+
+body.archive-readonly-mode input[data-archive-locked="true"],
+body.archive-readonly-mode textarea[data-archive-locked="true"],
+body.archive-readonly-mode select[data-archive-locked="true"] {
+  cursor: default !important;
+  opacity: 0.92;
+}
+

@@ -78,6 +78,7 @@ if (!window.dndInitialized) {
   });
 
   function startDrag(e, clientX, clientY, isTouch) {
+    if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
     if (
       e.target.closest(".remove-x") ||
       e.target.closest("button") ||
@@ -385,6 +386,7 @@ if (!window.dndInitialized) {
 // ==========================================
 
 function handleDndDrop(sourceNric, sourceRole, targetNric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   let volNric = sourceRole === "VOLUNTEER" ? sourceNric : targetNric;
   let traineeNric = sourceRole === "TRAINEE" ? sourceNric : targetNric;
 
@@ -449,6 +451,7 @@ function handleDndDrop(sourceNric, sourceRole, targetNric) {
 }
 
 function unpairTrainee(traineeNric, volNric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const ts = Date.now();
   const key = traineeNric + "_" + volNric;
   pendingPairingsMap.set(key, { action: "REMOVE", traineeNric, volNric, ts });
@@ -580,6 +583,7 @@ async function executePairingSync() {
 }
 
 window.pollPairingsNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const logTab = document.getElementById("tab-logistics");
   if (
     !logTab ||
@@ -635,6 +639,7 @@ window.pollPairingsNow = async function () {
 
 function startPairingPolling() {
   if (pairingPollInterval) clearInterval(pairingPollInterval);
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   pairingPollInterval = setInterval(window.pollPairingsNow, 8000);
 }
 
@@ -761,6 +766,7 @@ async function promptEditRoom(id) {
 }
 
 async function deleteRoom(id) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Are you sure you want to delete this room? Users inside will be unassigned.",
@@ -782,6 +788,7 @@ async function deleteRoom(id) {
 }
 
 async function deleteAllRooms() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "⚠️ DANGER: This will delete ALL rooms and unassign everyone. Are you sure you want to proceed?",
@@ -809,6 +816,7 @@ async function deleteAllRooms() {
 }
 
 async function resetRoomAssignments() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Are you sure you want to unassign everyone from all rooms?",
@@ -835,6 +843,7 @@ async function resetRoomAssignments() {
 }
 
 async function autoAssignRooms() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "This will automatically assign unassigned participants into EXISTING rooms based on their connections. Continue?",
@@ -1026,6 +1035,7 @@ async function autoAssignRooms() {
 }
 
 function handleRoomDrop(nric, targetRoomId) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   globalLogistics.rooms.forEach((r) => {
     if (!r.isDeleted && r.occupants.includes(nric)) {
       r.occupants = r.occupants.filter((n) => n !== nric);
@@ -1118,6 +1128,7 @@ async function executeRoomSync() {
 
 let roomPollInterval = null;
 window.pollRoomsNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const logTab = document.getElementById("tab-logistics");
   const roomSec = document.getElementById("log-rooms");
   if (
@@ -1164,6 +1175,7 @@ window.pollRoomsNow = async function () {
 };
 
 window.pollLogisticsAssignmentsNow = async function () {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const logTab = document.getElementById("tab-logistics");
   if (
     !logTab ||
@@ -1214,6 +1226,7 @@ window.pollLogisticsAssignmentsNow = async function () {
 
 function startRoomPolling() {
   if (roomPollInterval) clearInterval(roomPollInterval);
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   roomPollInterval = setInterval(window.pollRoomsNow, 10000);
 }
 
@@ -1280,7 +1293,7 @@ function buildLogisticsUI() {
                     <svg class="w-3.5 h-3.5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                 </button>
             </div>
-            <button onclick="manualSyncPairings(this)" class="btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncPairings(this)" class="archive-hide btn-sync-pairings text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
@@ -1309,20 +1322,20 @@ function buildLogisticsUI() {
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Rooms</h3>
-                <button onclick="autoAssignRooms()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Rooms">
+                <button onclick="autoAssignRooms()" class="archive-hide bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Rooms">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span class="whitespace-nowrap">Auto</span>
                 </button>
-                <button onclick="resetRoomAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetRoomAssignments()" class="archive-hide bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Assignment</span>
                 </button>
-                <button onclick="deleteAllRooms()" class="bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-red-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Delete All Rooms">
+                <button onclick="deleteAllRooms()" class="archive-hide bg-red-50 text-red-600 border-2 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-red-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Delete All Rooms">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Rooms</span>
                 </button>
             </div>
-            <button id="btn-sync-rooms" onclick="manualSyncRooms(this)" class="text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button id="btn-sync-rooms" onclick="manualSyncRooms(this)" class="archive-hide text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
@@ -1358,7 +1371,7 @@ function buildLogisticsUI() {
                     </button>
                 </div>
 
-                <button onclick="openManageRoomsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
+                <button onclick="openManageRoomsSheet()" class="archive-hide px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
             </div>
             <div id="roomListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
@@ -1370,21 +1383,21 @@ function buildLogisticsUI() {
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Groups</h3>
-                <button onclick="autoGroup()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Groups">
+                <button onclick="autoGroup()" class="archive-hide bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Groups">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span class="whitespace-nowrap">Auto</span>
                 </button>
-                <button onclick="resetGroupAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetGroupAssignments()" class="archive-hide bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
-                <button id="groupAssistedToggleBtn" onclick="toggleAssistedMode()" class="text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
+                <button id="groupAssistedToggleBtn" onclick="toggleAssistedMode()" class="archive-hide text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
                     <i class="fa-solid fa-link text-[10px] md:text-[11px]"></i>
                     <span class="whitespace-nowrap">Assisted Mode</span>
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                 </button>
             </div>
-            <button onclick="manualSyncGroups()" class="btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncGroups()" class="archive-hide btn-sync-groups text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
@@ -1411,7 +1424,7 @@ function buildLogisticsUI() {
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
             <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Groups</span>
-                <button onclick="openManageGroupsSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
+                <button onclick="openManageGroupsSheet()" class="archive-hide px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
             </div>
             <div id="groupListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
@@ -1422,21 +1435,21 @@ function buildLogisticsUI() {
         <div class="flex justify-between items-center px-1">
             <div class="flex flex-wrap items-center gap-1 md:gap-1.5">
                 <h3 class="text-xs md:text-base font-black text-gray-900 dark:text-white tracking-tight mr-1 shrink-0">Buses</h3>
-                <button onclick="autoBus()" class="bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Buses">
+                <button onclick="autoBus()" class="archive-hide bg-green-50 text-green-600 border-2 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-green-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Auto Assign Buses">
                     <i class="fa-solid fa-wand-magic-sparkles"></i>
                     <span class="whitespace-nowrap">Auto</span>
                 </button>
-                <button onclick="resetBusAssignments()" class="bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
+                <button onclick="resetBusAssignments()" class="archive-hide bg-orange-50 text-orange-600 border-2 border-orange-200 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800 text-[11px] md:text-xs font-bold px-1.5 py-1 md:px-2 md:py-1.5 rounded shadow-md hover:bg-orange-100 transition focus:outline-none flex items-center gap-0.5 md:gap-1" title="Clear all Assignments">
                     <svg class="w-3 h-3 md:w-3.5 md:h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     <span class="whitespace-nowrap">Clear</span>
                 </button>
-                <button id="busAssistedToggleBtn" onclick="toggleAssistedMode()" class="text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
+                <button id="busAssistedToggleBtn" onclick="toggleAssistedMode()" class="archive-hide text-[11px] md:text-xs font-bold px-2 py-1 md:py-1.5 rounded shadow-md transition focus:outline-none flex items-center gap-1.5 border-2 shrink-0 cursor-pointer" title="Toggle between Assisted Mode (auto-link connected participants) and Unassisted Mode (exceptions without auto-link)">
                     <i class="fa-solid fa-link text-[10px] md:text-[11px]"></i>
                     <span class="whitespace-nowrap">Assisted Mode</span>
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                 </button>
             </div>
-            <button onclick="manualSyncBuses()" class="btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
+            <button onclick="manualSyncBuses()" class="archive-hide btn-sync-buses text-xs md:text-xs px-2 py-1 rounded-md font-bold transition flex items-center justify-center border shadow-md bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800 focus:outline-none shrink-0">
                 <span class="btn-text">Saved</span><div class="btn-spinner ml-1 !w-3 !h-3 hidden-force"></div>
             </button>
         </div>
@@ -1463,7 +1476,7 @@ function buildLogisticsUI() {
         <div class="flex-1 min-w-0 flex flex-col h-full overflow-hidden transition-colors bg-white dark:bg-gray-950">
             <div class="flex items-center justify-between px-2 py-1.5 shrink-0 border-b-2 border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50">
                 <span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Assigned Buses</span>
-                <button onclick="openManageBusesSheet()" class="px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
+                <button onclick="openManageBusesSheet()" class="archive-hide px-2 py-1 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded shadow-md text-xs font-bold text-gray-600 dark:text-gray-300 hover:text-primary hover:border-primary transition focus:outline-none"><i class="fa-solid fa-cog"></i></button>
             </div>
             <div id="busListContainer" class="flex-grow overflow-y-auto p-1.5 md:p-2 custom-scrollbar flex flex-col gap-2 md:gap-3 pb-6"></div>
         </div>
@@ -1831,6 +1844,7 @@ function generateBusCardHtml(item, isAssigned = false) {
 }
 
 window.handleGroupDrop = async function (nric, groupName) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const p = globalLogistics.participants.find((x) => x.nric === nric);
   if (!p) return;
 
@@ -1883,6 +1897,7 @@ window.handleGroupDrop = async function (nric, groupName) {
 };
 
 function handleBusDrop(nric, busName) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const p = globalLogistics.participants.find((x) => x.nric === nric);
   if (!p) return;
   p.bus = busName;
@@ -1940,6 +1955,7 @@ function getConnectedParticipants(startNric) {
 }
 
 function autoGroup() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (activeGroupsList.length === 0)
     return showToast("Please add at least one group first.");
   let unassigned = globalLogistics.participants.filter(
@@ -1970,6 +1986,7 @@ function autoGroup() {
 }
 
 function autoBus() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (activeBusesList.length === 0)
     return showToast("Please add at least one bus first.");
   let unassigned = globalLogistics.participants.filter((p) => !p.bus);
@@ -2009,6 +2026,7 @@ function autoBus() {
 }
 
 async function resetGroupAssignments() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Clear all group assignments?",
@@ -2030,6 +2048,7 @@ async function resetGroupAssignments() {
 }
 
 async function resetBusAssignments() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (
     !(await appConfirm(
       "Clear all bus assignments?",
@@ -2668,6 +2687,12 @@ function closeSleepingModal() {
 // BOTTOM SHEET (REUSABLE)
 // ==========================================
 function openPairingSheet(sourceNric, sourceRole = "TRAINEE") {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    if (typeof showParticipantSummaryModal === "function" && sourceNric) {
+      showParticipantSummaryModal(sourceNric);
+    }
+    return;
+  }
   currentPairingTarget = sourceNric;
   currentPairingSourceRole = sourceRole;
   dndState.type = "pairing";
@@ -2737,6 +2762,7 @@ function openPairingSheet(sourceNric, sourceRole = "TRAINEE") {
 }
 
 function openRoomAddSheet(roomId) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeRoomTargetId = roomId;
   dndState.type = "rooming";
 
@@ -2943,6 +2969,12 @@ let activeAssignNric = null;
 let activeAssignType = null; // 'group' or 'bus'
 
 function openGroupAssignSheet(nric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    if (typeof showParticipantSummaryModal === "function" && nric) {
+      showParticipantSummaryModal(nric);
+    }
+    return;
+  }
   activeAssignNric = nric;
   activeAssignType = "group";
   const p = globalLogistics.participants.find((x) => x.nric === nric);
@@ -2967,6 +2999,12 @@ function openGroupAssignSheet(nric) {
 }
 
 function openBusAssignSheet(nric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    if (typeof showParticipantSummaryModal === "function" && nric) {
+      showParticipantSummaryModal(nric);
+    }
+    return;
+  }
   activeAssignNric = nric;
   activeAssignType = "bus";
   const p = globalLogistics.participants.find((x) => x.nric === nric);
@@ -3187,6 +3225,7 @@ async function removeGroupBusFromPopup(val) {
 }
 
 function openManageGroupsSheet() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeAssignNric = null; // No assignment
   activeAssignType = "group";
   const el_sheetTitle = document.getElementById("sheetTitle");
@@ -3201,6 +3240,7 @@ function openManageGroupsSheet() {
 }
 
 function openManageBusesSheet() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeAssignNric = null; // No assignment
   activeAssignType = "bus";
   const el_sheetTitle = document.getElementById("sheetTitle");
@@ -3215,16 +3255,19 @@ function openManageBusesSheet() {
 }
 
 function removeGroupList(gName) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeAssignType = "group";
   removeGroupBusFromPopup(gName);
 }
 
 function removeBusList(bName) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeAssignType = "bus";
   removeGroupBusFromPopup(bName);
 }
 
 function openManageRoomsSheet() {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   activeAssignNric = null; // No assignment
   activeAssignType = "room";
   const el_sheetTitle = document.getElementById("sheetTitle");
