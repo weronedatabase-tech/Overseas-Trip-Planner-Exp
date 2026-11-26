@@ -90,13 +90,17 @@
         class="flex-1 flex flex-col p-4 w-full max-w-lg mx-auto pb-20 relative"
       >
         <div id="viewLanding" class="mt-10 space-y-4 w-full animate-slide-up">
-          <div class="text-center mb-6">
+          <div id="landingWelcomeBox" class="text-center mb-6">
             <h2
+              id="landingHeadingTitle"
               class="text-3xl font-extrabold mb-2 text-gray-900 dark:text-white"
             >
               Welcome
             </h2>
-            <p class="text-gray-500 dark:text-gray-400 font-medium">
+            <p
+              id="landingHeadingSubtitle"
+              class="text-gray-500 dark:text-gray-400 font-medium"
+            >
               Please select an option below.
             </p>
           </div>
@@ -127,6 +131,7 @@
               class="flex justify-between items-center mb-6 border-b-2 border-gray-100 dark:border-gray-800 pb-4"
             >
               <h2
+                id="loginBoxTitle"
                 class="text-xl font-black text-gray-900 dark:text-white tracking-tight"
               >
                 Secure Login
@@ -139,10 +144,13 @@
             <div class="mb-8 text-left">
               <div class="flex flex-col mb-1.5">
                 <label
+                  id="loginPassLabel"
                   class="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                   >Password</label
                 >
-                <span class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"
+                <span
+                  id="loginPassHint"
+                  class="text-sm text-gray-500 dark:text-gray-400 mt-0.5"
                   >NRIC/FIN or Passport No. + Year of Birth (e.g.
                   <strong class="font-mono text-gray-700 dark:text-gray-300"
                     >S1234567A1989</strong
@@ -556,11 +564,24 @@
         modal.classList.remove("hidden-force");
       }
 
-      window.initPage = () => {
+      window.initPage = async () => {
         if (currentUser) {
-          if (currentUser.role === "admin") navigateTo("roster.html");
-          else navigateTo("dashboard.html");
+          if (currentUser.role === "admin") {
+            if (typeof showLoading === "function") showLoading();
+            const targetPage =
+              typeof resolveAdminDefaultPage === "function"
+                ? await resolveAdminDefaultPage()
+                : typeof getAdminDefaultPage === "function"
+                  ? getAdminDefaultPage()
+                  : "roster.html";
+            await navigateTo(targetPage);
+          } else {
+            await navigateTo("dashboard.html");
+          }
           return;
+        }
+        if (typeof renderLandingMode === "function") {
+          renderLandingMode();
         }
         if (typeof renderLandingHelpline === "function") {
           renderLandingHelpline();

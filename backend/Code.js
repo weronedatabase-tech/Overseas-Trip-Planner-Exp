@@ -334,6 +334,12 @@ if (ACTIVE_ARCHIVE_META) {
 
 return {
 status: 'success', 
+hasActiveTrip: Boolean(
+  props.getProperty('DB_SHEET_ID') ||
+  props.getProperty('REGISTRATION_OPEN') === 'true' ||
+  (String(props.getProperty('TRIP_TITLE') || '').trim() &&
+    String(props.getProperty('TRIP_YEAR') || '').trim())
+),
 registrationOpen: props.getProperty('REGISTRATION_OPEN') === 'true', 
 allowEdits: props.getProperty('ALLOW_EDITS') === 'true',
 committee: props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [], 

@@ -529,11 +529,21 @@ function saveTripFiles(files) {
   }
 }
 
+function computeHasActiveTrip(settings) {
+  if (!settings || typeof settings !== 'object') return false;
+  if (settings.isArchived) return false;
+  if (typeof settings.hasActiveTrip === 'boolean') return settings.hasActiveTrip;
+  const hasTitle = Boolean(String(settings.tripTitle || '').trim());
+  const hasYear = Boolean(String(settings.tripYear || '').trim());
+  return Boolean(settings.registrationOpen || (hasTitle && hasYear));
+}
+
 function mergeSettingsWithTripFiles(settings) {
   if (!settings || typeof settings !== 'object') return settings;
   const files = loadTripFiles();
   return {
     ...settings,
+    hasActiveTrip: computeHasActiveTrip(settings),
     tripInfographicId: files.tripInfographicId !== undefined ? files.tripInfographicId : (settings.tripInfographicId || ''),
     tripInfographicName: files.tripInfographicName !== undefined ? files.tripInfographicName : (settings.tripInfographicName || ''),
     tripInfographicUrl: files.tripInfographicUrl !== undefined ? files.tripInfographicUrl : (settings.tripInfographicUrl || ''),
@@ -964,9 +974,14 @@ app.post('/api', async (req, res) => {
         if (cfg && cfg.status !== 'error') {
           freshSettings = mergeSettingsWithTripFiles({
             ...cfg,
+            hasActiveTrip: false,
             registrationOpen: false,
             allowEdits: false,
             driveAccessList: {},
+            tripTitle: '',
+            tripYear: '',
+            tripStartDate: '',
+            tripEndDate: '',
             tripInfographicId: '',
             tripInfographicName: '',
             tripInfographicUrl: '',
@@ -980,6 +995,7 @@ app.post('/api', async (req, res) => {
       if (!freshSettings) {
         freshSettings = {
           status: 'success',
+          hasActiveTrip: false,
           registrationOpen: false,
           allowEdits: false,
           committee: [],

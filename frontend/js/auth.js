@@ -15,9 +15,15 @@ async function attemptLogin(btn) {
     currentUser = { nric: res.nric, role: res.role, name: res.name };
     localStorage.setItem("userSession", JSON.stringify(currentUser));
     if (currentUser.role === "admin") {
-      navigateTo("roster.html");
+      const targetPage =
+        typeof resolveAdminDefaultPage === "function"
+          ? await resolveAdminDefaultPage()
+          : typeof getAdminDefaultPage === "function"
+            ? getAdminDefaultPage()
+            : "roster.html";
+      await navigateTo(targetPage);
     } else {
-      navigateTo("dashboard.html");
+      await navigateTo("dashboard.html");
     }
   } catch (error) {
     err.textContent = error.message;

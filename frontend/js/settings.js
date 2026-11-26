@@ -501,6 +501,7 @@ async function executeToggleRegistration(
       if (savedYear) appSettings.tripYear = savedYear;
       if (savedStart) appSettings.tripStartDate = savedStart;
       if (savedEnd) appSettings.tripEndDate = savedEnd;
+      appSettings.hasActiveTrip = true;
 
       // Auto-populate the Trip Dates Configuration inputs immediately
       syncTripDateConfigInputs(appSettings.tripStartDate, appSettings.tripEndDate);
@@ -968,6 +969,7 @@ async function archiveSystem(btn) {
     }
     appSettings = {
       ...(fresh || {}),
+      hasActiveTrip: false,
       registrationOpen: false,
       allowEdits: false,
       driveAccessList: {},

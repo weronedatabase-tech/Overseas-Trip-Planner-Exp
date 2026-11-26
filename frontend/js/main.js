@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     navigateTo("index.html");
     return;
   }
-  if (!currentUser && isPublic) {
+  if (!currentUser && isPublic && localStorage.getItem("appSettings")) {
     const viewLoading = document.getElementById("viewLoading");
     if (viewLoading) viewLoading.classList.add("hidden-force");
   }
@@ -967,9 +967,56 @@ function handleRoomModalEscape(e) {
   }
 }
 
+function renderLandingMode() {
+  const activeTrip = hasActiveTrip();
+  const headingTitle = document.getElementById("landingHeadingTitle");
+  const headingSubtitle = document.getElementById("landingHeadingSubtitle");
+  const loginBoxTitle = document.getElementById("loginBoxTitle");
+  const loginPassLabel = document.getElementById("loginPassLabel");
+  const loginPassHint = document.getElementById("loginPassHint");
+  const loginPassInput = document.getElementById("loginPass");
+  const landingRegBox = document.getElementById("landingRegBox");
+  const landingReceiptBox = document.getElementById("landingReceiptBox");
+  const landingInfographicBox = document.getElementById("landingInfographicBox");
+  const landingHelplineBox = document.getElementById("landingHelplineBox");
+
+  if (!activeTrip) {
+    if (headingTitle) headingTitle.textContent = "No Trips Planned so far...";
+    if (headingSubtitle) headingSubtitle.classList.add("hidden-force");
+    if (loginBoxTitle) loginBoxTitle.textContent = "Admin Login";
+    if (loginPassLabel) loginPassLabel.textContent = "Admin Password";
+    if (loginPassHint) loginPassHint.classList.add("hidden-force");
+    if (loginPassInput) loginPassInput.placeholder = "Enter Admin Password";
+    if (landingRegBox) landingRegBox.classList.add("hidden-force");
+    if (landingReceiptBox) landingReceiptBox.classList.add("hidden-force");
+    if (landingInfographicBox) landingInfographicBox.classList.add("hidden-force");
+    if (landingHelplineBox) landingHelplineBox.remove();
+  } else {
+    if (headingTitle) headingTitle.textContent = "Welcome";
+    if (headingSubtitle) {
+      headingSubtitle.textContent = "Please select an option below.";
+      headingSubtitle.classList.remove("hidden-force");
+    }
+    if (loginBoxTitle) loginBoxTitle.textContent = "Secure Login";
+    if (loginPassLabel) loginPassLabel.textContent = "Password";
+    if (loginPassHint) loginPassHint.classList.remove("hidden-force");
+    if (loginPassInput) {
+      loginPassInput.placeholder = "e.g. S1234567A1989 / E12345671989";
+    }
+    if (landingRegBox) {
+      if (appSettings.registrationOpen)
+        landingRegBox.classList.remove("hidden-force");
+      else landingRegBox.classList.add("hidden-force");
+    }
+    if (landingReceiptBox) landingReceiptBox.classList.remove("hidden-force");
+  }
+}
+window.renderLandingMode = renderLandingMode;
+
 function applyHydrationDOMUpdates() {
+  const activeTrip = hasActiveTrip();
   const tripStr =
-    appSettings.tripTitle && appSettings.tripYear
+    activeTrip && appSettings.tripTitle && appSettings.tripYear
       ? `${appSettings.tripTitle} ${appSettings.tripYear}`
       : "";
   const titleEls = ["deskTripName", "mobTripName", "unauthTripName"];
@@ -985,13 +1032,7 @@ function applyHydrationDOMUpdates() {
     }
   });
 
-  const landingRegBox = document.getElementById("landingRegBox");
-  if (landingRegBox) {
-    if (appSettings.registrationOpen)
-      landingRegBox.classList.remove("hidden-force");
-    else landingRegBox.classList.add("hidden-force");
-  }
-
+  renderLandingMode();
   renderHeaderLegend();
   renderHeaderHelpline();
   renderLandingHelpline();
@@ -1008,6 +1049,11 @@ function renderLandingInfographic() {
   const link = document.getElementById("landingInfographicFullLink");
   const title = document.getElementById("landingInfographicTitle");
   if (!box || !img) return;
+
+  if (!hasActiveTrip()) {
+    box.classList.add("hidden-force");
+    return;
+  }
 
   let settings = typeof appSettings !== "undefined" ? appSettings : {};
   if (!settings.tripInfographicId && !settings.tripInfographicUrl) {
@@ -1079,6 +1125,7 @@ function renderLandingHelpline() {
   if (existing) existing.remove();
 
   if (
+    !hasActiveTrip() ||
     !appSettings ||
     !appSettings.helpline ||
     appSettings.helpline.length === 0
@@ -1132,8 +1179,56 @@ function renderProfileHelpline() {
 }
 window.renderProfileHelpline = renderProfileHelpline;
 
+function hasActiveTrip(settings) {
+  const cfg =
+    settings || (typeof appSettings !== "undefined" ? appSettings : null);
+  if (!cfg || typeof cfg !== "object") return false;
+  if (cfg.isArchived) return false;
+  if (typeof cfg.hasActiveTrip === "boolean") {
+    return cfg.hasActiveTrip;
+  }
+  const hasTitle = Boolean(String(cfg.tripTitle || "").trim());
+  const hasYear = Boolean(String(cfg.tripYear || "").trim());
+  return Boolean(cfg.registrationOpen || (hasTitle && hasYear));
+}
+window.hasActiveTrip = hasActiveTrip;
+
+function getAdminDefaultPage(settings) {
+  return hasActiveTrip(settings) ? "roster.html" : "settings.html";
+}
+window.getAdminDefaultPage = getAdminDefaultPage;
+
+async function resolveAdminDefaultPage() {
+  try {
+    const config = await apiCall("getSettings");
+    if (config && config.status !== "error") {
+      appSettings = config;
+      isHydrated = true;
+      try {
+        localStorage.setItem("appSettings", JSON.stringify(appSettings));
+      } catch (e) {}
+      return getAdminDefaultPage(appSettings);
+    }
+  } catch (e) {
+    console.warn("Failed to refresh settings for admin landing page:", e);
+  }
+
+  let fallbackSettings =
+    typeof appSettings !== "undefined" ? appSettings : null;
+  if (!hasActiveTrip(fallbackSettings)) {
+    try {
+      const stored = localStorage.getItem("appSettings");
+      if (stored) fallbackSettings = JSON.parse(stored);
+    } catch (e) {}
+  }
+  return getAdminDefaultPage(fallbackSettings);
+}
+window.resolveAdminDefaultPage = resolveAdminDefaultPage;
+
 async function silentHydration() {
   if (isHydrated) return;
+
+  const startPath = window.location.pathname;
 
   // Check if entering or continuing in Read-Only Archive Mode
   if (window.ArchiveMode && typeof window.ArchiveMode.bootstrapFromUrl === "function") {
@@ -1172,7 +1267,7 @@ async function silentHydration() {
       appSettings = JSON.parse(cachedSettings);
       applyHydrationDOMUpdates();
       isHydrated = true;
-      if (window.initPage) window.initPage();
+      if (window.initPage) await window.initPage();
 
       const viewLoading = document.getElementById("viewLoading");
       if (viewLoading) viewLoading.classList.add("hidden-force");
@@ -1199,14 +1294,16 @@ async function silentHydration() {
       localStorage.setItem("appSettings", JSON.stringify(appSettings));
       applyHydrationDOMUpdates();
 
-      if (!isHydrated) {
-        isHydrated = true;
-        if (window.initPage) window.initPage();
-      } else if (
-        window.location.pathname.endsWith("settings.html") &&
-        typeof buildSettingsUI === "function"
-      ) {
-        buildSettingsUI();
+      if (window.location.pathname === startPath) {
+        if (!isHydrated) {
+          isHydrated = true;
+          if (window.initPage) await window.initPage();
+        } else if (
+          window.location.pathname.endsWith("settings.html") &&
+          typeof buildSettingsUI === "function"
+        ) {
+          buildSettingsUI();
+        }
       }
     } else if (!cachedSettings) {
       // Critical failure on first load without cache
