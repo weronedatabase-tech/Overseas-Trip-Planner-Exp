@@ -282,7 +282,7 @@
       </nav>
 
       <div
-        class="order-1 md:order-2 flex-1 flex flex-col min-w-0 h-full overflow-hidden relative"
+        class="order-1 md:order-2 flex-1 flex flex-col min-w-0 min-h-0 md:h-full overflow-hidden relative"
       >
         <header
           class="flex items-center justify-between bg-white dark:bg-gray-950 border-b-2 border-gray-200 dark:border-gray-800 px-3 md:px-4 py-1 shrink-0 z-20 shadow-md"
@@ -361,11 +361,11 @@
 
         <main
           id="tabContainer"
-          class="flex-1 overflow-hidden flex flex-col overflow-x-hidden p-1 md:p-2 w-full relative custom-scrollbar bg-gray-50 dark:bg-gray-950"
+          class="flex-1 min-h-0 overflow-hidden flex flex-col overflow-x-hidden p-1 md:p-2 w-full relative custom-scrollbar bg-gray-50 dark:bg-gray-950"
         >
           <div
             id="tab-finance"
-            class="h-full min-h-full flex flex-col w-full max-w-7xl mx-auto"
+            class="flex-1 min-h-0 flex flex-col w-full max-w-7xl mx-auto"
           ></div>
         </main>
       </div>
@@ -374,50 +374,68 @@
     <!-- EXCHANGE RATES MODAL -->
     <div
       id="financeRatesModal"
-      class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-4 backdrop-blur-sm transition-opacity"
+      class="fixed inset-0 bg-black/60 z-[96] hidden-force flex justify-center items-center p-3 sm:p-4 backdrop-blur-sm transition-opacity"
     >
       <div
-        class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-sm p-5 shadow-2xl border-2 border-gray-200 dark:border-gray-700 m-auto animate-slide-up flex flex-col max-h-[90vh]"
+        class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-md p-4 sm:p-5 shadow-2xl border-2 border-gray-200 dark:border-gray-700 m-auto animate-slide-up flex flex-col max-h-[90vh]"
       >
         <div
-          class="flex justify-between items-center mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-2 shrink-0"
+          class="flex justify-between items-start gap-2 mb-3 border-b-2 border-gray-200 dark:border-gray-700 pb-2.5 shrink-0"
         >
-          <h3
-            class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2"
-          >
-            <svg
-              class="w-5 h-5 text-green-500 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2.5"
+          <div class="min-w-0">
+            <h3
+              class="text-base font-black text-gray-900 dark:text-white flex items-center gap-2"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            Exchange Rates
-          </h3>
+              <svg
+                class="w-5 h-5 text-green-500 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span>Exchange Rates</span>
+            </h3>
+            <p id="financeRatesSourceMeta" class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+              Source: Google Finance
+            </p>
+          </div>
           <button
             type="button"
             onclick="closeFinanceRatesModal()"
-            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 focus:outline-none shrink-0"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold px-1 leading-none focus:outline-none shrink-0"
           >
             &times;
           </button>
         </div>
         <div
           id="financeRatesList"
-          class="overflow-y-auto custom-scrollbar flex-grow space-y-2 pb-2"
+          class="overflow-y-auto custom-scrollbar flex-grow space-y-2 pb-2 pr-0.5"
         ></div>
         <div
-          class="mt-3 pt-3 border-t-2 border-gray-200 dark:border-gray-700 shrink-0 flex justify-end"
+          class="mt-3 pt-3 border-t-2 border-gray-200 dark:border-gray-700 shrink-0 flex flex-wrap items-center justify-between gap-2"
         >
           <button
+            type="button"
+            id="btnRefreshLiveRates"
+            onclick="refreshLiveExchangeRates(this)"
+            class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition focus:outline-none cursor-pointer"
+          >
+            <svg class="w-3.5 h-3.5 text-green-600 dark:text-green-400 btn-icon shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span class="btn-text">Refresh Live Rates</span>
+            <div class="btn-spinner spinner-primary hidden-force !w-3.5 !h-3.5 border-2"></div>
+          </button>
+          <button
+            type="button"
             onclick="closeFinanceRatesModal()"
-            class="bg-primary text-white py-2 px-6 rounded-lg font-bold shadow-md hover:bg-green-600 transition focus:outline-none"
+            class="bg-primary text-white py-2 px-6 rounded-lg text-xs sm:text-sm font-bold shadow-md hover:bg-green-600 transition focus:outline-none cursor-pointer ml-auto"
           >
             Done
           </button>
@@ -601,7 +619,7 @@
                   </label>
                   <input
                     type="number"
-                    step="0.000001"
+                    step="any"
                     id="editRecRate"
                     oninput="handleEditRateInput(this.value)"
                     class="w-full text-xs font-mono bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded p-1.5 focus:outline-none focus:border-blue-500"
@@ -613,7 +631,7 @@
                   </label>
                   <input
                     type="number"
-                    step="0.000001"
+                    step="any"
                     id="editRecInverseRate"
                     oninput="handleEditInverseRateInput(this.value)"
                     class="w-full text-xs font-mono bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded p-1.5 focus:outline-none focus:border-blue-500"
@@ -625,15 +643,15 @@
                 <label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-300">
                   SGD Total Equivalent
                 </label>
-                <div class="relative">
-                  <span class="absolute left-3 top-2.5 text-xs font-bold text-gray-400">SGD $</span>
+                <div class="flex items-stretch rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus-within:border-blue-500 overflow-hidden">
+                  <span class="flex items-center px-3 bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-500 dark:text-gray-400 shrink-0 whitespace-nowrap">SGD $</span>
                   <input
                     type="number"
                     step="0.01"
                     id="editRecSgdAmount"
                     required
                     oninput="handleEditSgdAmountInput()"
-                    class="w-full text-xs font-black pl-14 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 focus:outline-none focus:border-blue-500"
+                    class="w-full min-w-0 text-xs font-black bg-transparent p-2.5 focus:outline-none text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -912,8 +930,8 @@
               </div>
             </div>
 
-            <!-- Payer Selection & Amount (Side-by-side) -->
-            <div class="grid grid-cols-2 gap-2.5">
+            <!-- Payer Selection & Amount (Responsive) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
                 <label class="block text-[11px] font-bold mb-1 text-gray-600 dark:text-gray-300">
                   Paid By

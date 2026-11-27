@@ -348,6 +348,9 @@
                       <option value="THB">THB</option>
                       <option value="JPY">JPY</option>
                       <option value="KRW">KRW</option>
+                      <option value="TWD">TWD</option>
+                      <option value="PHP">PHP</option>
+                      <option value="VND">VND</option>
                     </select>
                   </div>
                   <div>
@@ -385,9 +388,9 @@
                     <div class="flex-1 min-w-0 pr-2">
                       <input
                         type="number"
-                        step="0.01"
+                        step="any"
                         id="landingRecRateToSgd"
-                        placeholder="0.00"
+                        placeholder="0.0000"
                         oninput="
                           handleLandingRateInputSync('to_sgd', this.value)
                         "
@@ -410,9 +413,9 @@
                     <div class="flex-1 min-w-0 pr-2">
                       <input
                         type="number"
-                        step="0.01"
+                        step="any"
                         id="landingRecRateFromSgd"
-                        placeholder="0.00"
+                        placeholder="0.0000"
                         oninput="
                           handleLandingRateInputSync('from_sgd', this.value)
                         "

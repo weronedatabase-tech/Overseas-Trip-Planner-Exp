@@ -283,7 +283,7 @@ if (name === "Raw Data") {
 } else if (name === "Finance Options") {
   sheet.appendRow(["JSON Data - Do Not Edit"]);
   sheet.appendRow([""]);
-  sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
+  ensureFinanceRatesSheetRows(sheet);
 } else if (name === "Receipts") {
   sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed", "Uploader Name"]);
   sheet.setFrozenRows(1);
@@ -536,7 +536,7 @@ case 'syncAttendanceUpdate':
   result = syncAttendanceUpdate(data.juncture, data.updates, auth.name || data.takenBy || 'System', auth);
   break;
 case 'fetchFinance':
-  result = fetchFinanceScoped(auth, Boolean(data.force || data.forceRebuild));
+  result = fetchFinanceScoped(auth, Boolean(data.force || data.forceRebuild), Boolean(data.refreshRates));
   break;
 case 'saveFinance':
   requireAuth(auth, 'admin');
@@ -1554,15 +1554,200 @@ finally { lock.releaseLock(); }
 // ==========================================
 // FINANCE ENGINE & RECEIPTS
 // ==========================================
-function fetchFinanceScoped(auth, forceRebuild = false) {
-  const full = fetchFinance(forceRebuild);
+const SUPPORTED_FINANCE_CURRENCIES = [
+  'MYR', 'USD', 'EUR', 'GBP', 'AUD', 'IDR',
+  'THB', 'JPY', 'KRW', 'TWD', 'PHP', 'VND'
+];
+
+function ensureFinanceRatesSheetRows(sheet) {
+  if (!sheet || ACTIVE_ARCHIVE_SHEET_ID) return;
+  try {
+    const count = SUPPORTED_FINANCE_CURRENCIES.length;
+    const existingFormulas = sheet.getRange(3, 1, count, 3).getFormulas();
+    const existingValues = sheet.getRange(3, 1, count, 3).getValues();
+    let needsWrite = false;
+    const rowsToWrite = [];
+
+    for (let i = 0; i < count; i++) {
+      const code = SUPPORTED_FINANCE_CURRENCIES[i];
+      const expectedLabel = code + ' to SGD Rate:';
+      const expectedFormula = '=GOOGLEFINANCE("CURRENCY:' + code + 'SGD")';
+      const curCode = String(existingValues[i][0] || '').trim().toUpperCase();
+      const curFormula = String(existingFormulas[i][2] || '').trim().toUpperCase();
+      if (curCode !== code || curFormula !== expectedFormula.toUpperCase()) {
+        needsWrite = true;
+      }
+      rowsToWrite.push([code, expectedLabel, expectedFormula]);
+    }
+
+    if (needsWrite) {
+      sheet.getRange(3, 1, count, 3).setValues(rowsToWrite);
+      SpreadsheetApp.flush();
+    }
+  } catch (e) {
+    console.warn('ensureFinanceRatesSheetRows warning:', e.message);
+  }
+}
+
+function parseGoogleFinanceQuoteHtml(html, currencyCode) {
+  if (!html) return null;
+  const cur = String(currencyCode || '').trim().toUpperCase();
+  const patterns = [
+    new RegExp('"' + cur + '\\s*/\\s*SGD"[^\\[]*\\[([0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)'),
+    /data-last-price="([0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)"/,
+    /class="YMlKec fxKbKc"[^>]*>([0-9,]+(?:\.[0-9]+)?)</
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const m = html.match(patterns[i]);
+    if (m && m[1]) {
+      const num = parseFloat(String(m[1]).replace(/,/g, ''));
+      if (!isNaN(num) && isFinite(num) && num > 0) return num;
+    }
+  }
+  return null;
+}
+
+function fetchGoogleFinanceLiveRates(forceRefresh = false, sheet = null) {
+  const cache = CacheService.getScriptCache();
+  const rateCacheKey = 'FINANCE_LIVE_RATES_V2';
+
+  if (!forceRefresh) {
+    try {
+      const cachedRaw = cache.get(rateCacheKey);
+      if (cachedRaw) {
+        const cachedObj = JSON.parse(cachedRaw);
+        if (cachedObj && cachedObj.rates && Object.keys(cachedObj.rates).length >= 10) {
+          return cachedObj;
+        }
+      }
+    } catch (e) {}
+  }
+
+  const ratesObj = { SGD: 1 };
+  let updatedAt = '';
+
+  // 1. Read Google Sheets =GOOGLEFINANCE("CURRENCY:<CUR>SGD") values first
+  if (sheet && !ACTIVE_ARCHIVE_SHEET_ID) {
+    ensureFinanceRatesSheetRows(sheet);
+    try {
+      const count = SUPPORTED_FINANCE_CURRENCIES.length;
+      const sheetRows = sheet.getRange(3, 1, count, 5).getValues();
+      sheetRows.forEach(r => {
+        const code = String(r[0] || '').trim().toUpperCase();
+        const val = typeof r[2] === 'number' ? r[2] : parseFloat(r[2]);
+        if (code && SUPPORTED_FINANCE_CURRENCIES.indexOf(code) !== -1 && !isNaN(val) && isFinite(val) && val > 0) {
+          ratesObj[code] = val;
+        }
+      });
+    } catch (e) {
+      console.warn('Sheet GOOGLEFINANCE read warning:', e.message);
+    }
+  }
+
+  // 2. Fetch directly from Google Finance (parallel UrlFetchApp.fetchAll) for any missing currencies or on forceRefresh
+  const toFetch = forceRefresh
+    ? SUPPORTED_FINANCE_CURRENCIES.slice()
+    : SUPPORTED_FINANCE_CURRENCIES.filter(c => !(ratesObj[c] > 0));
+
+  let fetchedLiveCount = 0;
+  if (toFetch.length > 0) {
+    try {
+      const requests = toFetch.map(cur => ({
+        url: 'https://www.google.com/finance/quote/' + cur + '-SGD?hl=en',
+        method: 'get',
+        muteHttpExceptions: true,
+        followRedirects: true,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36',
+          'Accept-Language': 'en-US,en;q=0.9'
+        }
+      }));
+      const responses = UrlFetchApp.fetchAll(requests);
+      for (let i = 0; i < responses.length; i++) {
+        try {
+          if (responses[i].getResponseCode() === 200) {
+            const parsed = parseGoogleFinanceQuoteHtml(responses[i].getContentText(), toFetch[i]);
+            if (parsed && parsed > 0) {
+              ratesObj[toFetch[i]] = parsed;
+              fetchedLiveCount++;
+            }
+          }
+        } catch (err) {}
+      }
+      if (fetchedLiveCount > 0) {
+        updatedAt = new Date().toISOString();
+      }
+    } catch (e) {
+      console.warn('Google Finance fetchAll warning:', e.message);
+    }
+  }
+
+  // 3. Merge with persisted last-known-good Google Finance rates for any transient failures
+  const props = PropertiesService.getScriptProperties();
+  let stored = null;
+  try {
+    const rawStored = props.getProperty('LAST_GOOD_GF_RATES_V2');
+    if (rawStored) stored = JSON.parse(rawStored);
+  } catch (e) {}
+
+  if (stored && stored.rates) {
+    SUPPORTED_FINANCE_CURRENCIES.forEach(code => {
+      if (!(ratesObj[code] > 0) && stored.rates[code] > 0) {
+        ratesObj[code] = stored.rates[code];
+      }
+    });
+    if (!updatedAt && stored.ratesUpdatedAt) {
+      updatedAt = stored.ratesUpdatedAt;
+    }
+  }
+
+  if (!updatedAt && Object.keys(ratesObj).length > 1) {
+    updatedAt = new Date().toISOString();
+  }
+
+  const result = {
+    rates: ratesObj,
+    ratesSource: 'Google Finance',
+    ratesUpdatedAt: updatedAt
+  };
+
+  // Persist last-known-good snapshot and update audit columns D/E in Finance Options sheet
+  if (Object.keys(ratesObj).length >= 2) {
+    try {
+      if (fetchedLiveCount > 0 || !stored || Object.keys(ratesObj).length > Object.keys((stored && stored.rates) || {}).length) {
+        props.setProperty('LAST_GOOD_GF_RATES_V2', JSON.stringify(result));
+      }
+    } catch (e) {}
+
+    if (sheet && !ACTIVE_ARCHIVE_SHEET_ID && fetchedLiveCount > 0) {
+      try {
+        const snapshotRows = SUPPORTED_FINANCE_CURRENCIES.map(code => [
+          ratesObj[code] || '',
+          updatedAt
+        ]);
+        sheet.getRange(3, 4, snapshotRows.length, 2).setValues(snapshotRows);
+      } catch (e) {}
+    }
+  }
+
+  if (Object.keys(ratesObj).length >= 10) {
+    try {
+      cache.put(rateCacheKey, JSON.stringify(result), 900); // 15-minute TTL
+    } catch (e) {}
+  }
+
+  return result;
+}
+
+function fetchFinanceScoped(auth, forceRebuild = false, refreshRates = false) {
+  const full = fetchFinance(forceRebuild, refreshRates);
   if (auth && auth.role === 'admin') return full;
 
   const rawData = full.data || { config: {}, options: [] };
   const rawConfig = rawData.config || {};
   const rawOptions = Array.isArray(rawData.options) ? rawData.options : (Array.isArray(rawData) ? rawData : []);
   const finalOpt = rawConfig.finalOptionId
-    ? rawOptions.find(o => o.id === rawConfig.finalOptionId)
+    ? rawOptions.find(o => o && o.id === rawConfig.finalOptionId && !o.isDeleted)
     : null;
   const safeOptions = finalOpt
     ? [{
@@ -1582,7 +1767,9 @@ function fetchFinanceScoped(auth, forceRebuild = false) {
         config: { finalOptionId: rawConfig.finalOptionId || '' },
         options: safeOptions
       },
-      rates: full.rates || { SGD: 1 }
+      rates: full.rates || { SGD: 1 },
+      ratesSource: full.ratesSource || 'Google Finance',
+      ratesUpdatedAt: full.ratesUpdatedAt || ''
     };
   }
 
@@ -1612,15 +1799,28 @@ function fetchFinanceScoped(auth, forceRebuild = false) {
       },
       options: safeOptions
     },
-    rates: full.rates || { SGD: 1 }
+    rates: full.rates || { SGD: 1 },
+    ratesSource: full.ratesSource || 'Google Finance',
+    ratesUpdatedAt: full.ratesUpdatedAt || ''
   };
 }
 
-function fetchFinance(forceRebuild = false) {
+function fetchFinance(forceRebuild = false, refreshRates = false) {
 const cacheKey = getCacheKey('FINANCE');
-if(!forceRebuild) {
-const cached = getLargeCache(cacheKey);
-if(cached) return JSON.parse(cached);
+let cachedRes = null;
+if (!forceRebuild) {
+  const cached = getLargeCache(cacheKey);
+  if (cached) {
+    try { cachedRes = JSON.parse(cached); } catch (e) {}
+  }
+}
+
+if (cachedRes && !refreshRates) {
+  const liveBundle = fetchGoogleFinanceLiveRates(false, null);
+  cachedRes.rates = liveBundle.rates;
+  cachedRes.ratesSource = liveBundle.ratesSource;
+  cachedRes.ratesUpdatedAt = liveBundle.ratesUpdatedAt;
+  return cachedRes;
 }
 
 const ss = getDatabase();
@@ -1629,22 +1829,27 @@ if (!sheet) {
 sheet = ss.insertSheet("Finance Options");
 sheet.appendRow(["JSON Data - Do Not Edit"]);
 sheet.appendRow([""]);
-sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
+ensureFinanceRatesSheetRows(sheet);
 }
 
-let ratesObj = { "SGD": 1 };
-try {
-const ratesData = sheet.getRange(3, 1, 13, 3).getValues();
-ratesData.forEach(r => { if(r[0] && r[1] && !isNaN(r[2]) && parseFloat(r[2]) > 0) ratesObj[String(r[0]).trim().toUpperCase()] = parseFloat(r[2]); });
-} catch(e){}
+const liveBundle = fetchGoogleFinanceLiveRates(refreshRates, sheet);
 
-const data = sheet.getDataRange().getValues();
-let jsonData = null;
-if (data.length >= 2 && data[1][0]) {
-try { jsonData = JSON.parse(String(data[1][0])); } catch(e) {}
+let jsonData = cachedRes ? cachedRes.data : null;
+if (!cachedRes || forceRebuild) {
+  const data = sheet.getDataRange().getValues();
+  jsonData = null;
+  if (data.length >= 2 && data[1][0]) {
+    try { jsonData = JSON.parse(String(data[1][0])); } catch(e) {}
+  }
 }
 
-const res = { status: 'success', data: jsonData, rates: ratesObj };
+const res = {
+  status: 'success',
+  data: jsonData,
+  rates: liveBundle.rates,
+  ratesSource: liveBundle.ratesSource,
+  ratesUpdatedAt: liveBundle.ratesUpdatedAt
+};
 putLargeCache(cacheKey, JSON.stringify(res));
 return res;
 }
@@ -1656,7 +1861,7 @@ if (!sheet) {
   sheet = ss.insertSheet("Finance Options");
   sheet.appendRow(["JSON Data - Do Not Edit"]);
   sheet.appendRow([""]);
-  sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
+  ensureFinanceRatesSheetRows(sheet);
 }
 
 const lock = LockService.getScriptLock();

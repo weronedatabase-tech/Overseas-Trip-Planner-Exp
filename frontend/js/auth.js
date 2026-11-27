@@ -99,6 +99,9 @@ async function toggleLandingReceipt() {
         catSelect.innerHTML =
           '<option value="" disabled selected>Loading categories...</option>';
         const finRes = await apiCall("fetchFinance");
+        if (finRes && finRes.rates) {
+          window.globalFinanceRates = finRes.rates;
+        }
         const financeConfig = finRes.data?.config || {};
         const financeOptions =
           finRes.data?.options ||
@@ -243,15 +246,17 @@ function landingCurChange() {
     document.getElementById("landingRecCurLabel1").innerText = cur;
     document.getElementById("landingRecCurLabel2").innerText = cur;
 
-    let rate = 1;
-    if (cur === "MYR") rate = 0.28;
-    // You can add more defaults here if needed
+    let rate =
+      (window.globalFinanceRates && window.globalFinanceRates[cur] > 0
+        ? parseFloat(window.globalFinanceRates[cur])
+        : 0) || (cur === "MYR" ? 0.31 : 1);
 
     document.getElementById("landingRecRate").value = rate;
-    document.getElementById("landingRecRateToSgd").value = rate.toFixed(2);
-    document.getElementById("landingRecRateFromSgd").value = (1 / rate).toFixed(
-      2,
-    );
+    document.getElementById("landingRecRateToSgd").value =
+      rate >= 0.01 ? rate.toFixed(4) : rate.toFixed(6);
+    const inv = 1 / rate;
+    document.getElementById("landingRecRateFromSgd").value =
+      inv >= 100 ? inv.toFixed(2) : inv.toFixed(4);
   }
   landingCalcSgd();
 }
@@ -271,10 +276,12 @@ function handleLandingRateInputSync(mode, value) {
   } else {
     const inverse = 1 / val;
     if (mode === "to_sgd") {
-      if (inputFromSgd) inputFromSgd.value = inverse.toFixed(2);
+      if (inputFromSgd)
+        inputFromSgd.value = inverse >= 100 ? inverse.toFixed(2) : inverse.toFixed(4);
       hiddenRate.value = val;
     } else if (mode === "from_sgd") {
-      if (inputToSgd) inputToSgd.value = inverse.toFixed(2);
+      if (inputToSgd)
+        inputToSgd.value = inverse >= 0.01 ? inverse.toFixed(4) : inverse.toFixed(6);
       hiddenRate.value = inverse; // 1 Foreign = X SGD
     }
   }
