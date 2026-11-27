@@ -1821,6 +1821,14 @@ async function loadPage(url) {
     if (window.ArchiveMode && typeof window.ArchiveMode.syncUI === "function") {
       window.ArchiveMode.syncUI();
     }
+    if (window.LiveSync) {
+      if (typeof window.LiveSync.setView === "function") {
+        window.LiveSync.setView();
+      }
+      if (typeof window.LiveSync.refreshPresenceBadge === "function") {
+        window.LiveSync.refreshPresenceBadge();
+      }
+    }
   } catch (e) {
     console.error("SPA routing error:", e);
     window.location.assign(url);

@@ -3,11 +3,21 @@
 // ==========================================
 const ENV = 'Exp';
 
-// ENVIRONMENT API ENDPOINTS
+// ENVIRONMENT API ENDPOINTS (Google Apps Script Durable Backend)
 const EXP_URL = 'https://script.google.com/macros/s/AKfycbw7ZFsUb_24YlMNIDumzE2wNxIVl_yVLNFMFqQXArtEi79Wze11yiOrtRFhHC9D3SJv/exec';
 const DEV_URL = 'https://script.google.com/macros/s/AKfycby48gbzI_4V0TEJ0Gra4Qb_J3xywBA6A792d2reGx0QWUx-6QFEKRWBTmr8mGG86osg/exec';
 const PROD_URL = 'https://script.google.com/macros/s/AKfycbz4OLZtR2lX97MrGZVaNg13Lrzvwgy7mBfQr7PgoQGK617sL8ZCkKvZD2hIZodus-O_/exec';
 const API_URL = ENV === 'Exp' ? EXP_URL : (ENV === 'Dev' ? DEV_URL : PROD_URL);
+const GAS_BACKEND_URL = API_URL;
+
+// PERSISTENT NODE.JS WEBSOCKET & IN-MEMORY CACHE SERVER URLS
+// Used by GitHub Pages (cross-origin) to get <50ms WebSocket push + 0ms cached reads + background GAS write queue.
+// When served directly by server.js (e.g. Cloud Run / AI Studio / localhost), same-origin /api & ws(s):// are auto-detected.
+// Set each URL once deployed (e.g. 'https://overseas-trip-exp-xxxx.run.app'); leave '' to fall back to direct GAS.
+const EXP_REALTIME_URL = '';
+const DEV_REALTIME_URL = '';
+const PROD_REALTIME_URL = '';
+const REALTIME_SERVER_URL = ENV === 'Exp' ? EXP_REALTIME_URL : (ENV === 'Dev' ? DEV_REALTIME_URL : PROD_REALTIME_URL);
 
 // ENVIRONMENT Google Drive Folders
 const EXP_Drive_Folder_ID = '1j76RcNGRkbMGq6nkyiGOOGGtv5PkzhGW';

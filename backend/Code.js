@@ -425,15 +425,24 @@ function recordSyncMutation(action, reqData, result) {
   return state;
 }
 
-function getSyncState(sinceSeq) {
+function getSyncState(sinceSeq, auth) {
   const state = loadSyncState();
   const clientSeq = Number(sinceSeq) || 0;
+  const authInfo = auth
+    ? {
+        nric: auth.nric || '',
+        role: auth.role || 'user',
+        name: auth.name || '',
+        isMainAdmin: Boolean(auth.isMainAdmin),
+      }
+    : null;
   if (clientSeq > 0 && state.seq <= clientSeq) {
     return {
       status: 'success',
       changed: false,
       seq: state.seq,
-      global: state.global
+      global: state.global,
+      authInfo: authInfo
     };
   }
   const recentEvents = Array.isArray(state.events)
@@ -445,7 +454,8 @@ function getSyncState(sinceSeq) {
     seq: state.seq,
     global: state.global,
     domains: state.domains || {},
-    events: recentEvents
+    events: recentEvents,
+    authInfo: authInfo
   };
 }
 
@@ -532,7 +542,7 @@ let result = {};
 switch(data.action) {
 case 'getSyncState':
   requireAuth(auth, 'user');
-  result = getSyncState(data.sinceSeq);
+  result = getSyncState(data.sinceSeq, auth);
   break;
 case 'listArchivedTrips':
   requireAuth(auth, 'admin');

@@ -2257,6 +2257,16 @@ window.toggleIcAttendance = function (nric) {
   currentIcAttendanceData[nric].takenBy =
     currentUser.displayName || currentUser.name || currentUser.nric;
 
+  // Instant 0ms WebSocket + cross-tab push BEFORE the 800ms HTTP debounce
+  const icJuncEl = document.getElementById("icJunctureSelect");
+  const icJuncture = icJuncEl ? icJuncEl.value : "";
+  if (icJuncture && window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+    window.LiveSync.sendLive("live:attendance", {
+      juncture: icJuncture,
+      updates: [{ nric, status: newStatus, ts: nowTs }],
+    });
+  }
+
   if (icSyncTimeout) clearTimeout(icSyncTimeout);
   icSyncTimeout = setTimeout(() => {
     executeIcAttendanceSync();
@@ -2343,6 +2353,45 @@ window.manualSyncIcAttendance = async function () {
     setIcSyncButtonState("error");
     showToast("Sync failed.", true);
   }
+};
+
+window.applyRemoteIcAttendanceDelta = function (juncture, updates) {
+  if (!isCurrentUserGroupIC || !juncture || !Array.isArray(updates) || updates.length === 0) return;
+  const select = document.getElementById("icJunctureSelect");
+  const container = document.getElementById("icAttendanceContainer");
+  if (!select || !container || select.value !== juncture) return;
+
+  const pulsed = [];
+  let hasChanges = false;
+  updates.forEach((u) => {
+    if (!u || !u.nric) return;
+    const key = String(u.nric).trim();
+    if (pendingIcAttendanceUpdates.has(key)) return;
+    const ts = Number(u.ts) || Date.now();
+    const lEntry = currentIcAttendanceData[key] || { status: false, ts: 0 };
+    if (ts >= (lEntry.ts || 0)) {
+      const nextStatus = Boolean(u.status);
+      if (lEntry.status !== nextStatus) {
+        hasChanges = true;
+        pulsed.push({ nric: key, checked: nextStatus });
+      }
+      currentIcAttendanceData[key] = {
+        ...(currentIcAttendanceData[key] || {}),
+        status: nextStatus,
+        ts,
+      };
+    }
+  });
+
+  if (hasChanges) {
+    renderGroupAttendance(false, true);
+    pulsed.forEach((item) => {
+      if (typeof window.triggerIcPulseFeedback === "function") {
+        window.triggerIcPulseFeedback(item.nric, item.checked);
+      }
+    });
+  }
+  return true;
 };
 
 window.pollIcAttendanceNow = async function () {

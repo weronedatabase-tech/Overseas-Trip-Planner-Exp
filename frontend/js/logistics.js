@@ -528,6 +528,15 @@ function setSyncButtonState(state) {
 
 function triggerPairingSync() {
   setSyncButtonState("saving");
+  if (
+    pendingPairingsMap.size > 0 &&
+    window.LiveSync &&
+    typeof window.LiveSync.sendLive === "function"
+  ) {
+    window.LiveSync.sendLive("live:pairings", {
+      updates: Array.from(pendingPairingsMap.values()),
+    });
+  }
   if (pairingSyncTimeout) clearTimeout(pairingSyncTimeout);
   pairingSyncTimeout = setTimeout(() => {
     executePairingSync();
@@ -583,6 +592,70 @@ async function executePairingSync() {
     isPairingSyncing = false;
   }
 }
+
+window.applyRemotePairingsDelta = function (updates) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const logTab = document.getElementById("tab-logistics");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    !globalLogistics ||
+    !Array.isArray(globalLogistics.pairings) ||
+    !Array.isArray(updates) ||
+    updates.length === 0
+  )
+    return;
+
+  let hasChanges = false;
+  updates.forEach((sPair) => {
+    if (!sPair || !sPair.traineeNric || !sPair.volNric) return;
+    const key = sPair.traineeNric + "_" + sPair.volNric;
+    if (pendingPairingsMap.has(key)) return;
+    let lPair = globalLogistics.pairings.find(
+      (p) => p.traineeNric === sPair.traineeNric && p.volNric === sPair.volNric,
+    );
+    const sTs = Number(sPair.ts) || Date.now();
+    if (lPair) {
+      if (sTs >= (lPair.ts || 0) && lPair.status !== sPair.status) {
+        lPair.status = sPair.status;
+        lPair.ts = sTs;
+        hasChanges = true;
+      }
+    } else {
+      globalLogistics.pairings.push({ ...sPair, ts: sTs });
+      hasChanges = true;
+    }
+  });
+
+  if (hasChanges && !dndState.el && !dndState.isDragging) {
+    const srcPool = document.getElementById("dnd-source-pool");
+    const tgtList = document.getElementById("dnd-target-list");
+    const prevSrcTop = srcPool ? srcPool.scrollTop : 0;
+    const prevTgtTop = tgtList ? tgtList.scrollTop : 0;
+    renderPairings();
+    if (srcPool) srcPool.scrollTop = prevSrcTop;
+    if (tgtList) tgtList.scrollTop = prevTgtTop;
+
+    const sheet = document.getElementById("selectionBottomSheet");
+    const sheetSearch = document.getElementById("sheetSearchInput");
+    const typingInSheet = sheetSearch && document.activeElement === sheetSearch;
+    if (
+      sheet &&
+      !sheet.classList.contains("hidden-force") &&
+      currentPairingTarget &&
+      !typingInSheet
+    ) {
+      const prevQuery = sheetSearch ? sheetSearch.value : "";
+      openPairingSheet(currentPairingTarget, currentPairingSourceRole);
+      const nextSearch = document.getElementById("sheetSearchInput");
+      if (nextSearch && prevQuery) {
+        nextSearch.value = prevQuery;
+        if (typeof filterBottomSheet === "function") filterBottomSheet();
+      }
+    }
+  }
+  return true;
+};
 
 window.pollPairingsNow = async function () {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
@@ -1099,6 +1172,9 @@ function queueRoomUpdate(roomId) {
   if (room) {
     pendingRoomUpdates.set(roomId, room);
     setRoomSyncButtonState("saving");
+    if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:rooms", { updates: [room] });
+    }
     if (roomSyncTimeout) clearTimeout(roomSyncTimeout);
     roomSyncTimeout = setTimeout(() => {
       executeRoomSync();
@@ -1151,6 +1227,125 @@ async function executeRoomSync() {
     isRoomSyncing = false;
   }
 }
+
+window.applyRemoteRoomsDelta = function (updates) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const logTab = document.getElementById("tab-logistics");
+  const roomSec = document.getElementById("log-rooms");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    !globalLogistics ||
+    !Array.isArray(globalLogistics.rooms) ||
+    !Array.isArray(updates) ||
+    updates.length === 0
+  )
+    return;
+
+  let hasChanges = false;
+  updates.forEach((sRoom) => {
+    if (!sRoom || !sRoom.id || pendingRoomUpdates.has(sRoom.id)) return;
+    let lRoom = globalLogistics.rooms.find((r) => r.id === sRoom.id);
+    const sTs = Number(sRoom.ts) || Date.now();
+    if (lRoom) {
+      if (sTs >= (lRoom.ts || 0)) {
+        lRoom.name = sRoom.name;
+        lRoom.capacity = sRoom.capacity;
+        lRoom.occupants = Array.isArray(sRoom.occupants) ? sRoom.occupants : [];
+        lRoom.isDeleted = Boolean(sRoom.isDeleted);
+        lRoom.ts = sTs;
+        hasChanges = true;
+      }
+    } else {
+      globalLogistics.rooms.push({ ...sRoom, ts: sTs });
+      hasChanges = true;
+    }
+  });
+
+  if (
+    hasChanges &&
+    roomSec &&
+    !roomSec.classList.contains("hidden-force") &&
+    !dndState.el &&
+    !dndState.isDragging
+  ) {
+    const pool = document.getElementById("unassignedRoomPool");
+    const list = document.getElementById("roomListContainer");
+    const prevPoolTop = pool ? pool.scrollTop : 0;
+    const prevListTop = list ? list.scrollTop : 0;
+    renderRooms();
+    if (pool) pool.scrollTop = prevPoolTop;
+    if (list) list.scrollTop = prevListTop;
+  }
+  return true;
+};
+
+window.applyRemoteAssignmentsDelta = function (updates, column) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const logTab = document.getElementById("tab-logistics");
+  if (
+    !logTab ||
+    logTab.classList.contains("hidden-force") ||
+    !globalLogistics ||
+    !Array.isArray(globalLogistics.participants) ||
+    !Array.isArray(updates) ||
+    updates.length === 0
+  )
+    return;
+
+  const col = String(column || "");
+  let hasChanges = false;
+  updates.forEach((u) => {
+    if (!u || !u.nric) return;
+    const key = String(u.nric).trim().toUpperCase();
+    if (col === "logisticsGroup" && pendingGroupUpdates.has(u.nric)) return;
+    if (col === "bus" && pendingBusUpdates.has(u.nric)) return;
+    const p = globalLogistics.participants.find(
+      (x) => String(x.nric || "").toUpperCase() === key,
+    );
+    if (!p) return;
+    if (col === "logisticsGroup") {
+      const nextVal = String(u.value || "");
+      if (p.logisticsGroup !== nextVal) {
+        p.logisticsGroup = nextVal;
+        hasChanges = true;
+      }
+    } else if (col === "bus") {
+      const nextVal = String(u.value || "");
+      if (p.bus !== nextVal) {
+        p.bus = nextVal;
+        hasChanges = true;
+      }
+    } else if (col === "isGroupIC") {
+      const nextVal = Boolean(u.value);
+      if (Boolean(p.isGroupIC) !== nextVal) {
+        p.isGroupIC = nextVal;
+        hasChanges = true;
+      }
+    }
+  });
+
+  if (hasChanges && (!dndState || (!dndState.el && !dndState.isDragging))) {
+    const scrollIds = [
+      "unassignedGroupPool",
+      "groupListContainer",
+      "unassignedBusPool",
+      "busListContainer",
+    ];
+    const savedScroll = {};
+    scrollIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) savedScroll[id] = el.scrollTop;
+    });
+    if (col === "logisticsGroup" || col === "isGroupIC") renderGroups();
+    if (col === "bus") renderBuses();
+    scrollIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el && savedScroll[id] !== undefined) el.scrollTop = savedScroll[id];
+    });
+  }
+  return true;
+};
 
 let roomPollInterval = null;
 window.pollRoomsNow = async function () {
@@ -1939,6 +2134,12 @@ window.handleGroupDrop = async function (nric, groupName) {
     }
 
     p.isGroupIC = false;
+    if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:assignments", {
+        updates: [{ nric: nric, value: false }],
+        column: "isGroupIC",
+      });
+    }
     try {
       await apiCall("syncAssignments", {
         updates: [{ nric: nric, value: false }],
@@ -2200,12 +2401,32 @@ async function manualSyncBuses() {
 
 let groupSyncTimeout = null;
 function triggerGroupSync() {
+  if (
+    pendingGroupUpdates.size > 0 &&
+    window.LiveSync &&
+    typeof window.LiveSync.sendLive === "function"
+  ) {
+    window.LiveSync.sendLive("live:assignments", {
+      updates: Array.from(pendingGroupUpdates.values()),
+      column: "logisticsGroup",
+    });
+  }
   if (groupSyncTimeout) clearTimeout(groupSyncTimeout);
   groupSyncTimeout = setTimeout(executeGroupSync, 2500);
 }
 
 let busSyncTimeout = null;
 function triggerBusSync() {
+  if (
+    pendingBusUpdates.size > 0 &&
+    window.LiveSync &&
+    typeof window.LiveSync.sendLive === "function"
+  ) {
+    window.LiveSync.sendLive("live:assignments", {
+      updates: Array.from(pendingBusUpdates.values()),
+      column: "bus",
+    });
+  }
   if (busSyncTimeout) clearTimeout(busSyncTimeout);
   busSyncTimeout = setTimeout(executeBusSync, 2500);
 }
@@ -3654,6 +3875,13 @@ window.assignICToGroupFromSheet = async function (nric, gName) {
 
   renderGroups();
   window.openGroupICSheet(gName); // refresh sheet to show updated status
+
+  if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+    window.LiveSync.sendLive("live:assignments", {
+      updates: updates,
+      column: "isGroupIC",
+    });
+  }
 
   showToast(newValue ? "Assigning Group IC..." : "Removing Group IC...");
   try {

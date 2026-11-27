@@ -191,16 +191,48 @@ function handleMinuteInput(id, field, value) {
   }
 }
 
+let minutesLivePushTimeout = null;
 function queueMinuteUpdate(id) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   pendingMinutesUpdates.set(id, minutesMap.get(id));
   updateMinutesSyncUI("saving");
+
+  // Stream instant live WebSocket delta (200ms micro-debounce while typing)
+  if (minutesLivePushTimeout) clearTimeout(minutesLivePushTimeout);
+  minutesLivePushTimeout = setTimeout(() => {
+    if (pendingMinutesUpdates.size > 0 && window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:minutes", {
+        updates: Array.from(pendingMinutesUpdates.values()),
+      });
+    }
+  }, 200);
 
   if (minutesSyncTimeout) clearTimeout(minutesSyncTimeout);
   minutesSyncTimeout = setTimeout(() => {
     executeMinutesSync();
   }, 1500);
 }
+
+window.applyRemoteMinutesDelta = function (updates) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const tab = document.getElementById("tab-minutes");
+  if (!tab || tab.classList.contains("hidden-force") || !Array.isArray(updates)) return;
+
+  let hasChanges = false;
+  updates.forEach((sNote) => {
+    if (!sNote || !sNote.id) return;
+    const lNote = minutesMap.get(sNote.id);
+    if (!lNote || ((sNote.ts || 0) >= (lNote.ts || 0) && !pendingMinutesUpdates.has(sNote.id))) {
+      minutesMap.set(sNote.id, sNote);
+      updateNoteDOM(sNote);
+      hasChanges = true;
+    }
+  });
+  if (hasChanges && pendingMinutesUpdates.size === 0) {
+    updateMinutesSyncUI("saved");
+  }
+  return true;
+};
 
 async function executeMinutesSync() {
   if (pendingMinutesUpdates.size === 0) return;

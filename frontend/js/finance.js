@@ -441,6 +441,7 @@ function setFinanceSyncButtonState(state) {
   }
 }
 
+let financeLivePushTimeout = null;
 function queueFinanceUpdate(optId = null) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   if (optId) {
@@ -452,11 +453,87 @@ function queueFinanceUpdate(optId = null) {
   }
   financeConfig.ts = Date.now();
   setFinanceSyncButtonState("saving");
+
+  // Stream live WebSocket delta to other Admins (200ms micro-debounce while typing)
+  if (financeLivePushTimeout) clearTimeout(financeLivePushTimeout);
+  financeLivePushTimeout = setTimeout(() => {
+    if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:finance", {
+        payload: {
+          config: financeConfig,
+          updates: Array.from(pendingFinanceUpdates.values()),
+        },
+      });
+    }
+  }, 200);
+
   if (financeSyncTimeout) clearTimeout(financeSyncTimeout);
   financeSyncTimeout = setTimeout(() => {
     executeFinanceSync();
   }, 1500);
 }
+
+window.applyRemoteFinanceDelta = function (payload) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const tab = document.getElementById("tab-finance");
+  if (!tab || tab.classList.contains("hidden-force") || !payload) return;
+
+  let hasChanges = false;
+  if (
+    payload.config &&
+    pendingFinanceUpdates.size === 0 &&
+    !financeSyncTimeout &&
+    (payload.config.ts || 0) >= (financeConfig.ts || 0)
+  ) {
+    financeConfig = { ...financeConfig, ...payload.config };
+    if (!financeConfig.customRates) financeConfig.customRates = {};
+    if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
+    if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+    window.financeConfig = financeConfig;
+    hasChanges = true;
+  }
+
+  const incomingOpts = Array.isArray(payload.updates)
+    ? payload.updates
+    : Array.isArray(payload.options)
+      ? payload.options
+      : [];
+  incomingOpts.forEach((sOpt) => {
+    if (!sOpt || !sOpt.id || pendingFinanceUpdates.has(sOpt.id)) return;
+    if (sOpt.isDeleted) {
+      const before = financeOptions.length;
+      financeOptions = financeOptions.filter((o) => o.id !== sOpt.id);
+      if (financeOptions.length !== before) hasChanges = true;
+      return;
+    }
+    const lIdx = financeOptions.findIndex((o) => o.id === sOpt.id);
+    if (lIdx === -1) {
+      sOpt._isCollapsed = isFinanceCollapsed;
+      financeOptions.push(sOpt);
+      hasChanges = true;
+    } else {
+      const lOpt = financeOptions[lIdx];
+      if ((sOpt.ts || 0) >= (lOpt.ts || 0)) {
+        sOpt._isCollapsed = lOpt._isCollapsed;
+        financeOptions[lIdx] = sOpt;
+        hasChanges = true;
+      }
+    }
+  });
+  window.financeOptions = financeOptions;
+
+  if (hasChanges) {
+    if (isFinanceUiBusyForRender() || finDndState.active) {
+      pendingRemoteFinanceRender = true;
+    } else {
+      renderAllFinanceTabs();
+      if (pendingFinanceUpdates.size === 0 && pendingReceiptUpdates.size === 0) {
+        setFinanceSyncButtonState("saved");
+      }
+    }
+  }
+  return true;
+};
 
 async function executeFinanceSync() {
   if (pendingFinanceUpdates.size === 0 && !financeConfig.ts) return;
