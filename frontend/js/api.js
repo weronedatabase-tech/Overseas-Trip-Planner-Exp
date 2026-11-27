@@ -440,8 +440,23 @@ window.dispatchRealtimeUpdate = async function (msg) {
       if (typeof window.applyRemoteAssignmentsDelta === "function" && window.applyRemoteAssignmentsDelta(msg.updates, msg.column) === true) {
         handledDirectly = true;
       }
+    } else if (msg.type === "delta:logistics_lists") {
+      if (typeof window.applyRemoteLogisticsListsDelta === "function" && window.applyRemoteLogisticsListsDelta(msg) === true) {
+        handledDirectly = true;
+      }
     } else if (msg.type === "delta:finance" && msg.payload) {
       if (typeof window.applyRemoteFinanceDelta === "function" && window.applyRemoteFinanceDelta(msg.payload) === true) {
+        handledDirectly = true;
+      }
+    } else if (msg.type === "delta:receipts" && Array.isArray(msg.updates)) {
+      if (typeof window.applyRemoteReceiptsDelta === "function" && window.applyRemoteReceiptsDelta(msg.updates) === true) {
+        handledDirectly = true;
+      }
+      if (typeof window.applyRemoteProfileReceiptsDelta === "function" && window.applyRemoteProfileReceiptsDelta(msg.updates) === true) {
+        handledDirectly = true;
+      }
+    } else if (msg.type === "delta:roster") {
+      if (typeof window.applyRemoteRosterDelta === "function" && window.applyRemoteRosterDelta(msg) === true) {
         handledDirectly = true;
       }
     } else if (msg.type === "delta:minutes" && Array.isArray(msg.updates)) {

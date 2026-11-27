@@ -604,11 +604,54 @@ function queueReceiptUpdate(receipt) {
   receipt.ts = Date.now();
   pendingReceiptUpdates.set(receipt.id, receipt);
   setFinanceSyncButtonState("saving");
+
+  // Instant 0ms WebSocket delta to other Admins & affected participant
+  if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+    window.LiveSync.sendLive("live:receipts", { updates: [receipt] });
+  }
+
   if (receiptSyncTimeout) clearTimeout(receiptSyncTimeout);
   receiptSyncTimeout = setTimeout(() => {
     executeReceiptSync();
   }, 1500);
 }
+
+window.applyRemoteReceiptsDelta = function (updates) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return false;
+  const tab = document.getElementById("tab-finance");
+  if (!tab || tab.classList.contains("hidden-force") || !Array.isArray(updates) || updates.length === 0) {
+    return false;
+  }
+
+  let hasChanges = false;
+  updates.forEach((u) => {
+    if (!u || !u.id || pendingReceiptUpdates.has(u.id)) return;
+    const idx = globalReceipts.findIndex((r) => r.id === u.id);
+    const uTs = Number(u.ts) || Date.now();
+    if (idx === -1) {
+      globalReceipts.push({ ...u, ts: uTs });
+      hasChanges = true;
+    } else if (uTs >= (Number(globalReceipts[idx].ts) || 0)) {
+      globalReceipts[idx] = { ...globalReceipts[idx], ...u, ts: uTs };
+      hasChanges = true;
+    }
+  });
+  window.globalReceipts = globalReceipts;
+
+  if (hasChanges) {
+    if (isFinanceUiBusyForRender() || finDndState.active) {
+      pendingRemoteFinanceRender = true;
+    } else {
+      renderReceiptsBrowser();
+      renderFinalizedFinances();
+      renderFeeTracker();
+      if (pendingFinanceUpdates.size === 0 && pendingReceiptUpdates.size === 0) {
+        setFinanceSyncButtonState("saved");
+      }
+    }
+  }
+  return true;
+};
 
 async function executeReceiptSync() {
   if (pendingReceiptUpdates.size === 0) return;

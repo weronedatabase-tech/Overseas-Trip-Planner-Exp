@@ -2431,6 +2431,49 @@ window.pollIcAttendanceNow = async function () {
   } catch (e) {}
 };
 
+window.applyRemoteProfileReceiptsDelta = function (updates) {
+  const tabProfile = document.getElementById("tab-profile");
+  if (!tabProfile || !currentUser || currentUser.role === "admin" || !Array.isArray(updates) || updates.length === 0) {
+    return false;
+  }
+  const familyNrics = new Set(
+    [...loadedFamily.map((f) => f.nric), currentUser.nric]
+      .filter(Boolean)
+      .map((n) => String(n).trim().toUpperCase()),
+  );
+
+  let changed = false;
+  updates.forEach((u) => {
+    if (!u || !u.id) return;
+    const up = String(u.uploaderNric || "").trim().toUpperCase();
+    const paid = String(u.paidByNric || "").trim().toUpperCase();
+    const existingIdx = myReceipts.findIndex((r) => r.id === u.id);
+    if (u.isDeleted) {
+      if (existingIdx !== -1) {
+        myReceipts.splice(existingIdx, 1);
+        changed = true;
+      }
+      return;
+    }
+    if (!familyNrics.has(up) && !familyNrics.has(paid)) return;
+    if (existingIdx === -1) {
+      myReceipts.push(u);
+      changed = true;
+    } else {
+      myReceipts[existingIdx] = { ...myReceipts[existingIdx], ...u };
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    lastProfileSnapshotSig = computeProfileSnapshotSig();
+    if (typeof renderMyReceiptsContainer === "function") {
+      renderMyReceiptsContainer();
+    }
+  }
+  return true;
+};
+
 window.pollProfileNow = async function (domains, msg) {
   const tabProfile = document.getElementById("tab-profile");
   if (!tabProfile || !currentUser || currentUser.role === "admin") return;

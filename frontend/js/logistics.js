@@ -594,35 +594,50 @@ async function executePairingSync() {
 }
 
 window.applyRemotePairingsDelta = function (updates) {
-  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return false;
   const logTab = document.getElementById("tab-logistics");
   if (
     !logTab ||
     logTab.classList.contains("hidden-force") ||
     !globalLogistics ||
-    !Array.isArray(globalLogistics.pairings) ||
     !Array.isArray(updates) ||
     updates.length === 0
   )
-    return;
+    return false;
+
+  if (!Array.isArray(globalLogistics.pairings)) globalLogistics.pairings = [];
 
   let hasChanges = false;
   updates.forEach((sPair) => {
     if (!sPair || !sPair.traineeNric || !sPair.volNric) return;
-    const key = sPair.traineeNric + "_" + sPair.volNric;
-    if (pendingPairingsMap.has(key)) return;
-    let lPair = globalLogistics.pairings.find(
-      (p) => p.traineeNric === sPair.traineeNric && p.volNric === sPair.volNric,
-    );
+    const tNorm = String(sPair.traineeNric).trim().toUpperCase();
+    const vNorm = String(sPair.volNric).trim().toUpperCase();
+    const keyExact = sPair.traineeNric + "_" + sPair.volNric;
+    const keyNorm = tNorm + "_" + vNorm;
+    if (pendingPairingsMap.has(keyExact) || pendingPairingsMap.has(keyNorm)) return;
+
+    const nextStatus =
+      sPair.status || (sPair.action === "ADD" ? "ACTIVE" : "UNPAIRED");
     const sTs = Number(sPair.ts) || Date.now();
+
+    let lPair = globalLogistics.pairings.find(
+      (p) =>
+        String(p.traineeNric || "").trim().toUpperCase() === tNorm &&
+        String(p.volNric || "").trim().toUpperCase() === vNorm,
+    );
     if (lPair) {
-      if (sTs >= (lPair.ts || 0) && lPair.status !== sPair.status) {
-        lPair.status = sPair.status;
+      if (sTs >= (Number(lPair.ts) || 0) && lPair.status !== nextStatus) {
+        lPair.status = nextStatus;
         lPair.ts = sTs;
         hasChanges = true;
       }
     } else {
-      globalLogistics.pairings.push({ ...sPair, ts: sTs });
+      globalLogistics.pairings.push({
+        traineeNric: sPair.traineeNric,
+        volNric: sPair.volNric,
+        status: nextStatus,
+        ts: sTs,
+      });
       hasChanges = true;
     }
   });
@@ -1229,18 +1244,19 @@ async function executeRoomSync() {
 }
 
 window.applyRemoteRoomsDelta = function (updates) {
-  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return false;
   const logTab = document.getElementById("tab-logistics");
   const roomSec = document.getElementById("log-rooms");
   if (
     !logTab ||
     logTab.classList.contains("hidden-force") ||
     !globalLogistics ||
-    !Array.isArray(globalLogistics.rooms) ||
     !Array.isArray(updates) ||
     updates.length === 0
   )
-    return;
+    return false;
+
+  if (!Array.isArray(globalLogistics.rooms)) globalLogistics.rooms = [];
 
   let hasChanges = false;
   updates.forEach((sRoom) => {
@@ -1248,16 +1264,21 @@ window.applyRemoteRoomsDelta = function (updates) {
     let lRoom = globalLogistics.rooms.find((r) => r.id === sRoom.id);
     const sTs = Number(sRoom.ts) || Date.now();
     if (lRoom) {
-      if (sTs >= (lRoom.ts || 0)) {
+      if (sTs >= (Number(lRoom.ts) || 0)) {
         lRoom.name = sRoom.name;
         lRoom.capacity = sRoom.capacity;
-        lRoom.occupants = Array.isArray(sRoom.occupants) ? sRoom.occupants : [];
+        lRoom.occupants = Array.isArray(sRoom.occupants) ? [...sRoom.occupants] : [];
         lRoom.isDeleted = Boolean(sRoom.isDeleted);
         lRoom.ts = sTs;
         hasChanges = true;
       }
     } else {
-      globalLogistics.rooms.push({ ...sRoom, ts: sTs });
+      globalLogistics.rooms.push({
+        ...sRoom,
+        occupants: Array.isArray(sRoom.occupants) ? [...sRoom.occupants] : [],
+        isDeleted: Boolean(sRoom.isDeleted),
+        ts: sTs,
+      });
       hasChanges = true;
     }
   });
@@ -1276,12 +1297,38 @@ window.applyRemoteRoomsDelta = function (updates) {
     renderRooms();
     if (pool) pool.scrollTop = prevPoolTop;
     if (list) list.scrollTop = prevListTop;
+
+    const sheet = document.getElementById("selectionBottomSheet");
+    const sheetSearch = document.getElementById("sheetSearchInput");
+    const typingInSheet = sheetSearch && document.activeElement === sheetSearch;
+    if (
+      sheet &&
+      !sheet.classList.contains("hidden-force") &&
+      activeRoomTargetId &&
+      !typingInSheet &&
+      typeof openRoomAddSheet === "function"
+    ) {
+      const targetStillExists = globalLogistics.rooms.find(
+        (r) => r.id === activeRoomTargetId && !r.isDeleted,
+      );
+      if (targetStillExists) {
+        const prevQuery = sheetSearch ? sheetSearch.value : "";
+        openRoomAddSheet(activeRoomTargetId);
+        const nextSearch = document.getElementById("sheetSearchInput");
+        if (nextSearch && prevQuery) {
+          nextSearch.value = prevQuery;
+          if (typeof filterBottomSheet === "function") filterBottomSheet();
+        }
+      } else if (typeof closeSelectionSheet === "function") {
+        closeSelectionSheet();
+      }
+    }
   }
   return true;
 };
 
 window.applyRemoteAssignmentsDelta = function (updates, column) {
-  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return false;
   const logTab = document.getElementById("tab-logistics");
   if (
     !logTab ||
@@ -1291,7 +1338,7 @@ window.applyRemoteAssignmentsDelta = function (updates, column) {
     !Array.isArray(updates) ||
     updates.length === 0
   )
-    return;
+    return false;
 
   const col = String(column || "");
   let hasChanges = false;
@@ -1310,10 +1357,24 @@ window.applyRemoteAssignmentsDelta = function (updates, column) {
         p.logisticsGroup = nextVal;
         hasChanges = true;
       }
+      if (nextVal && !activeGroupsList.includes(nextVal)) {
+        activeGroupsList.push(nextVal);
+        try {
+          localStorage.setItem("activeGroupsList", JSON.stringify(activeGroupsList));
+        } catch (e) {}
+        hasChanges = true;
+      }
     } else if (col === "bus") {
       const nextVal = String(u.value || "");
       if (p.bus !== nextVal) {
         p.bus = nextVal;
+        hasChanges = true;
+      }
+      if (nextVal && !activeBusesList.includes(nextVal)) {
+        activeBusesList.push(nextVal);
+        try {
+          localStorage.setItem("activeBusesList", JSON.stringify(activeBusesList));
+        } catch (e) {}
         hasChanges = true;
       }
     } else if (col === "isGroupIC") {
@@ -1327,6 +1388,10 @@ window.applyRemoteAssignmentsDelta = function (updates, column) {
 
   if (hasChanges && (!dndState || (!dndState.el && !dndState.isDragging))) {
     const scrollIds = [
+      "dnd-source-pool",
+      "dnd-target-list",
+      "unassignedRoomPool",
+      "roomListContainer",
       "unassignedGroupPool",
       "groupListContainer",
       "unassignedBusPool",
@@ -1337,14 +1402,86 @@ window.applyRemoteAssignmentsDelta = function (updates, column) {
       const el = document.getElementById(id);
       if (el) savedScroll[id] = el.scrollTop;
     });
-    if (col === "logisticsGroup" || col === "isGroupIC") renderGroups();
-    if (col === "bus") renderBuses();
+    if (col === "logisticsGroup" || col === "isGroupIC") {
+      renderGroups();
+      renderPairings();
+      renderRooms();
+    }
+    if (col === "bus") {
+      renderBuses();
+    }
     scrollIds.forEach((id) => {
       const el = document.getElementById(id);
       if (el && savedScroll[id] !== undefined) el.scrollTop = savedScroll[id];
     });
   }
   return true;
+};
+
+window.applyRemoteLogisticsListsDelta = function (msg) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return false;
+  if (!msg || !msg.listType) return false;
+
+  if (msg.listType === "group") {
+    if (msg.action === "add" && msg.name && !activeGroupsList.includes(msg.name)) {
+      activeGroupsList.push(msg.name);
+    } else if (msg.action === "remove" && msg.name) {
+      activeGroupsList = activeGroupsList.filter((x) => x !== msg.name);
+      if (globalLogistics && Array.isArray(globalLogistics.participants)) {
+        globalLogistics.participants.forEach((p) => {
+          if (p.logisticsGroup === msg.name) p.logisticsGroup = "";
+        });
+      }
+    } else if (msg.action === "rename" && msg.oldName && msg.name) {
+      const idx = activeGroupsList.indexOf(msg.oldName);
+      if (idx !== -1) activeGroupsList[idx] = msg.name;
+      else if (!activeGroupsList.includes(msg.name)) activeGroupsList.push(msg.name);
+      if (globalLogistics && Array.isArray(globalLogistics.participants)) {
+        globalLogistics.participants.forEach((p) => {
+          if (p.logisticsGroup === msg.oldName) p.logisticsGroup = msg.name;
+        });
+      }
+    }
+    try {
+      localStorage.setItem("activeGroupsList", JSON.stringify(activeGroupsList));
+    } catch (e) {}
+    const logTab = document.getElementById("tab-logistics");
+    if (logTab && !logTab.classList.contains("hidden-force")) {
+      renderGroups();
+    }
+    return true;
+  }
+
+  if (msg.listType === "bus") {
+    if (msg.action === "add" && msg.name && !activeBusesList.includes(msg.name)) {
+      activeBusesList.push(msg.name);
+    } else if (msg.action === "remove" && msg.name) {
+      activeBusesList = activeBusesList.filter((x) => x !== msg.name);
+      if (globalLogistics && Array.isArray(globalLogistics.participants)) {
+        globalLogistics.participants.forEach((p) => {
+          if (p.bus === msg.name) p.bus = "";
+        });
+      }
+    } else if (msg.action === "rename" && msg.oldName && msg.name) {
+      const idx = activeBusesList.indexOf(msg.oldName);
+      if (idx !== -1) activeBusesList[idx] = msg.name;
+      else if (!activeBusesList.includes(msg.name)) activeBusesList.push(msg.name);
+      if (globalLogistics && Array.isArray(globalLogistics.participants)) {
+        globalLogistics.participants.forEach((p) => {
+          if (p.bus === msg.oldName) p.bus = msg.name;
+        });
+      }
+    }
+    try {
+      localStorage.setItem("activeBusesList", JSON.stringify(activeBusesList));
+    } catch (e) {}
+    const logTab = document.getElementById("tab-logistics");
+    if (logTab && !logTab.classList.contains("hidden-force")) {
+      renderBuses();
+    }
+    return true;
+  }
+  return false;
 };
 
 let roomPollInterval = null;
@@ -3477,11 +3614,25 @@ async function addGroupBusFromPopup() {
         "activeGroupsList",
         JSON.stringify(activeGroupsList),
       );
+      if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+        window.LiveSync.sendLive("live:logistics_lists", {
+          listType: "group",
+          action: "add",
+          name: val,
+        });
+      }
     }
   } else {
     if (!activeBusesList.includes(val)) {
       activeBusesList.push(val);
       localStorage.setItem("activeBusesList", JSON.stringify(activeBusesList));
+      if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+        window.LiveSync.sendLive("live:logistics_lists", {
+          listType: "bus",
+          action: "add",
+          name: val,
+        });
+      }
     }
   }
   renderGroupBusOptions();
@@ -3511,6 +3662,13 @@ async function removeGroupBusFromPopup(val) {
     });
     activeGroupsList = activeGroupsList.filter((x) => x !== val);
     localStorage.setItem("activeGroupsList", JSON.stringify(activeGroupsList));
+    if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:logistics_lists", {
+        listType: "group",
+        action: "remove",
+        name: val,
+      });
+    }
     renderGroups();
     if (pendingGroupUpdates.size > 0) triggerGroupSync();
   } else {
@@ -3522,6 +3680,13 @@ async function removeGroupBusFromPopup(val) {
     });
     activeBusesList = activeBusesList.filter((x) => x !== val);
     localStorage.setItem("activeBusesList", JSON.stringify(activeBusesList));
+    if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+      window.LiveSync.sendLive("live:logistics_lists", {
+        listType: "bus",
+        action: "remove",
+        name: val,
+      });
+    }
     renderBuses();
     if (pendingBusUpdates.size > 0) triggerBusSync();
   }
@@ -3974,6 +4139,14 @@ window.promptEditGroup = async function (oldName) {
       pendingGroupUpdates.set(p.nric, { nric: p.nric, value: val });
     }
   });
+  if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+    window.LiveSync.sendLive("live:logistics_lists", {
+      listType: "group",
+      action: "rename",
+      oldName,
+      name: val,
+    });
+  }
   renderGroups();
   if (pendingGroupUpdates.size > 0) triggerGroupSync();
 };
@@ -4004,6 +4177,14 @@ window.promptEditBus = async function (oldName) {
       pendingBusUpdates.set(p.nric, { nric: p.nric, value: val });
     }
   });
+  if (window.LiveSync && typeof window.LiveSync.sendLive === "function") {
+    window.LiveSync.sendLive("live:logistics_lists", {
+      listType: "bus",
+      action: "rename",
+      oldName,
+      name: val,
+    });
+  }
   renderBuses();
   if (pendingBusUpdates.size > 0) triggerBusSync();
 };

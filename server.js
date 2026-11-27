@@ -622,6 +622,185 @@ function patchAllMinutesCaches(updates) {
   }
 }
 
+function patchReceiptsList(list, updates) {
+  if (!Array.isArray(list) || !Array.isArray(updates)) return false;
+  let changed = false;
+  updates.forEach((u) => {
+    if (!u || !u.id) return;
+    const ts = Number(u.ts) || Date.now();
+    const idx = list.findIndex((r) => r.id === u.id);
+    if (idx === -1) {
+      list.push({ ...u, ts });
+      changed = true;
+    } else if (ts >= Number(list[idx].ts || 0)) {
+      list[idx] = { ...list[idx], ...u, ts };
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function patchAllReceiptCaches(updates) {
+  if (!Array.isArray(updates) || updates.length === 0) return;
+  for (const [key, entry] of cache.store.entries()) {
+    if (!key.startsWith("live::")) continue;
+    if (key.includes("::fetchReceipts::") && entry.value && Array.isArray(entry.value.receipts)) {
+      if (key.startsWith("live::admin::")) {
+        patchReceiptsList(entry.value.receipts, updates);
+      } else {
+        // Re-fetch scoped user receipts cleanly on next read so no cross-family receipt ever enters user cache
+        cache.delete(key);
+      }
+    }
+  }
+}
+
+function patchParticipantInList(list, member, deletedNric) {
+  if (!Array.isArray(list)) return false;
+  let changed = false;
+  if (deletedNric) {
+    const target = String(deletedNric).trim().toUpperCase();
+    for (let i = list.length - 1; i >= 0; i--) {
+      if (String(list[i].nric || "").trim().toUpperCase() === target) {
+        list.splice(i, 1);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+  if (!member || !member.nric) return false;
+  const target = String(member.nric).trim().toUpperCase();
+  const p = list.find((x) => String(x.nric || "").trim().toUpperCase() === target);
+  if (!p) return false;
+  const fields = [
+    "email", "role", "fullName", "relatedTrainee", "relationship", "group",
+    "gender", "contact", "address", "nationality", "passportNo", "passportExpiry",
+    "dob", "diet", "emergencyName", "emergencyContact", "emergencyRelation",
+    "sleeping", "otherPoints", "shortName", "medical",
+  ];
+  fields.forEach((f) => {
+    if (member[f] !== undefined) p[f] = member[f];
+  });
+  if (member.fullName !== undefined && p.name !== undefined) {
+    p.name = member.fullName;
+  }
+  changed = true;
+  return changed;
+}
+
+function patchAllRosterCaches(member, deletedNric = "") {
+  invalidateAllUserScopes();
+  for (const [key, entry] of cache.store.entries()) {
+    if (!key.startsWith("live::")) continue;
+    if (key.startsWith("live::admin::fetchAdminRoster::") && entry.value && Array.isArray(entry.value.roster)) {
+      patchParticipantInList(entry.value.roster, member, deletedNric);
+    } else if (key.startsWith("live::admin::fetchLogistics::") && entry.value && Array.isArray(entry.value.participants)) {
+      patchParticipantInList(entry.value.participants, member, deletedNric);
+    } else if (key.includes("::getProfile::") || key.includes("::fetchLogistics::") || key.includes("::getPublicTrainees::")) {
+      cache.delete(key);
+    }
+  }
+}
+
+function patchSettingsObject(cfg, action, body) {
+  if (!cfg || typeof cfg !== "object") return false;
+  if (action === "toggleEdits") {
+    cfg.allowEdits = Boolean(body.status);
+    return true;
+  }
+  if (action === "saveTripSettings") {
+    if (body.title !== undefined && body.title !== "") cfg.tripName = body.title;
+    if (body.year !== undefined && body.year !== "") cfg.tripYear = body.year;
+    if (body.start !== undefined && body.start !== null) cfg.tripStartDate = String(body.start || "").trim();
+    if (body.end !== undefined && body.end !== null) cfg.tripEndDate = String(body.end || "").trim();
+    return true;
+  }
+  if (action === "addProjectGroup") {
+    const g = String(body.groupName || "").trim();
+    if (!Array.isArray(cfg.projectGroups)) cfg.projectGroups = [];
+    if (!cfg.projectColors || typeof cfg.projectColors !== "object") cfg.projectColors = {};
+    if (g && !cfg.projectGroups.includes(g)) cfg.projectGroups.push(g);
+    if (g && body.colorClass) cfg.projectColors[g] = body.colorClass;
+    return true;
+  }
+  if (action === "removeProjectGroup") {
+    const g = String(body.groupName || "").trim();
+    if (Array.isArray(cfg.projectGroups)) cfg.projectGroups = cfg.projectGroups.filter((x) => x !== g);
+    if (cfg.projectColors && g) delete cfg.projectColors[g];
+    return true;
+  }
+  if (action === "modifyJunctures") {
+    if (!Array.isArray(cfg.junctures)) cfg.junctures = ["Morning Assembly"];
+    const { actionType, oldName, newName } = body;
+    if (actionType === "add" && newName && !cfg.junctures.includes(newName)) cfg.junctures.push(newName);
+    else if (actionType === "remove" && oldName) cfg.junctures = cfg.junctures.filter((j) => j !== oldName);
+    else if (actionType === "edit" && oldName && newName) {
+      const idx = cfg.junctures.indexOf(oldName);
+      if (idx > -1) cfg.junctures[idx] = newName;
+    }
+    return true;
+  }
+  if (action === "saveSortingRules") {
+    cfg.sortingRules = body.rules;
+    return true;
+  }
+  if (action === "saveCustomViewsOrder") {
+    cfg.customViewsOrder = body.order;
+    return true;
+  }
+  if (action === "addCommittee") {
+    if (!Array.isArray(cfg.committee)) cfg.committee = [];
+    const nric = String(body.nric || "").trim().toUpperCase();
+    if (nric && !cfg.committee.find((c) => c.nric === nric)) {
+      cfg.committee.push({
+        nric,
+        name: String(body.name || "").trim().toUpperCase(),
+        phone: String(body.phone || "").trim(),
+      });
+    }
+    return true;
+  }
+  if (action === "removeCommittee") {
+    const nric = String(body.nric || "").trim().toUpperCase();
+    if (Array.isArray(cfg.committee)) cfg.committee = cfg.committee.filter((c) => c.nric !== nric);
+    return true;
+  }
+  if (action === "addHelpline") {
+    if (!Array.isArray(cfg.helpline)) cfg.helpline = [];
+    const id = String(body.id || "").trim();
+    if (id && !cfg.helpline.find((c) => c.id === id)) {
+      cfg.helpline.push({
+        id,
+        name: String(body.name || "").trim().toUpperCase(),
+        phone: String(body.phone || "").trim(),
+      });
+    }
+    return true;
+  }
+  if (action === "removeHelpline") {
+    const id = String(body.id || "").trim();
+    if (Array.isArray(cfg.helpline)) cfg.helpline = cfg.helpline.filter((c) => c.id !== id);
+    return true;
+  }
+  return false;
+}
+
+function patchAllSettingsCaches(action, body) {
+  let latestAdminSettings = null;
+  for (const [key, entry] of cache.store.entries()) {
+    if (!key.startsWith("live::")) continue;
+    if (key.includes("::getSettings::") && entry.value && typeof entry.value === "object") {
+      patchSettingsObject(entry.value, action, body);
+      if (key.startsWith("live::admin::")) {
+        latestAdminSettings = entry.value;
+      }
+    } else if (action === "modifyICJunctures" && key.includes("::getProfile::")) {
+      cache.delete(key);
+    }
+  }
+  return latestAdminSettings;
+}
+
 function replayPendingMutationsOnRead(action, reqData, freshRes) {
   if (!freshRes || freshRes.status === "error" || pendingMutations.length === 0) return freshRes;
   for (const m of pendingMutations) {
@@ -642,6 +821,16 @@ function replayPendingMutationsOnRead(action, reqData, freshRes) {
       }
     } else if (action === "fetchMinutes" && m.action === "syncMinutes") {
       patchMinutesList(freshRes.minutes, m.payload.updates);
+    } else if (action === "fetchReceipts" && m.action === "syncReceipts") {
+      if (Array.isArray(freshRes.receipts)) {
+        patchReceiptsList(freshRes.receipts, m.payload.updates);
+      }
+    } else if ((action === "fetchAdminRoster" || action === "fetchLogistics") && (m.action === "adminUpdateParticipant" || m.action === "updateProfile")) {
+      patchParticipantInList(freshRes.roster || freshRes.participants, m.payload.member, "");
+    } else if ((action === "fetchAdminRoster" || action === "fetchLogistics") && m.action === "deleteParticipant") {
+      patchParticipantInList(freshRes.roster || freshRes.participants, null, m.payload.nric);
+    } else if (action === "getSettings") {
+      patchSettingsObject(freshRes, m.action, m.payload);
     }
   }
   return freshRes;
@@ -1169,6 +1358,7 @@ wss.on("connection", (ws) => {
       });
     } else if (msg.type === "live:assignments" && Array.isArray(msg.updates)) {
       patchAllAssignmentCaches(msg.updates, msg.column);
+      refreshConnectedUserScopesFromCache();
       const affected = msg.updates.map((u) => u && u.nric).filter(Boolean);
       broadcastScopedDelta({
         type: "delta:assignments",
@@ -1178,6 +1368,21 @@ wss.on("connection", (ws) => {
         excludeWs: ws,
         affectedNrics: affected,
         adminPayload: { updates: msg.updates, column: msg.column },
+      });
+    } else if (msg.type === "live:logistics_lists" && msg.listType) {
+      broadcastScopedDelta({
+        type: "delta:logistics_lists",
+        action: "syncAssignments",
+        domains: ["logistics"],
+        senderClientId: msg.senderId || meta.clientId,
+        excludeWs: ws,
+        adminPayload: {
+          listType: msg.listType,
+          listAction: msg.action,
+          action: msg.action,
+          name: msg.name,
+          oldName: msg.oldName,
+        },
       });
     } else if (msg.type === "live:finance" && msg.payload) {
       patchAllFinanceCaches(msg.payload);
@@ -1189,6 +1394,23 @@ wss.on("connection", (ws) => {
         excludeWs: ws,
         broadcastToParticipants: Boolean(msg.payload.config),
         adminPayload: { payload: msg.payload },
+      });
+    } else if (msg.type === "live:receipts" && Array.isArray(msg.updates)) {
+      patchAllReceiptCaches(msg.updates);
+      const affected = [];
+      msg.updates.forEach((u) => {
+        if (u && u.uploaderNric) affected.push(u.uploaderNric);
+        if (u && u.paidByNric) affected.push(u.paidByNric);
+      });
+      broadcastScopedDelta({
+        type: "delta:receipts",
+        action: "syncReceipts",
+        domains: ["receipts", "finance"],
+        senderClientId: msg.senderId || meta.clientId,
+        excludeWs: ws,
+        affectedNrics: affected.length > 0 ? affected : null,
+        broadcastToParticipants: affected.length === 0,
+        adminPayload: { updates: msg.updates },
       });
     } else if (msg.type === "live:minutes" && Array.isArray(msg.updates)) {
       patchAllMinutesCaches(msg.updates);
@@ -1259,6 +1481,54 @@ const READ_ACTIONS = new Set([
   "getCommittee",
 ]);
 
+function refreshConnectedUserScopesFromCache() {
+  const cachedRosterRes = cache.get("live::admin::fetchAdminRoster::{}");
+  const cachedLogRes = cache.get("live::admin::fetchLogistics::{}");
+  const list =
+    (cachedLogRes && Array.isArray(cachedLogRes.participants) && cachedLogRes.participants) ||
+    (cachedRosterRes && Array.isArray(cachedRosterRes.roster) && cachedRosterRes.roster) ||
+    null;
+  if (!list) return;
+
+  let presenceChanged = false;
+  for (const [, meta] of wsClients.entries()) {
+    if (!meta.joined || !meta.auth || meta.auth.role === "admin") continue;
+    const cleanNric = String(meta.auth.nric || "").trim().toUpperCase();
+    const self = list.find((r) => String(r.nric || "").trim().toUpperCase() === cleanNric);
+    if (!self) continue;
+    const prevIsIc = Boolean(meta.scope && meta.scope.isGroupIC);
+    const prevGrp = String((meta.scope && meta.scope.logisticsGroup) || "").trim();
+    const pocNric = String(self.pocNric || self.nric).trim().toUpperCase();
+    const familyNrics = new Set([cleanNric]);
+    const groupMembersNrics = new Set();
+    const isGroupIC = Boolean(self.isGroupIC);
+    const logisticsGroup = String(self.logisticsGroup || "").trim();
+    list.forEach((r) => {
+      const rn = String(r.nric || "").trim().toUpperCase();
+      const rpoc = String(r.pocNric || r.nric || "").trim().toUpperCase();
+      if (rpoc === pocNric) familyNrics.add(rn);
+      if (isGroupIC && logisticsGroup && String(r.logisticsGroup || "").trim() === logisticsGroup) {
+        groupMembersNrics.add(rn);
+      }
+    });
+    const nextScope = {
+      role: "user",
+      pocNric,
+      familyNrics,
+      isGroupIC,
+      logisticsGroup,
+      groupMembersNrics,
+      expiresAt: Date.now() + SCOPE_CACHE_TTL_MS,
+    };
+    meta.scope = nextScope;
+    userScopeCache.set(cleanNric, nextScope);
+    if (prevIsIc !== isGroupIC || prevGrp !== logisticsGroup) {
+      presenceChanged = true;
+    }
+  }
+  if (presenceChanged) broadcastPresence();
+}
+
 const OPTIMISTIC_BG_WRITE_ACTIONS = new Set([
   "syncAttendanceUpdate",
   "syncPairingUpdates",
@@ -1266,6 +1536,21 @@ const OPTIMISTIC_BG_WRITE_ACTIONS = new Set([
   "syncAssignments",
   "syncMinutes",
   "saveFinance",
+  "syncReceipts",
+  "adminUpdateParticipant",
+  "updateProfile",
+  "deleteParticipant",
+  "toggleEdits",
+  "saveTripSettings",
+  "addProjectGroup",
+  "removeProjectGroup",
+  "modifyJunctures",
+  "saveSortingRules",
+  "saveCustomViewsOrder",
+  "addCommittee",
+  "removeCommittee",
+  "addHelpline",
+  "removeHelpline",
 ]);
 
 function getCacheKeyForRead(action, parsedBody, auth) {
@@ -1386,7 +1671,21 @@ app.post("/api", async (req, res) => {
   // =========================================================
   // OPTIMISTIC COLLABORATIVE WRITES (0ms Patch + <20ms WS Push + Async FIFO GAS Queue)
   // =========================================================
-  if (OPTIMISTIC_BG_WRITE_ACTIONS.has(action) && !body.archiveId) {
+  const settingsListActions = new Set([
+    "addProjectGroup",
+    "removeProjectGroup",
+    "modifyJunctures",
+    "addCommittee",
+    "removeCommittee",
+    "addHelpline",
+    "removeHelpline",
+  ]);
+  const canRunOptimistic =
+    OPTIMISTIC_BG_WRITE_ACTIONS.has(action) &&
+    !body.archiveId &&
+    (!settingsListActions.has(action) || Boolean(cache.get("live::admin::getSettings::{}")));
+
+  if (canRunOptimistic) {
     const verifiedAuth = body.authToken ? await verifyAuthWithGAS(body.authToken) : null;
     if (!verifiedAuth) {
       return res.json({ status: "error", message: "AUTH_REQUIRED: Session expired or unauthorized." });
@@ -1406,12 +1705,47 @@ app.post("/api", async (req, res) => {
           return res.json({ status: "error", message: "FORBIDDEN: You can only update attendance for your own group." });
         }
       }
+    } else if (action === "modifyICJunctures") {
+      if (verifiedAuth.role !== "admin") {
+        const scope = await resolveUserScope(verifiedAuth, body.authToken);
+        const cleanGroup = String(body.groupName || "").trim();
+        if (!scope || !scope.isGroupIC || scope.logisticsGroup !== cleanGroup) {
+          return res.json({ status: "error", message: "FORBIDDEN: Only this group IC or Admin can modify custom junctures." });
+        }
+      }
+    } else if (action === "updateProfile") {
+      if (verifiedAuth.role !== "admin") {
+        const cachedCfg = cache.get("live::admin::getSettings::{}") || cache.get(`live::user:${verifiedAuth.nric}::getSettings::{}`);
+        if (cachedCfg && cachedCfg.allowEdits === false) {
+          return res.json({ status: "error", message: "Editing locked." });
+        }
+        const scope = await resolveUserScope(verifiedAuth, body.authToken);
+        const targetNric = String((body.member && body.member.nric) || "").trim().toUpperCase();
+        if (!targetNric || !scope || !scope.familyNrics.has(targetNric)) {
+          return res.json({ status: "error", message: "Unauthorized: you can only edit your own family members." });
+        }
+      }
+    } else if (action === "syncReceipts") {
+      if (verifiedAuth.role !== "admin") {
+        const scope = await resolveUserScope(verifiedAuth, body.authToken);
+        const valid =
+          Array.isArray(body.updates) &&
+          body.updates.every((u) => u && u.isDeleted === true);
+        if (!scope || !valid) {
+          return res.json({ status: "error", message: "FORBIDDEN: Admin access required." });
+        }
+      }
+    } else if (action === "addProjectGroup" || action === "removeProjectGroup") {
+      if (!verifiedAuth.isMainAdmin) {
+        return res.json({ status: "error", message: "Unauthorized" });
+      }
     } else if (verifiedAuth.role !== "admin") {
       return res.json({ status: "error", message: "FORBIDDEN: Admin access required." });
     }
 
     const senderClientId = body.clientId ? String(body.clientId) : "";
     let syncSeq = serverSyncSeq;
+    let patchedSettingsObj = null;
 
     // 1. Authoritative 0ms in-memory patch + instant scoped WebSocket push
     if (action === "syncAttendanceUpdate") {
@@ -1456,6 +1790,7 @@ app.post("/api", async (req, res) => {
       });
     } else if (action === "syncAssignments") {
       patchAllAssignmentCaches(body.updates || [], body.column);
+      refreshConnectedUserScopesFromCache();
       const affected = (body.updates || []).map((u) => u && u.nric).filter(Boolean);
       syncSeq = broadcastScopedDelta({
         type: "delta:assignments",
@@ -1475,6 +1810,22 @@ app.post("/api", async (req, res) => {
         broadcastToParticipants: Boolean(body.payload && body.payload.config),
         adminPayload: { payload: body.payload },
       });
+    } else if (action === "syncReceipts") {
+      patchAllReceiptCaches(body.updates || []);
+      const affected = [];
+      (body.updates || []).forEach((u) => {
+        if (u && u.uploaderNric) affected.push(u.uploaderNric);
+        if (u && u.paidByNric) affected.push(u.paidByNric);
+      });
+      syncSeq = broadcastScopedDelta({
+        type: "delta:receipts",
+        action,
+        domains: ["receipts", "finance"],
+        senderClientId,
+        affectedNrics: affected.length > 0 ? affected : null,
+        broadcastToParticipants: affected.length === 0,
+        adminPayload: { updates: body.updates || [] },
+      });
     } else if (action === "syncMinutes") {
       patchAllMinutesCaches(body.updates || []);
       syncSeq = broadcastScopedDelta({
@@ -1483,6 +1834,40 @@ app.post("/api", async (req, res) => {
         domains: ["minutes"],
         senderClientId,
         adminPayload: { updates: body.updates || [] },
+      });
+    } else if (action === "adminUpdateParticipant" || action === "updateProfile") {
+      patchAllRosterCaches(body.member, "");
+      const affected = body.member && body.member.nric ? [body.member.nric] : [];
+      syncSeq = broadcastScopedDelta({
+        type: "delta:roster",
+        action,
+        domains: ["roster", "logistics", "finance"],
+        senderClientId,
+        affectedNrics: affected.length > 0 ? affected : null,
+        adminPayload: { member: body.member || null },
+      });
+    } else if (action === "deleteParticipant") {
+      patchAllRosterCaches(null, body.nric);
+      const affected = body.nric ? [body.nric] : [];
+      syncSeq = broadcastScopedDelta({
+        type: "delta:roster",
+        action,
+        domains: ["roster", "logistics", "finance"],
+        senderClientId,
+        affectedNrics: affected.length > 0 ? affected : null,
+        adminPayload: { deletedNric: body.nric || "" },
+      });
+    } else {
+      // Settings mutations (toggleEdits, saveTripSettings, add/removeProjectGroup, modifyJunctures, etc.)
+      patchedSettingsObj = patchAllSettingsCaches(action, body);
+      const domains = ACTION_DOMAINS[action] || ["settings"];
+      syncSeq = broadcastScopedDelta({
+        type: "delta:settings",
+        action,
+        domains,
+        senderClientId,
+        groupName: body.groupName ? String(body.groupName) : "",
+        adminPayload: patchedSettingsObj ? { settings: patchedSettingsObj } : {},
       });
     }
 
@@ -1507,12 +1892,60 @@ app.post("/api", async (req, res) => {
       })
       .catch(() => {});
 
-    // 3. Fast response to caller (preserving expected response shape for saveFinance if cached)
+    // 3. Fast response to caller (preserving exact response fields expected by each frontend caller!)
     if (action === "saveFinance") {
       const cachedFin = cache.get("live::admin::fetchFinance::{}");
       if (cachedFin && cachedFin.status === "success") {
         return res.json({ ...cachedFin, queued: true, _syncSeq: syncSeq, _syncTs: Date.now() });
       }
+    } else if (action === "syncReceipts") {
+      const cachedRec = cache.get("live::admin::fetchReceipts::{}");
+      if (cachedRec && Array.isArray(cachedRec.receipts)) {
+        return res.json({ status: "success", receipts: cachedRec.receipts, queued: true, _syncSeq: syncSeq, _syncTs: Date.now() });
+      }
+    } else if (action === "addProjectGroup" || action === "removeProjectGroup") {
+      return res.json({
+        status: "success",
+        groups: patchedSettingsObj ? patchedSettingsObj.projectGroups : undefined,
+        projectColors: patchedSettingsObj ? patchedSettingsObj.projectColors : undefined,
+        queued: true,
+        _syncSeq: syncSeq,
+      });
+    } else if (action === "modifyJunctures") {
+      return res.json({
+        status: "success",
+        junctures: patchedSettingsObj ? patchedSettingsObj.junctures : undefined,
+        queued: true,
+        _syncSeq: syncSeq,
+      });
+    } else if (action === "addCommittee" || action === "removeCommittee") {
+      return res.json({
+        status: "success",
+        list: patchedSettingsObj ? patchedSettingsObj.committee : undefined,
+        queued: true,
+        _syncSeq: syncSeq,
+      });
+    } else if (action === "addHelpline" || action === "removeHelpline") {
+      return res.json({
+        status: "success",
+        list: patchedSettingsObj ? patchedSettingsObj.helpline : undefined,
+        queued: true,
+        _syncSeq: syncSeq,
+      });
+    } else if (action === "saveSortingRules") {
+      return res.json({ status: "success", sortingRules: body.rules, queued: true, _syncSeq: syncSeq });
+    } else if (action === "saveCustomViewsOrder") {
+      return res.json({ status: "success", customViewsOrder: body.order, queued: true, _syncSeq: syncSeq });
+    } else if (action === "saveTripSettings") {
+      return res.json({
+        status: "success",
+        title: body.title,
+        year: body.year,
+        start: String(body.start || "").trim(),
+        end: String(body.end || "").trim(),
+        queued: true,
+        _syncSeq: syncSeq,
+      });
     }
     return res.json({ status: "success", queued: true, _syncSeq: syncSeq, _syncTs: Date.now() });
   }
@@ -1525,7 +1958,11 @@ app.post("/api", async (req, res) => {
     const domains = ACTION_DOMAINS[action];
 
     if (domains && gasRes && gasRes.status !== "error") {
-      invalidateCachesForDomains(domains);
+      if (action === "uploadReceipt" && gasRes.receipt) {
+        patchAllReceiptCaches([gasRes.receipt]);
+      } else {
+        invalidateCachesForDomains(domains);
+      }
       const affected = [];
       if (body.member && body.member.nric) affected.push(body.member.nric);
       if (body.nric) affected.push(body.nric);

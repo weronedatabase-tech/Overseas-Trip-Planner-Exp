@@ -83,24 +83,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Pillar 1 Sync Safety: Track mutational interactions
+  // Pillar 1 Sync Safety: Track mutational interactions (never treat passive scroll as a mutation)
   document.addEventListener("input", () => {
     lastLocalChange = Date.now();
   });
   document.addEventListener("change", () => {
     lastLocalChange = Date.now();
   });
-  document.addEventListener("click", (e) => {
-    if (e.target.tagName === "BUTTON" || e.target.closest("button"))
-      lastLocalChange = Date.now();
-  });
-  document.addEventListener(
-    "scroll",
-    () => {
-      lastLocalChange = Date.now();
-    },
-    { capture: true, passive: true },
-  );
 
   // Setup Long Press for Participant Quick View
   setupGlobalLongPress();
@@ -1348,12 +1337,15 @@ async function silentHydration() {
   }
 }
 
-window.refreshSettingsRealtime = async function () {
+window.refreshSettingsRealtime = async function (msg) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
     return;
   }
   try {
-    const config = await apiCall("getSettings", { bypassLocalCache: true });
+    const config =
+      msg && msg.settings && typeof msg.settings === "object"
+        ? msg.settings
+        : await apiCall("getSettings", { bypassLocalCache: true });
     if (config && config.status !== "error") {
       appSettings = config;
       localStorage.setItem("appSettings", JSON.stringify(appSettings));
