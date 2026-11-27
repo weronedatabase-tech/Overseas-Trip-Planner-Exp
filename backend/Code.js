@@ -1682,6 +1682,11 @@ function fetchGoogleFinanceLiveRates(forceRefresh = false, sheet = null) {
     }
   }
 
+  const liveCountBeforeFallback = Object.keys(ratesObj).length - 1;
+  if (fetchedLiveCount > 0 || (forceRefresh && liveCountBeforeFallback > 0)) {
+    updatedAt = new Date().toISOString();
+  }
+
   // 3. Merge with persisted last-known-good Google Finance rates for any transient failures
   const props = PropertiesService.getScriptProperties();
   let stored = null;
@@ -1714,7 +1719,7 @@ function fetchGoogleFinanceLiveRates(forceRefresh = false, sheet = null) {
   // Persist last-known-good snapshot and update audit columns D/E in Finance Options sheet
   if (Object.keys(ratesObj).length >= 2) {
     try {
-      if (fetchedLiveCount > 0 || !stored || Object.keys(ratesObj).length > Object.keys((stored && stored.rates) || {}).length) {
+      if (fetchedLiveCount > 0 || (forceRefresh && liveCountBeforeFallback > 0) || !stored || Object.keys(ratesObj).length > Object.keys((stored && stored.rates) || {}).length) {
         props.setProperty('LAST_GOOD_GF_RATES_V2', JSON.stringify(result));
       }
     } catch (e) {}

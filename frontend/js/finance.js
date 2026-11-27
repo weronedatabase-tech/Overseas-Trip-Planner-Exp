@@ -907,9 +907,9 @@ function renderFinalizedFinances() {
             ${f.name}
             ${catReceipts.length > 0 ? `<span class="ml-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500">(${catReceipts.length} receipt${catReceipts.length > 1 ? "s" : ""})</span>` : ""}
         </td>
-        <td class="py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-3 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-        <td class="py-2 px-3 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-semibold text-gray-600 dark:text-gray-400 text-right whitespace-nowrap">SGD ${plannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-bold text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${actualSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+        <td class="py-2 px-3 text-xs font-black ${diffClass} text-right whitespace-nowrap">${diff > 0 ? "+" : ""}${diff.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
     </tr>`;
   });
 
@@ -1004,7 +1004,7 @@ function renderFinalizedFinances() {
                         <div class="bg-blue-50/40 dark:bg-blue-950/20 p-3 rounded-lg border-2 border-blue-100 dark:border-blue-900/40 flex flex-col min-w-0">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 mb-1">Total Fees Expected</span>
                             <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums text-blue-700 dark:text-blue-400 leading-tight break-words">
-                                SGD ${totalFeesExpected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                SGD ${totalFeesExpected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
                                 ${totalPocCount > 0 ? `${totalPocCount} families expected` : "Set in Fee Tracker"}
@@ -1014,7 +1014,7 @@ function renderFinalizedFinances() {
                         <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-800 flex flex-col min-w-0">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Total Planned Expenses</span>
                             <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums text-gray-900 dark:text-white leading-tight break-words">
-                                SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
                                 ${opt.fields.length} budget categories
@@ -1030,7 +1030,7 @@ function renderFinalizedFinances() {
                     </div>
                     <div class="text-right ml-auto">
                         <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums whitespace-nowrap ${isPlannedCovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
-                            ${plannedDiff >= 0 ? "+" : ""}SGD ${plannedDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            ${plannedDiff >= 0 ? "+" : ""}SGD ${plannedDiff.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span class="block text-[10px] font-bold ${isPlannedCovered ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} uppercase tracking-wider">
                             ${isPlannedCovered ? "Projected Surplus" : "Projected Shortfall"}
@@ -1058,7 +1058,7 @@ function renderFinalizedFinances() {
                         <div class="bg-green-50/40 dark:bg-green-950/20 p-3 rounded-lg border-2 border-green-100 dark:border-green-900/40 flex flex-col min-w-0">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-green-800 dark:text-green-300 mb-1">Total Fees Collected</span>
                             <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums text-green-700 dark:text-green-400 leading-tight break-words">
-                                SGD ${totalFeesCollected.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                SGD ${totalFeesCollected.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
                                 ${paidPocCount}/${totalPocCount} families paid
@@ -1068,7 +1068,7 @@ function renderFinalizedFinances() {
                         <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-800 flex flex-col min-w-0">
                             <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">Total Actual Expenses</span>
                             <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums text-gray-900 dark:text-white leading-tight break-words">
-                                SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </span>
                             <span class="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mt-1">
                                 ${activeExpenseReceipts.length} expense receipts
@@ -1084,7 +1084,7 @@ function renderFinalizedFinances() {
                     </div>
                     <div class="text-right ml-auto">
                         <span class="text-sm sm:text-base md:text-lg font-black font-mono tabular-nums whitespace-nowrap ${isActualSolvent ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}">
-                            ${actualDiff >= 0 ? "+" : ""}SGD ${actualDiff.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                            ${actualDiff >= 0 ? "+" : ""}SGD ${actualDiff.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                         <span class="block text-[10px] font-bold ${isActualSolvent ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} uppercase tracking-wider">
                             ${isActualSolvent ? "Cash In Hand" : "Cash Shortfall"}
@@ -1099,19 +1099,19 @@ function renderFinalizedFinances() {
             <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center min-w-0">
                 <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Planned / Pax</span>
                 <span class="text-xs md:text-sm font-black font-mono tabular-nums text-gray-800 dark:text-gray-200 mt-0.5 truncate">
-                    SGD ${(pax > 0 ? grandPlannedSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    SGD ${(pax > 0 ? grandPlannedSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center min-w-0">
                 <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Actual / Pax</span>
                 <span class="text-xs md:text-sm font-black font-mono tabular-nums text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
-                    SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    SGD ${(pax > 0 ? grandActualSgd / pax : 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center min-w-0">
                 <span class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Expense Variance</span>
                 <span class="text-xs md:text-sm font-black font-mono tabular-nums ${expenseVariance < 0 ? "text-rose-600 dark:text-rose-400" : "text-purple-600 dark:text-purple-400"} mt-0.5 truncate">
-                    ${expenseVariance > 0 ? "+" : ""}SGD ${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    ${expenseVariance > 0 ? "+" : ""}SGD ${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
             <div class="bg-white dark:bg-gray-900 p-2.5 rounded-lg border-2 border-gray-200 dark:border-gray-800 text-center flex flex-col justify-center min-w-0">
@@ -1145,9 +1145,9 @@ function renderFinalizedFinances() {
             <tfoot class="bg-gray-50 dark:bg-gray-950/80 border-t-2 border-gray-300 dark:border-gray-700 font-bold">
                 <tr>
                     <td class="py-2.5 px-3 text-xs uppercase tracking-wider font-black text-gray-900 dark:text-white">Total Expenses</td>
-                    <td class="py-2.5 px-3 text-xs font-black text-gray-900 dark:text-white text-right whitespace-nowrap">SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td class="py-2.5 px-3 text-xs font-black text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
-                    <td class="py-2.5 px-3 text-xs font-black ${expenseVariance < 0 ? "text-rose-600 dark:text-rose-400" : "text-purple-600 dark:text-purple-400"} text-right whitespace-nowrap">${expenseVariance > 0 ? "+" : ""}${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</td>
+                    <td class="py-2.5 px-3 text-xs font-black text-gray-900 dark:text-white text-right whitespace-nowrap">SGD ${grandPlannedSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="py-2.5 px-3 text-xs font-black text-green-700 dark:text-green-400 text-right whitespace-nowrap">SGD ${grandActualSgd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td class="py-2.5 px-3 text-xs font-black ${expenseVariance < 0 ? "text-rose-600 dark:text-rose-400" : "text-purple-600 dark:text-purple-400"} text-right whitespace-nowrap">${expenseVariance > 0 ? "+" : ""}${expenseVariance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 </tr>
             </tfoot>
         </table>
@@ -1296,7 +1296,7 @@ function renderFinanceOptions() {
         <input
           type="number"
           min="0"
-          value="${financeConfig.globalPaxCount}"
+          value="${financeConfig.globalPaxCount ?? 0}"
           oninput="financeConfig.globalPaxCount = parseInt(this.value) || 0; financeOptions.forEach(o => updateTotals(o.id)); queueFinanceUpdate();"
           onchange="updateFinanceConfig('globalPaxCount', this.value)"
           class="hide-spinners w-16 text-xs font-black font-mono tabular-nums border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:border-primary text-center"
@@ -1400,7 +1400,7 @@ function renderFinanceOptions() {
         .replace(/"/g, "&quot;");
 
       const desktopRowGridClass = isWideCard
-        ? "xl:grid-cols-[24px_minmax(130px,1.3fr)_88px_minmax(160px,1fr)_86px_minmax(115px,0.85fr)_minmax(130px,1.1fr)_32px] xl:items-center xl:gap-2 xl:py-2 xl:px-3"
+        ? "xl:grid-cols-[24px_minmax(120px,1.15fr)_84px_minmax(195px,1.25fr)_84px_minmax(115px,0.85fr)_minmax(115px,1fr)_30px] xl:items-center xl:gap-2 xl:py-2 xl:px-3"
         : "";
 
       html += `
@@ -1557,7 +1557,7 @@ function renderFinanceOptions() {
               isWideCard
                 ? `
             <!-- Desktop Column Headers for Full-Width Spreadsheet View (xl+ only to prevent overlap on narrow laptops) -->
-            <div class="hidden xl:grid xl:grid-cols-[24px_minmax(130px,1.3fr)_88px_minmax(160px,1fr)_86px_minmax(115px,0.85fr)_minmax(130px,1.1fr)_32px] xl:items-center xl:gap-2 px-6 py-2 bg-gray-100/80 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-800 text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <div class="hidden xl:grid xl:grid-cols-[24px_minmax(120px,1.15fr)_84px_minmax(195px,1.25fr)_84px_minmax(115px,0.85fr)_minmax(115px,1fr)_30px] xl:items-center xl:gap-2 px-6 py-2 bg-gray-100/80 dark:bg-gray-800/70 border-b border-gray-200 dark:border-gray-800 text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
               <span></span>
               <span>Category</span>
               <span>Billing</span>
@@ -1670,7 +1670,7 @@ function renderFinanceOptions() {
                     <div class="order-4 col-span-12 sm:order-6 sm:col-span-6 ${isWideCard ? "xl:order-4 xl:col-span-1" : ""} flex items-stretch h-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 focus-within:border-primary overflow-hidden min-w-0">
                       <select
                         onchange="updateFinanceField('${opt.id}', '${f.id}', 'currency', this.value)"
-                        class="bg-gray-100 dark:bg-gray-800 text-[11px] font-black text-gray-700 dark:text-gray-200 px-1.5 border-r border-gray-300 dark:border-gray-700 outline-none cursor-pointer shrink-0"
+                        class="bg-gray-100 dark:bg-gray-800 text-[11px] font-black text-gray-700 dark:text-gray-200 px-1 border-r border-gray-300 dark:border-gray-700 outline-none cursor-pointer shrink-0 w-[58px]"
                         title="Input Currency"
                       >
                         ${getCurrencyOptions(f.currency)}
@@ -1680,7 +1680,7 @@ function renderFinanceOptions() {
                         value="${displayCostStr}"
                         oninput="formatMoneyInput(this, false); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)"
                         onblur="formatMoneyInput(this, true); updateFinanceField('${opt.id}', '${f.id}', 'cost', this.value)"
-                        class="w-full min-w-0 bg-transparent text-xs font-bold font-mono tabular-nums text-gray-900 dark:text-white px-2 outline-none text-right"
+                        class="w-full min-w-0 bg-transparent text-xs font-bold font-mono tabular-nums text-gray-900 dark:text-white px-1.5 outline-none text-right"
                         placeholder="0.00"
                       />
                     </div>
@@ -4143,9 +4143,9 @@ function renderFeeTracker(targetScrollPoc = null) {
         <div class="flex flex-wrap items-center gap-2 md:gap-3">
             <div class="flex items-center gap-1.5">
                 <label class="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 tracking-wider whitespace-nowrap">Per-Pax (SGD):</label>
-                <div class="relative flex items-center">
-                    <span class="absolute left-1.5 text-xs font-bold text-gray-400 pointer-events-none">$</span>
-                    <input type="text" value="${baseFee ? parseFloat(baseFee).toLocaleString("en-US", { minimumFractionDigits: 2 }) : "0.00"}" oninput="formatMoneyInput(this, false); financeConfig.perPersonFee = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFinanceConfig('perPersonFee', parseFloat(this.value.replace(/,/g, ''))||0)" class="w-[76px] text-xs font-black font-mono tabular-nums border-2 border-gray-300 dark:border-gray-600 rounded pl-4 pr-1.5 py-1 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-sm text-right">
+                <div class="flex items-center w-28 border-2 border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-950 focus-within:ring-1 focus-within:ring-primary focus-within:border-primary shadow-sm overflow-hidden">
+                    <span class="pl-2 pr-1 text-xs font-bold text-gray-400 select-none shrink-0">$</span>
+                    <input type="text" value="${baseFee ? parseFloat(baseFee).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}" oninput="formatMoneyInput(this, false); financeConfig.perPersonFee = parseFloat(this.value.replace(/,/g, ''))||0; queueFinanceUpdate();" onblur="formatMoneyInput(this, true); updateFinanceConfig('perPersonFee', parseFloat(this.value.replace(/,/g, ''))||0)" class="w-full min-w-0 bg-transparent text-xs font-black font-mono tabular-nums pr-2 py-1 text-gray-900 dark:text-white focus:outline-none text-right">
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
