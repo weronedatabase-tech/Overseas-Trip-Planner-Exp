@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+_site/
+data/
+uploads/
+.clasprc.json
+.clasp.json
+.env
+.DS_Store

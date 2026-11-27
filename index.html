@@ -4,9 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0"
     />
     <title>Overseas Trip Planner</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script>
+      (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");}}catch(e){}})();
+    </script>
     <meta name="description" content="Application for planning and managing overseas trips, including attendance, finance, logistics, and participant profiles." />
     <meta property="og:title" content="Overseas Trip Planner" />
     <meta property="og:description" content="Application for planning and managing overseas trips, including attendance, finance, logistics, and participant profiles." />
@@ -200,13 +205,12 @@
                   </svg>
                   <svg
                     id="eyeClosed"
-                    class="hidden-force"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                    class="w-5 h-5"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="2"
+                      stroke="currentColor"
+                      class="w-5 h-5 hidden-force"
                   >
                     <path
                       stroke-linecap="round"
@@ -235,7 +239,7 @@
             <button
               type="button"
               onclick="toggleLandingReceipt()"
-              class="w-full flex justify-between items-center p-3.5 text-left focus:outline-none hover:bg-gray-50/80 dark:hover:bg-gray-750 transition group cursor-pointer"
+              class="w-full flex justify-between items-center p-3.5 text-left focus:outline-none hover:bg-gray-50/80 dark:hover:bg-gray-800 transition group cursor-pointer"
             >
               <div class="flex items-center gap-2.5 min-w-0">
                 <span class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 group-hover:text-primary transition-colors shrink-0">
@@ -520,8 +524,7 @@
             </div>
             <div class="p-3 bg-gray-50/50 dark:bg-gray-900/40 flex justify-center items-center">
               <img
-                id="landingInfographicImg"
-                src=""
+                  id="landingInfographicImg"
                 alt="Trip Infographic"
                 class="w-full h-auto max-h-[550px] object-contain rounded-2xl shadow-sm hover:opacity-95 transition cursor-pointer"
                 onclick="openInfographicModal(this.src)"
@@ -537,6 +540,7 @@
     <script src="frontend/js/live-sync.js"></script>
     <script src="frontend/js/state.js"></script>
     <script src="frontend/js/ui.js"></script>
+    <script src="frontend/js/archive-mode.js"></script>
     <script src="frontend/js/main.js"></script>
     <script src="frontend/js/auth.js"></script>
     <script>
@@ -550,7 +554,8 @@
           modal.innerHTML = `
             <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
               <button onclick="document.getElementById('infographicModal').classList.add('hidden-force')" class="absolute -top-10 right-0 text-white hover:text-gray-300 text-3xl font-black px-2 focus:outline-none cursor-pointer">&times;</button>
-              <img id="infographicModalImg" src="" alt="Infographic" class="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
+              <img
+        id="infographicModalImg" alt="Infographic" class="max-h-[85vh] max-w-full object-contain rounded-xl shadow-2xl" />
             </div>
           `;
           modal.addEventListener("click", (e) => {

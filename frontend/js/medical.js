@@ -297,8 +297,9 @@ function renderMedicalTable() {
 
   const tbody = document.getElementById("medicalTableBody");
   let html = "";
+  const escMed = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
   data.forEach((p) => {
-    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleStr = String(p.role || "").substring(0, 3).toUpperCase();
     const roleColor =
       p.role === "TRAINEE"
         ? "text-green-600 dark:text-green-400"
@@ -309,15 +310,15 @@ function renderMedicalTable() {
     const shortNameUpper = (p.shortName || "").toUpperCase();
     const nameClass = "font-bold text-gray-900 dark:text-gray-100";
 
-    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${escMed(p.nric)}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
-           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
+           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${escMed(fullNameUpper)}</div>
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${escMed(shortNameUpper)}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
-               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
+               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${escMed(roleStr)}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${escMed((p.group || "None").toUpperCase())}">${escMed(getProjectAbbreviation(p.group || "None"))}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${escMed(p.caregiverFor.toUpperCase())}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
@@ -328,13 +329,13 @@ function renderMedicalTable() {
       p.medical.trim().toLowerCase() !== "nil" &&
       p.medical.trim().toLowerCase() !== "none";
     if (hasMedical) {
-      html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Medical & Medications:</span> <span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.medical}</span></div>`;
+      html += `<div><span class="font-bold text-gray-500 uppercase text-xs block mb-0.5">Medical & Medications:</span> <span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${escMed(p.medical)}</span></div>`;
     }
 
     if (p.emergencyName || p.emergencyContact) {
       html += `<div class="p-2 bg-gray-50 dark:bg-gray-800 rounded border-2 border-gray-100 dark:border-gray-700">
            <div class="text-[11px] text-gray-400 uppercase tracking-widest font-bold mb-1">Emergency Contact</div>
-           <div class="font-bold text-gray-800 dark:text-gray-200">${(p.emergencyName || "-").toUpperCase()} ${p.emergencyRelation ? `(${p.emergencyRelation.toUpperCase()})` : ""}</div>
+           <div class="font-bold text-gray-800 dark:text-gray-200">${escMed((p.emergencyName || "-").toUpperCase())} ${p.emergencyRelation ? `(${escMed(p.emergencyRelation.toUpperCase())})` : ""}</div>
            <div class="font-mono text-green-600 dark:text-green-400 font-bold mt-0.5">${renderPhoneLink(p.emergencyContact)}</div>
        </div>`;
     }

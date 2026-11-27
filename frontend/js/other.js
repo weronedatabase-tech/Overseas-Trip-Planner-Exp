@@ -113,7 +113,7 @@ async function loadOtherData() {
 
     renderOtherTable();
   } catch (e) {
-    showToast("Failed to load medical data.", true);
+    showToast("Failed to load other details.", true);
   } finally {
     if (loader) loader.classList.add("hidden-force");
   }
@@ -292,8 +292,10 @@ function renderOtherTable() {
 
   const tbody = document.getElementById("otherTableBody");
   let html = "";
+  const escO = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+  const emptyVals = new Set(["nil", "none", "-", "na", "n/a", "no"]);
   data.forEach((p) => {
-    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const roleStr = String(p.role || "").substring(0, 3).toUpperCase();
     const roleColor =
       p.role === "TRAINEE"
         ? "text-green-600 dark:text-green-400"
@@ -304,15 +306,15 @@ function renderOtherTable() {
     const shortNameUpper = (p.shortName || "").toUpperCase();
     const nameClass = "font-bold text-gray-900 dark:text-gray-100";
 
-    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${escO(p.nric)}">
        <td class="py-1.5 px-2 align-top sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-md w-[35%]">
-           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
+           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${escO(fullNameUpper)}</div>
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${escO(shortNameUpper)}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
-               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
+               <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${escO(roleStr)}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-[11px] font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${escO((p.group || "None").toUpperCase())}">${escO(getProjectAbbreviation(p.group || "None"))}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${escO(p.caregiverFor.toUpperCase())}]</div>` : ""}
        </td>
        <td class="py-1.5 px-2 align-top w-[65%] text-xs leading-relaxed whitespace-normal break-words border-l-2 border-gray-100 dark:border-gray-700/50">
            <div class="flex flex-col gap-3">`;
@@ -320,18 +322,16 @@ function renderOtherTable() {
     const hasNotes =
       p.otherPoints &&
       p.otherPoints.trim() &&
-      p.otherPoints.trim().toLowerCase() !== "nil" &&
-      p.otherPoints.trim().toLowerCase() !== "none";
+      !emptyVals.has(p.otherPoints.trim().toLowerCase());
     const hasSleep =
       p.sleeping &&
       p.sleeping.trim() &&
-      p.sleeping.trim().toLowerCase() !== "nil" &&
-      p.sleeping.trim().toLowerCase() !== "none";
+      !emptyVals.has(p.sleeping.trim().toLowerCase());
     if (hasSleep) {
-      html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.sleeping}</span></div>`;
+      html += `<div><span class="text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${escO(p.sleeping)}</span></div>`;
     }
     if (hasNotes) {
-      html += `<div><span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${p.otherPoints}</span></div>`;
+      html += `<div><span class="text-orange-700 dark:text-orange-400 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap">${escO(p.otherPoints)}</span></div>`;
     }
 
     html += `</div></td></tr>`;

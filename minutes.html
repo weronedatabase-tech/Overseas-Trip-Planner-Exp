@@ -4,9 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0"
     />
     <title>Minutes | Overseas Trip</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script>
+      (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");}}catch(e){}})();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="frontend/js/tailwind.config.js"></script>
     <link rel="stylesheet" href="frontend/css/styles.css" />
@@ -271,7 +276,7 @@
               />
             </svg>
             <span class="btn-text">Logout</span>
-            <div class="btn-spinner hidden-force !w-3 !h-3"></div>
+            <div class="btn-spinner spinner-red hidden-force !w-3 !h-3"></div>
           </button>
         </div>
       </nav>

@@ -229,7 +229,9 @@ async function executeMinutesSync() {
     }
     updateMinutesSyncUI("saved");
   } catch (e) {
-    updates.forEach((u) => pendingMinutesUpdates.set(u.id, u));
+    updates.forEach((u) => {
+      if (!pendingMinutesUpdates.has(u.id)) pendingMinutesUpdates.set(u.id, u);
+    });
     updateMinutesSyncUI("error");
   } finally {
     isMinutesSyncing = false;
@@ -393,18 +395,20 @@ function createNoteDOM(note) {
       })
     : "New";
 
+  const escM = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+  const escMJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => escM(s);
   div.innerHTML = `
    <div class="flex justify-between items-center bg-gray-50/80 dark:bg-gray-900/50 p-2 md:p-3 border-b-2 border-gray-100 dark:border-gray-700 shrink-0">
        <div class="flex items-center gap-2">
-           <input type="date" value="${formatYMD(note.date)}" ${isRO ? "readonly disabled" : ""}
+           <input type="date" value="${escM(formatYMD(note.date))}" ${isRO ? "readonly disabled" : ""}
                class="note-date min-w-[120px] [color-scheme:light] dark:[color-scheme:dark] text-xs font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded px-2 py-1 shadow-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
-               onchange="handleMinuteInput('${note.id}', 'date', this.value)">
-           <span id="min-by-${note.id}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${timeStr} by ${(note.updatedBy || "").toUpperCase()}</span>
+               onchange="handleMinuteInput('${escMJs(note.id)}', 'date', this.value)">
+           <span id="min-by-${escM(note.id)}" class="note-meta text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide hidden md:inline-block">${escM(timeStr)} by ${escM((note.updatedBy || "").toUpperCase())}</span>
        </div>
        ${
          isRO
            ? ""
-           : `<button onclick="deleteMinuteNote('${note.id}')" class="archive-hide text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 p-1.5 rounded shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none" title="Delete Note">
+           : `<button onclick="deleteMinuteNote('${escMJs(note.id)}')" class="archive-hide text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border-2 border-red-200 dark:border-red-900/50 p-1.5 rounded shadow-md hover:bg-red-100 dark:hover:bg-red-900/60 transition focus:outline-none" title="Delete Note">
            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
        </button>`
        }
@@ -413,14 +417,14 @@ function createNoteDOM(note) {
        <textarea ${isRO ? "readonly" : ""}
            class="note-content w-full bg-gray-50 dark:bg-gray-950 border-2 border-gray-200 dark:border-gray-700 rounded-lg p-3 text-xs md:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y shadow-inner min-h-[100px]"
            placeholder="${isRO ? "No notes recorded." : "Salient points, decisions made, or important notes..."}"
-           oninput="handleMinuteInput('${note.id}', 'content', this.value)">${note.content || ""}</textarea>
+           oninput="handleMinuteInput('${escMJs(note.id)}', 'content', this.value)">${escM(note.content || "")}</textarea>
    </div>
    <div class="bg-green-50/50 dark:bg-green-900/10 p-2 md:p-3 border-t-2 border-green-100 dark:border-green-900/30 flex items-center gap-2">
        <svg class="w-4 h-4 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-       <input type="text" value="${note.assignedTo || ""}" ${isRO ? "readonly" : ""}
+       <input type="text" value="${escM(note.assignedTo || "")}" ${isRO ? "readonly" : ""}
            class="note-assigned w-full bg-white dark:bg-gray-800 border-2 border-green-200 dark:border-green-800/50 rounded-md px-2 py-1.5 text-xs font-bold text-green-800 dark:text-green-300 placeholder-green-300 dark:placeholder-green-700 focus:outline-none focus:ring-1 focus:ring-primary shadow-md"
            placeholder="${isRO ? "No follow-ups tagged" : "Tag follow-ups (e.g. John, Alice)..."}"
-           oninput="handleMinuteInput('${note.id}', 'assignedTo', this.value)">
+           oninput="handleMinuteInput('${escMJs(note.id)}', 'assignedTo', this.value)">
    </div>
 `;
 

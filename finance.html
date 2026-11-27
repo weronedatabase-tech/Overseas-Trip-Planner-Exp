@@ -4,9 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0"
     />
     <title>Finance | Overseas Trip</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script>
+      (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");}}catch(e){}})();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="frontend/js/tailwind.config.js"></script>
     <link rel="stylesheet" href="frontend/css/styles.css" />
@@ -271,7 +276,7 @@
               />
             </svg>
             <span class="btn-text">Logout</span>
-            <div class="btn-spinner hidden-force !w-3 !h-3"></div>
+            <div class="btn-spinner spinner-red hidden-force !w-3 !h-3"></div>
           </button>
         </div>
       </nav>
@@ -878,8 +883,8 @@
                 <input
                   type="file"
                   id="adminFeeFileInput"
-                  required
                   accept="image/*,application/pdf"
+                  onclick="event.stopPropagation()"
                   onchange="handleAdminFeeFileSelect(this)"
                   class="hidden-force"
                 />
@@ -893,7 +898,7 @@
                   </div>
                 </div>
                 <div id="adminFeeFilePreview" class="hidden-force flex flex-col items-center">
-                  <img id="adminFeeImgPreview" class="max-h-24 max-w-full rounded-lg shadow mb-1 object-contain hidden-force" />
+                  <img id="adminFeeImgPreview" alt="Selected receipt preview" class="max-h-24 max-w-full rounded-lg shadow mb-1 object-contain hidden-force" />
                   <div id="adminFeePdfPreview" class="hidden-force p-1.5 bg-red-50 text-red-600 rounded-lg font-bold text-xs flex items-center gap-2 mb-1">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/></svg>
                     <span id="adminFeePdfName">PDF Document</span>
@@ -915,7 +920,7 @@
                 </label>
                 <select
                   id="adminFeePayerSelect"
-                  class="w-full text-xs font-semibold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-purple-500"
+                  class="w-full text-xs font-semibold bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-purple-500"
                 >
                 </select>
               </div>
@@ -927,6 +932,7 @@
                 <input
                   type="number"
                   step="0.01"
+                  min="0.01"
                   id="adminFeeAmount"
                   required
                   placeholder="0.00"
@@ -944,7 +950,7 @@
                 type="text"
                 id="adminFeeRemarks"
                 placeholder="e.g. Deposit, balance, notes..."
-                class="w-full text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-purple-500"
+                class="w-full text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-700 rounded-lg p-2 focus:outline-none focus:border-purple-500"
               />
             </div>
 
@@ -992,6 +998,7 @@
     <script src="frontend/js/archive-mode.js"></script>
     <script src="frontend/js/main.js"></script>
     <script src="frontend/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js" crossorigin="anonymous"></script>
     <script src="frontend/js/finance.js"></script>
     <script>
       window.initPage = () => {

@@ -202,6 +202,9 @@ function renderExtractSearchResults() {
     return;
   }
 
+  const esc = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const escJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => esc(String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+
   cont.innerHTML = matches
     .map((p) => {
       const roleColor =
@@ -223,15 +226,15 @@ function renderExtractSearchResults() {
         projAbbr = getProjectAbbreviation(p.group || "None");
 
       return `
-        <div onclick="addExtractExcluded('${p.nric}')" class="flex items-center justify-between p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition shadow-md">
+        <div onclick="addExtractExcluded('${escJs(p.nric)}')" class="flex items-center justify-between p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition shadow-md">
             <div class="flex flex-col min-w-0 pr-2">
-                <div class="font-bold text-xs md:text-sm text-gray-900 dark:text-gray-100 leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-                ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
+                <div class="font-bold text-xs md:text-sm text-gray-900 dark:text-gray-100 leading-tight whitespace-normal break-words">${esc(fullNameUpper)}</div>
+                ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${esc(shortNameUpper)}</div>` : ""}
                 <div class="flex items-center gap-1 mt-1.5 flex-wrap">
-                    <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-900/50 px-1.5 py-[1.5px] leading-tight rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-widest">${roleStr}</span>
-                    <span class="px-1.5 py-[1.5px] leading-tight rounded border shadow-md text-[11px] font-bold ${projColor} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${projAbbr}</span>
+                    <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-900/50 px-1.5 py-[1.5px] leading-tight rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-widest">${esc(roleStr)}</span>
+                    <span class="px-1.5 py-[1.5px] leading-tight rounded border shadow-md text-[11px] font-bold ${projColor} whitespace-normal break-words inline-block" title="${esc((p.group || "None").toUpperCase())}">${esc(projAbbr)}</span>
                 </div>
-                ${p.relatedTrainee && p.role === "CAREGIVER" ? `<div class="mt-1.5 font-bold text-purple-600 dark:text-purple-400 text-xs tracking-tight">[${p.relatedTrainee.toUpperCase()}]</div>` : ""}
+                ${p.relatedTrainee && p.role === "CAREGIVER" ? `<div class="mt-1.5 font-bold text-purple-600 dark:text-purple-400 text-xs tracking-tight">[${esc(p.relatedTrainee.toUpperCase())}]</div>` : ""}
             </div>
             <button class="shrink-0 p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-red-500 transition focus:outline-none bg-gray-100 dark:bg-gray-900/50 border-2 border-gray-200 dark:border-gray-700">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -249,6 +252,9 @@ function renderExtractExcluded() {
     cont.innerHTML = `<span class="text-xs text-gray-400 font-medium italic p-2">None selected.</span>`;
     return;
   }
+
+  const esc = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  const escJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => esc(String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
 
   let html = "";
   extractExcludedNrics.forEach((nric) => {
@@ -274,15 +280,15 @@ function renderExtractExcluded() {
       projAbbr = getProjectAbbreviation(p.group || "None");
 
     html += `
-        <div onclick="removeExtractExcluded('${p.nric}')" class="flex items-center justify-between p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition shadow-md w-full">
+        <div onclick="removeExtractExcluded('${escJs(p.nric)}')" class="flex items-center justify-between p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-900/10 cursor-pointer transition shadow-md w-full">
             <div class="flex flex-col min-w-0 pr-2">
-                <div class="font-bold text-xs md:text-sm text-gray-900 dark:text-gray-100 leading-tight whitespace-normal break-words line-through opacity-70">${fullNameUpper}</div>
-                ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words line-through opacity-70">${shortNameUpper}</div>` : ""}
+                <div class="font-bold text-xs md:text-sm text-gray-900 dark:text-gray-100 leading-tight whitespace-normal break-words line-through opacity-70">${esc(fullNameUpper)}</div>
+                ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words line-through opacity-70">${esc(shortNameUpper)}</div>` : ""}
                 <div class="flex items-center gap-1 mt-1.5 flex-wrap opacity-80">
-                    <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-900/50 px-1.5 py-[1.5px] leading-tight rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-widest">${roleStr}</span>
-                    <span class="px-1.5 py-[1.5px] leading-tight rounded border shadow-md text-[11px] font-bold ${projColor} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${projAbbr}</span>
+                    <span class="text-[11px] font-black ${roleColor} bg-gray-50 dark:bg-gray-900/50 px-1.5 py-[1.5px] leading-tight rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-widest">${esc(roleStr)}</span>
+                    <span class="px-1.5 py-[1.5px] leading-tight rounded border shadow-md text-[11px] font-bold ${projColor} whitespace-normal break-words inline-block" title="${esc((p.group || "None").toUpperCase())}">${esc(projAbbr)}</span>
                 </div>
-                ${p.relatedTrainee && p.role === "CAREGIVER" ? `<div class="mt-1.5 font-bold text-purple-600 dark:text-purple-400 text-xs tracking-tight opacity-70">[${p.relatedTrainee.toUpperCase()}]</div>` : ""}
+                ${p.relatedTrainee && p.role === "CAREGIVER" ? `<div class="mt-1.5 font-bold text-purple-600 dark:text-purple-400 text-xs tracking-tight opacity-70">[${esc(p.relatedTrainee.toUpperCase())}]</div>` : ""}
             </div>
             <button class="shrink-0 p-1.5 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 transition focus:outline-none bg-red-50 dark:bg-red-900/10 border-2 border-red-200 dark:border-red-800/50">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -851,10 +857,20 @@ function showExtractionResultPopup(res) {
   const modal = getOrCreateExtractionResultModal();
   const nameEl = document.getElementById("extractResultFileName");
   const linkEl = document.getElementById("extractResultLink");
+  const copyBtn = document.getElementById("btnCopyExtractLink");
   const copyLbl = document.getElementById("lblCopyExtractLink");
 
   if (nameEl) nameEl.textContent = fileName;
-  if (linkEl) linkEl.href = fileUrl || "#";
+  if (linkEl) {
+    if (fileUrl) {
+      linkEl.href = fileUrl;
+      linkEl.classList.remove("pointer-events-none");
+    } else {
+      linkEl.removeAttribute("href");
+      linkEl.classList.add("pointer-events-none");
+    }
+  }
+  if (copyBtn) copyBtn.classList.toggle("hidden-force", !fileUrl);
   if (copyLbl) copyLbl.textContent = "Copy Link";
 
   modal.classList.remove("hidden-force");
@@ -906,19 +922,7 @@ function downloadExtractedFile() {
   const { fileName, downloadUrl, fileData, fileId, mimeType } =
     lastExtractedFile;
 
-  // Prefer server attachment endpoint for reliable download across iOS Safari, Android Chrome, and desktop
-  if (downloadUrl) {
-    const a = document.createElement("a");
-    a.href = downloadUrl;
-    a.download = fileName;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    showToast("Downloading Excel file...");
-    return;
-  }
-
+  // Prefer in-memory base64 Blob from GAS for instant, server-free downloads across GitHub Pages & AI Studio
   if (fileData) {
     try {
       const blob = base64ToExcelBlob(fileData, mimeType);

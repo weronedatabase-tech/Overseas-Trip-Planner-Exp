@@ -5,8 +5,17 @@
 // ==========================================
 function setupProject() {
 const props = PropertiesService.getScriptProperties();
-if(!props.getProperty('PASS_GENERAL')) props.setProperty('PASS_GENERAL', 'P@ssw0rd');
-if(!props.getProperty('PASS_ADMIN')) props.setProperty('PASS_ADMIN', 'P@ssw0rd');
+if(!props.getProperty('PASS_GENERAL')) {
+  const genPwd = Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+  props.setProperty('PASS_GENERAL', genPwd);
+  console.log('Generated initial PASS_GENERAL (change in Script Properties): ' + genPwd);
+}
+if(!props.getProperty('PASS_ADMIN')) {
+  const admPwd = Utilities.getUuid().replace(/-/g, '').substring(0, 16);
+  props.setProperty('PASS_ADMIN', admPwd);
+  console.log('Generated initial PASS_ADMIN (change in Script Properties): ' + admPwd);
+}
+getAuthSecret();
 if(!props.getProperty('REGISTRATION_OPEN')) props.setProperty('REGISTRATION_OPEN', 'false');
 if(!props.getProperty('ALLOW_EDITS')) props.setProperty('ALLOW_EDITS', 'false');
 
@@ -18,6 +27,120 @@ SlidesApp.create('Auth Setup').setTrashed(true);
 } catch(e) {}
 setupCron();
 console.log(`Safe setup complete for ${ENV} environment.`);
+}
+
+// ==========================================
+// AUTHENTICATION & TOKEN HELPERS (HMAC-SHA256)
+// ==========================================
+const AUTH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function getAuthSecret() {
+  const props = PropertiesService.getScriptProperties();
+  let secret = props.getProperty('AUTH_SECRET');
+  if (!secret) {
+    const raw = Utilities.getUuid() + ':' + Utilities.getUuid() + ':' + Date.now();
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw);
+    secret = Utilities.base64EncodeWebSafe(digest).replace(/=+$/, '');
+    props.setProperty('AUTH_SECRET', secret);
+  }
+  return secret;
+}
+
+function base64UrlEncodeStr(str) {
+  return Utilities.base64EncodeWebSafe(Utilities.newBlob(str).getBytes()).replace(/=+$/, '');
+}
+
+function base64UrlDecodeStr(b64) {
+  let padded = String(b64 || '').replace(/-/g, '+').replace(/_/g, '/');
+  while (padded.length % 4 !== 0) padded += '=';
+  return Utilities.newBlob(Utilities.base64Decode(padded)).getDataAsString();
+}
+
+function constantTimeEquals(a, b) {
+  const sa = String(a || '');
+  const sb = String(b || '');
+  if (sa.length !== sb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < sa.length; i++) {
+    diff |= sa.charCodeAt(i) ^ sb.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+function createAuthToken(userObj) {
+  const now = Date.now();
+  const payload = {
+    nric: String(userObj.nric || '').trim().toUpperCase(),
+    role: String(userObj.role || 'user'),
+    name: String(userObj.name || ''),
+    isMainAdmin: Boolean(userObj.isMainAdmin || String(userObj.nric || '').trim().toUpperCase() === 'ADMIN'),
+    iat: now,
+    exp: now + AUTH_TOKEN_TTL_MS
+  };
+  const payloadB64 = base64UrlEncodeStr(JSON.stringify(payload));
+  const sigBytes = Utilities.computeHmacSha256Signature(payloadB64, getAuthSecret());
+  const sigB64 = Utilities.base64EncodeWebSafe(sigBytes).replace(/=+$/, '');
+  return payloadB64 + '.' + sigB64;
+}
+
+function verifyAuthToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const payloadB64 = parts[0];
+  const sigB64 = parts[1];
+  try {
+    const expectedBytes = Utilities.computeHmacSha256Signature(payloadB64, getAuthSecret());
+    const expectedB64 = Utilities.base64EncodeWebSafe(expectedBytes).replace(/=+$/, '');
+    if (!constantTimeEquals(sigB64, expectedB64)) return null;
+    const payload = JSON.parse(base64UrlDecodeStr(payloadB64));
+    if (!payload || !payload.nric || !payload.exp || Date.now() > payload.exp) return null;
+    // Re-verify committee admin membership if not main admin
+    if (payload.role === 'admin' && !payload.isMainAdmin) {
+      const props = PropertiesService.getScriptProperties();
+      const committeeList = JSON.parse(props.getProperty('COMMITTEE_LIST') || '[]');
+      const stillCommittee = committeeList.some(c => String(c.nric || '').trim().toUpperCase() === payload.nric);
+      if (!stillCommittee) return null;
+    }
+    return payload;
+  } catch (e) {
+    return null;
+  }
+}
+
+function requireAuth(auth, level) {
+  if (!auth) throw new Error('AUTH_REQUIRED: Session expired or unauthorized. Please log in again.');
+  if (level === 'admin' && auth.role !== 'admin') {
+    throw new Error('FORBIDDEN: Admin access required.');
+  }
+  if (level === 'main_admin' && (!auth.isMainAdmin || auth.role !== 'admin')) {
+    throw new Error('FORBIDDEN: Main Admin access required.');
+  }
+  return auth;
+}
+
+function getUserFamilyContext(userNric) {
+  const cleanNric = String(userNric || '').trim().toUpperCase();
+  const roster = fetchAdminRoster().roster || [];
+  const self = roster.find(r => r.nric === cleanNric) || null;
+  if (!self) return { self: null, pocNric: cleanNric, familyNrics: new Set([cleanNric]), groupMembersNrics: new Set() };
+  const pocNric = self.pocNric || self.nric;
+  const familyNrics = new Set();
+  roster.forEach(r => {
+    if ((r.pocNric || r.nric) === pocNric || r.nric === cleanNric) {
+      familyNrics.add(r.nric);
+    }
+  });
+  const groupMembersNrics = new Set();
+  if (self.isGroupIC && self.logisticsGroup) {
+    const myGrp = String(self.logisticsGroup).trim();
+    roster.forEach(r => {
+      if (String(r.logisticsGroup || '').trim() === myGrp) {
+        groupMembersNrics.add(r.nric);
+      }
+    });
+  }
+  return { self, pocNric, familyNrics, groupMembersNrics };
 }
 
 function factoryResetSettings() {
@@ -150,7 +273,7 @@ return true;
 // API ROUTER
 // ==========================================
 function setupSheets(ss) {
-const requiredSheets =["Raw Data", "Finance Options", "Receipts", "Rooms", "Buses", "Groups", "Pairings", "Attendance", "Minutes"];
+const requiredSheets =["Raw Data", "Finance Options", "Receipts", "Rooms", "Pairings", "Attendance", "Minutes"];
 requiredSheets.forEach(name => {
 if (!ss.getSheetByName(name)) {
 let sheet = ss.insertSheet(name);
@@ -160,7 +283,7 @@ if (name === "Raw Data") {
 } else if (name === "Finance Options") {
   sheet.appendRow(["JSON Data - Do Not Edit"]);
   sheet.appendRow([""]);
-  sheet.appendRow(["Currency Setup", "SGD to MYR Rate:", '=GOOGLEFINANCE("CURRENCY:SGDMYR")']);
+  sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
 } else if (name === "Receipts") {
   sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed", "Uploader Name"]);
   sheet.setFrozenRows(1);
@@ -183,12 +306,17 @@ const defaultSheet = ss.getSheetByName("Sheet1");
 if (defaultSheet && ss.getSheets().length > 1) ss.deleteSheet(defaultSheet);
 }
 
+function doGet() {
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', service: 'Overseas Trip Planner API' })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
 ACTIVE_ARCHIVE_SHEET_ID = null;
 ACTIVE_ARCHIVE_FOLDER_ID = null;
 ACTIVE_ARCHIVE_META = null;
 try {
 const data = JSON.parse(e.postData.contents);
+const auth = verifyAuthToken(data.authToken);
 const READONLY_ARCHIVE_ACTIONS = [
   'getSettings',
   'fetchAdminRoster',
@@ -201,81 +329,255 @@ const READONLY_ARCHIVE_ACTIONS = [
   'fetchMinutes',
   'getDriveContents',
   'getProfile',
-  'getPublicTrainees'
+  'getPublicTrainees',
+  'getArchivedTripMeta',
+  'extractData'
 ];
 if (data.archiveId || data.archiveSheetId) {
+  requireAuth(auth, 'admin');
   if (READONLY_ARCHIVE_ACTIONS.indexOf(data.action) === -1) {
     throw new Error("Archived trips are read-only and cannot be modified.");
   }
-  const props = PropertiesService.getScriptProperties();
-  const archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
-  const found = archives.find(a => (data.archiveId && a.id === data.archiveId) || (data.archiveSheetId && a.sheetId === data.archiveSheetId));
-  ACTIVE_ARCHIVE_META = found || null;
-  ACTIVE_ARCHIVE_SHEET_ID = (found && found.sheetId) || data.archiveSheetId || null;
-  ACTIVE_ARCHIVE_FOLDER_ID = (found && found.folderId) || data.archiveFolderId || null;
+  const archives = loadArchivedTripsRegistry();
+  const cleanArchId = String(data.archiveId || '').trim();
+  const found = archives.find(a => cleanArchId && String(a.id || '').trim() === cleanArchId);
+  if (!found || !found.sheetId) {
+    throw new Error("Archived trip not found.");
+  }
+  ACTIVE_ARCHIVE_META = found;
+  ACTIVE_ARCHIVE_SHEET_ID = found.sheetId;
+  ACTIVE_ARCHIVE_FOLDER_ID = found.folderId || null;
 }
 let result = {};
 switch(data.action) {
-case 'listArchivedTrips': result = listArchivedTrips(); break;
-case 'getSettings': result = getAppConfig(); break;
-case 'login': result = handleLogin(data.password, data.nric); break;
-case 'getProfile': result = getProfile(data.nric); break;
-case 'updateProfile': result = updateProfile(data.member); break;
-case 'submitRegistration': result = submitRegistration(data.payload); break;
-case 'getPublicTrainees': result = getPublicTrainees(); break;
-case 'checkDuplicateParticipant': result = checkDuplicateParticipant(data.nric, data.passport); break;
-case 'toggleRegistration': result = toggleRegistration(data.status, data.tripTitle, data.tripYear, data.tripStart, data.tripEnd); break;
-case 'toggleEdits': result = toggleEdits(data.status); break;
-case 'getCommittee': result = getCommitteeList(); break;
-case 'addCommittee': result = modifyCommitteeList(data.nric, true, data.name, data.phone); break;
-case 'removeCommittee': result = modifyCommitteeList(data.nric, false); break;
-case 'addHelpline': result = modifyHelplineContacts(data.id, true, data.name, data.phone); break;
-case 'removeHelpline': result = modifyHelplineContacts(data.id, false); break;
-case 'addProjectGroup': result = modifyProjectGroups(data.groupName, true, data.callerNric, data.colorClass); break;
-case 'removeProjectGroup': result = modifyProjectGroups(data.groupName, false, data.callerNric); break;
-case 'modifyJunctures': result = modifyJunctures(data.actionType, data.oldName, data.newName); break;
-case 'modifyICJunctures': result = modifyICJunctures(data.actionType, data.oldName, data.newName, data.groupName); break;
-case 'saveSortingRules': result = saveSortingRules(data.rules, data.callerNric); break;
-case 'saveCustomViewsOrder': result = saveCustomViewsOrder(data.order, data.callerNric); break;
-case 'saveTripSettings': result = saveTripSettings(data.title, data.year, data.start, data.end); break;
-case 'clearCache': result = clearGlobalCache(); break;
-case 'fetchAdminRoster': result = fetchAdminRoster(); break;
-case 'adminUpdateParticipant': result = updateProfile(data.member, true); break;
-case 'deleteParticipant': result = deleteParticipant(data.nric); break;
-case 'addDriveAccess': result = addDriveAccess(data.email, data.role); break;
-case 'removeDriveAccess': result = removeDriveAccess(data.email); break;
-case 'massDriveAccess': result = massDriveAccess(data.actionType, data.emails, data.role); break;
-case 'getDriveContents': result = getDriveContents(data.folderId); break;
-case 'uploadDriveFile': result = uploadDriveFile(data.folderId, data.fileName, data.mimeType, data.fileData); break;
-case 'createDriveFolder': result = createDriveFolder(data.parentFolderId, data.folderName); break;
-case 'createGoogleDoc': result = createGoogleDoc(data.folderId, data.fileName, data.docType); break;
-case 'renameDriveItem': result = renameDriveItem(data.itemId, data.isFolder, data.newName, data.currentFolderId); break;
-case 'deleteDriveItem': result = deleteDriveItem(data.itemId, data.isFolder, data.currentFolderId); break;
-case 'bulkDriveOperation': result = bulkDriveOperation(data.actionType, data.items, data.targetFolderId, data.singleNewName); break;
-case 'fetchLogistics': result = fetchLogistics(); break;
-case 'syncPairingUpdates': result = syncPairingUpdates(data.updates, data.takenBy || 'Admin'); break;
-case 'extractData': result = extractData(data.extractType, data.excludedNrics, data.customConfig); break;
-case 'fetchPairingsOnly': result = fetchPairingsOnly(); break;
-case 'syncRoomUpdates': result = syncRoomUpdates(data.updates, data.takenBy || 'Admin'); break;
-case 'syncAssignments': result = syncAssignments(data.updates, data.column); break;
-case 'fetchRoomsOnly': result = fetchRoomsOnly(); break;
-case 'fetchAttendanceData': result = fetchAttendanceData(data.juncture); break;
-case 'syncAttendanceUpdate': result = syncAttendanceUpdate(data.juncture, data.updates, data.takenBy); break;
-case 'fetchFinance': result = fetchFinance(); break;
-case 'saveFinance': result = saveFinance(data.payload); break;
-case 'fetchReceipts': result = fetchReceipts(); break;
-case 'uploadReceipt': result = uploadReceipt(data.payload); break;
-case 'syncReceipts': result = syncReceipts(data.updates); break;
-case 'fetchMinutes': result = fetchMinutes(); break;
-case 'syncMinutes': result = syncMinutes(data.updates, data.takenBy); break;
-case 'setTripFile': result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl); break;
-case 'archiveAndReset': result = archiveAndReset(data.newArchiveId, data.archivedBy); break;
-case 'deleteArchivedTrip': result = deleteArchivedTrip(data.targetArchiveId, data.targetSheetId, data.callerNric); break;
+case 'listArchivedTrips':
+  requireAuth(auth, 'admin');
+  result = listArchivedTrips();
+  break;
+case 'getArchivedTripMeta':
+  requireAuth(auth, 'admin');
+  result = getArchivedTripMeta(data.archiveId);
+  break;
+case 'getSettings':
+  result = getAppConfig(auth);
+  break;
+case 'login':
+  result = handleLogin(data.password, data.nric);
+  break;
+case 'getProfile':
+  requireAuth(auth, 'user');
+  result = getProfile(data.nric, auth);
+  break;
+case 'updateProfile':
+  requireAuth(auth, 'user');
+  result = updateProfile(data.member, false, auth);
+  break;
+case 'submitRegistration':
+  result = submitRegistration(data.payload);
+  break;
+case 'getPublicTrainees':
+  if (!auth && PropertiesService.getScriptProperties().getProperty('REGISTRATION_OPEN') !== 'true') {
+    throw new Error('Registration is closed.');
+  }
+  result = getPublicTrainees();
+  break;
+case 'checkDuplicateParticipant':
+  if (!auth && PropertiesService.getScriptProperties().getProperty('REGISTRATION_OPEN') !== 'true') {
+    throw new Error('Registration is closed.');
+  }
+  result = checkDuplicateParticipant(data.nric, data.passport);
+  break;
+case 'toggleRegistration':
+  requireAuth(auth, 'admin');
+  result = toggleRegistration(data.status, data.tripTitle, data.tripYear, data.tripStart, data.tripEnd);
+  break;
+case 'toggleEdits':
+  requireAuth(auth, 'admin');
+  result = toggleEdits(data.status);
+  break;
+case 'getCommittee':
+  requireAuth(auth, 'admin');
+  result = getCommitteeList();
+  break;
+case 'addCommittee':
+  requireAuth(auth, 'admin');
+  result = modifyCommitteeList(data.nric, true, data.name, data.phone);
+  break;
+case 'removeCommittee':
+  requireAuth(auth, 'admin');
+  result = modifyCommitteeList(data.nric, false);
+  break;
+case 'addHelpline':
+  requireAuth(auth, 'admin');
+  result = modifyHelplineContacts(data.id, true, data.name, data.phone);
+  break;
+case 'removeHelpline':
+  requireAuth(auth, 'admin');
+  result = modifyHelplineContacts(data.id, false);
+  break;
+case 'addProjectGroup':
+  requireAuth(auth, 'main_admin');
+  result = modifyProjectGroups(data.groupName, true, auth, data.colorClass);
+  break;
+case 'removeProjectGroup':
+  requireAuth(auth, 'main_admin');
+  result = modifyProjectGroups(data.groupName, false, auth);
+  break;
+case 'modifyJunctures':
+  requireAuth(auth, 'admin');
+  result = modifyJunctures(data.actionType, data.oldName, data.newName);
+  break;
+case 'modifyICJunctures':
+  requireAuth(auth, 'user');
+  result = modifyICJunctures(data.actionType, data.oldName, data.newName, data.groupName, auth);
+  break;
+case 'saveSortingRules':
+  requireAuth(auth, 'admin');
+  result = saveSortingRules(data.rules);
+  break;
+case 'saveCustomViewsOrder':
+  requireAuth(auth, 'admin');
+  result = saveCustomViewsOrder(data.order);
+  break;
+case 'saveTripSettings':
+  requireAuth(auth, 'admin');
+  result = saveTripSettings(data.title, data.year, data.start, data.end);
+  break;
+case 'clearCache':
+  requireAuth(auth, 'admin');
+  result = clearGlobalCache();
+  break;
+case 'fetchAdminRoster':
+  requireAuth(auth, 'admin');
+  result = fetchAdminRoster(Boolean(data.force || data.forceRebuild));
+  break;
+case 'adminUpdateParticipant':
+  requireAuth(auth, 'admin');
+  result = updateProfile(data.member, true, auth);
+  break;
+case 'deleteParticipant':
+  requireAuth(auth, 'admin');
+  result = deleteParticipant(data.nric);
+  break;
+case 'addDriveAccess':
+  requireAuth(auth, 'main_admin');
+  result = addDriveAccess(data.email, data.role);
+  break;
+case 'removeDriveAccess':
+  requireAuth(auth, 'main_admin');
+  result = removeDriveAccess(data.email);
+  break;
+case 'massDriveAccess':
+  requireAuth(auth, 'main_admin');
+  result = massDriveAccess(data.actionType, data.emails, data.role);
+  break;
+case 'getDriveContents':
+  requireAuth(auth, 'admin');
+  result = getDriveContents(data.folderId);
+  break;
+case 'uploadDriveFile':
+  requireAuth(auth, 'admin');
+  result = uploadDriveFile(data.folderId, data.fileName, data.mimeType, data.fileData);
+  break;
+case 'createDriveFolder':
+  requireAuth(auth, 'admin');
+  result = createDriveFolder(data.parentFolderId, data.folderName);
+  break;
+case 'createGoogleDoc':
+  requireAuth(auth, 'admin');
+  result = createGoogleDoc(data.folderId, data.fileName, data.docType);
+  break;
+case 'renameDriveItem':
+  requireAuth(auth, 'admin');
+  result = renameDriveItem(data.itemId, data.isFolder, data.newName, data.currentFolderId);
+  break;
+case 'deleteDriveItem':
+  requireAuth(auth, 'admin');
+  result = deleteDriveItem(data.itemId, data.isFolder, data.currentFolderId);
+  break;
+case 'bulkDriveOperation':
+  requireAuth(auth, 'admin');
+  result = bulkDriveOperation(data.actionType, data.items, data.targetFolderId, data.singleNewName);
+  break;
+case 'fetchLogistics':
+  requireAuth(auth, 'user');
+  result = fetchLogisticsScoped(auth, Boolean(data.force || data.forceRebuild));
+  break;
+case 'syncPairingUpdates':
+  requireAuth(auth, 'admin');
+  result = syncPairingUpdates(data.updates, auth.name || data.takenBy || 'Admin');
+  break;
+case 'extractData':
+  requireAuth(auth, 'admin');
+  result = extractData(data.extractType, data.excludedNrics, data.customConfig, data.folderId);
+  break;
+case 'fetchPairingsOnly':
+  requireAuth(auth, 'admin');
+  result = fetchPairingsOnly(Boolean(data.force || data.forceRebuild));
+  break;
+case 'syncRoomUpdates':
+  requireAuth(auth, 'admin');
+  result = syncRoomUpdates(data.updates, auth.name || data.takenBy || 'Admin');
+  break;
+case 'syncAssignments':
+  requireAuth(auth, 'admin');
+  result = syncAssignments(data.updates, data.column);
+  break;
+case 'fetchRoomsOnly':
+  requireAuth(auth, 'admin');
+  result = fetchRoomsOnly(Boolean(data.force || data.forceRebuild));
+  break;
+case 'fetchAttendanceData':
+  requireAuth(auth, 'user');
+  result = fetchAttendanceDataScoped(data.juncture, auth, Boolean(data.force || data.forceRebuild));
+  break;
+case 'syncAttendanceUpdate':
+  requireAuth(auth, 'user');
+  result = syncAttendanceUpdate(data.juncture, data.updates, auth.name || data.takenBy || 'System', auth);
+  break;
+case 'fetchFinance':
+  result = fetchFinanceScoped(auth, Boolean(data.force || data.forceRebuild));
+  break;
+case 'saveFinance':
+  requireAuth(auth, 'admin');
+  result = saveFinance(data.payload);
+  break;
+case 'fetchReceipts':
+  requireAuth(auth, 'user');
+  result = fetchReceiptsScoped(auth, Boolean(data.force || data.forceRebuild));
+  break;
+case 'uploadReceipt':
+  result = uploadReceipt(data.payload, auth);
+  break;
+case 'syncReceipts':
+  requireAuth(auth, 'user');
+  result = syncReceipts(data.updates, auth);
+  break;
+case 'fetchMinutes':
+  requireAuth(auth, 'admin');
+  result = fetchMinutes(Boolean(data.force || data.forceRebuild));
+  break;
+case 'syncMinutes':
+  requireAuth(auth, 'admin');
+  result = syncMinutes(data.updates, auth.name || data.takenBy || 'Admin');
+  break;
+case 'setTripFile':
+  requireAuth(auth, 'admin');
+  result = setTripFile(data.fileType, data.fileId, data.fileName, data.fileUrl);
+  break;
+case 'archiveAndReset':
+  requireAuth(auth, 'main_admin');
+  result = archiveAndReset(data.newArchiveId, auth.name || data.archivedBy || 'Admin', data.driveAccessEmails, auth);
+  break;
+case 'deleteArchivedTrip':
+  requireAuth(auth, 'main_admin');
+  result = deleteArchivedTrip(data.targetArchiveId, data.targetSheetId, auth);
+  break;
 default: throw new Error("Unknown action.");
 }
 return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 } catch (error) {
-return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
+return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message || error.toString() })).setMimeType(ContentService.MimeType.JSON);
 } finally {
 ACTIVE_ARCHIVE_SHEET_ID = null;
 ACTIVE_ARCHIVE_FOLDER_ID = null;
@@ -286,8 +588,10 @@ ACTIVE_ARCHIVE_META = null;
 // ==========================================
 // CORE APP LOGIC
 // ==========================================
-function getAppConfig() {
+function getAppConfig(auth) {
 const props = PropertiesService.getScriptProperties();
+const isAdmin = Boolean(auth && auth.role === 'admin');
+const isLoggedIn = Boolean(auth);
 let activeProjects = [];
 try {
 const dbId = getDbId();
@@ -310,7 +614,7 @@ if (ACTIVE_ARCHIVE_META) {
     archivedAt: ACTIVE_ARCHIVE_META.archivedAt || '',
     registrationOpen: false,
     allowEdits: false,
-    committee: ACTIVE_ARCHIVE_META.committee || [],
+    committee: isAdmin ? (ACTIVE_ARCHIVE_META.committee || []) : [],
     helpline: ACTIVE_ARCHIVE_META.helpline || [],
     projectGroups: ACTIVE_ARCHIVE_META.projectGroups || (props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getProperty('PROJECT_GROUPS')) : []),
     projectColors: ACTIVE_ARCHIVE_META.projectColors || (props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {}),
@@ -332,6 +636,13 @@ if (ACTIVE_ARCHIVE_META) {
   };
 }
 
+const rawCommittee = props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [];
+const safeCommittee = isAdmin
+  ? rawCommittee
+  : isLoggedIn
+    ? rawCommittee.map(c => ({ name: c.name || '', phone: c.phone || '' }))
+    : [];
+
 return {
 status: 'success', 
 hasActiveTrip: Boolean(
@@ -342,7 +653,7 @@ hasActiveTrip: Boolean(
 ),
 registrationOpen: props.getProperty('REGISTRATION_OPEN') === 'true', 
 allowEdits: props.getProperty('ALLOW_EDITS') === 'true',
-committee: props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [], 
+committee: safeCommittee, 
 helpline: props.getProperty('HELPLINE_CONTACTS') ? JSON.parse(props.getProperty('HELPLINE_CONTACTS')) : [],
 projectGroups: props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getProperty('PROJECT_GROUPS')) : [], 
 projectColors: props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {}, 
@@ -350,7 +661,7 @@ activeProjects: activeProjects,
 junctures: props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly'],
 sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty('SORTING_RULES')) : ['project', 'family', 'role', 'name'],
 customViewsOrder: props.getProperty('CUSTOM_VIEWS_ORDER') ? JSON.parse(props.getProperty('CUSTOM_VIEWS_ORDER')) : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
-driveAccessList: props.getProperty('APP_GRANTED_ACCESS') ? JSON.parse(props.getProperty('APP_GRANTED_ACCESS')) : {}, 
+driveAccessList: isAdmin && props.getProperty('APP_GRANTED_ACCESS') ? JSON.parse(props.getProperty('APP_GRANTED_ACCESS')) : {}, 
 tripTitle: props.getProperty('TRIP_TITLE') || '', tripYear: props.getProperty('TRIP_YEAR') || '',
 tripStartDate: props.getProperty('TRIP_START_DATE') || '', tripEndDate: props.getProperty('TRIP_END_DATE') || '',
 tripInfographicId: props.getProperty('TRIP_INFOGRAPHIC_ID') || '',
@@ -369,23 +680,28 @@ const genPass = props.getProperty('PASS_GENERAL') || '';
 password = String(password || '').trim();
 nric = String(nric || '').trim().toUpperCase();
 
-if (!password && !nric) return { status: 'error', message: 'Please enter a password.' };
+if (!password) return { status: 'error', message: 'Please enter a password.' };
 
-if (password === adminPassPrefix || (nric === 'ADMIN' && password === adminPassPrefix)) {
- return { status: 'success', role: 'admin', name: 'MAIN ADMIN', nric: 'ADMIN' };
+if (adminPassPrefix && (password === adminPassPrefix || (nric === 'ADMIN' && password === adminPassPrefix))) {
+ const userObj = { role: 'admin', name: 'MAIN ADMIN', nric: 'ADMIN', isMainAdmin: true };
+ return { status: 'success', ...userObj, token: createAuthToken(userObj) };
 }
 
 const committeeList = props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [];
 if (adminPassPrefix && password.startsWith(adminPassPrefix) && password.length > adminPassPrefix.length) {
  const possibleNric = password.substring(adminPassPrefix.length).toUpperCase();
  const commMember = committeeList.find(c => String(c.nric || '').trim().toUpperCase() === possibleNric);
- if (commMember) return { status: 'success', role: 'admin', name: commMember.name.toUpperCase(), nric: possibleNric };
+ if (commMember) {
+   const userObj = { role: 'admin', name: commMember.name.toUpperCase(), nric: possibleNric, isMainAdmin: false };
+   return { status: 'success', ...userObj, token: createAuthToken(userObj) };
+ }
 }
 
-if (nric) {
+if (nric && adminPassPrefix) {
  const commMember = committeeList.find(c => String(c.nric || '').trim().toUpperCase() === nric);
  if (commMember && (password === adminPassPrefix || password === (adminPassPrefix + nric))) {
-   return { status: 'success', role: 'admin', name: commMember.name.toUpperCase(), nric: nric };
+   const userObj = { role: 'admin', name: commMember.name.toUpperCase(), nric: nric, isMainAdmin: false };
+   return { status: 'success', ...userObj, token: createAuthToken(userObj) };
  }
 }
 
@@ -407,7 +723,10 @@ if (password.length >= 5) {
           if (m) birthYear = m[0];
        }
      }
-     if (birthYear === possibleYearStr) return { status: 'success', role: 'user', name: user.fullName, nric: possibleNric };
+     if (birthYear && birthYear === possibleYearStr) {
+       const userObj = { role: 'user', name: user.fullName, nric: possibleNric, isMainAdmin: false };
+       return { status: 'success', ...userObj, token: createAuthToken(userObj) };
+     }
      else return { status: 'error', message: 'Incorrect password.' };
    }
  }
@@ -427,8 +746,9 @@ if (nric) {
         if (m) birthYear = m[0];
      }
    }
-   if (password === genPass || (birthYear && password === birthYear) || password === (nric + birthYear)) {
-     return { status: 'success', role: 'user', name: user.fullName, nric: nric };
+   if ((genPass && password === genPass) || (birthYear && password === birthYear) || (birthYear && password === (nric + birthYear))) {
+     const userObj = { role: 'user', name: user.fullName, nric: nric, isMainAdmin: false };
+     return { status: 'success', ...userObj, token: createAuthToken(userObj) };
    } else {
      return { status: 'error', message: 'Incorrect password.' };
    }
@@ -438,11 +758,52 @@ if (nric) {
 return { status: 'error', message: 'Invalid password or user not found.' };
 }
 
-function getProfile(nric) {
+function getProfile(nric, auth) {
+const requestedNric = String(nric || '').trim().toUpperCase();
+const isAdmin = Boolean(auth && auth.role === 'admin');
 const rosterRes = fetchAdminRoster();
 const data = rosterRes.roster;
 
-const currentUserRecord = data.find(r => r.nric === nric);
+let targetNric = requestedNric;
+if (!isAdmin && auth) {
+  const ctx = getUserFamilyContext(auth.nric);
+  if (!ctx.familyNrics.has(requestedNric)) {
+    // Allow non-admin to view limited contact card ONLY for paired volunteer/trainee or own logistics group
+    const logistics = fetchLogistics();
+    const allowedPaired = new Set();
+    (logistics.pairings || []).filter(p => p.status === 'ACTIVE').forEach(p => {
+      if (ctx.familyNrics.has(p.traineeNric)) allowedPaired.add(p.volNric);
+      if (ctx.familyNrics.has(p.volNric)) allowedPaired.add(p.traineeNric);
+    });
+    if (!allowedPaired.has(requestedNric) && !ctx.groupMembersNrics.has(requestedNric)) {
+      return { status: 'error', message: 'Unauthorized profile access.' };
+    }
+    const targetRec = data.find(r => r.nric === requestedNric);
+    if (!targetRec) return { status: 'error', message: 'Profile not found.' };
+    return {
+      status: 'success',
+      family: [{
+        role: targetRec.role,
+        fullName: targetRec.fullName,
+        shortName: targetRec.shortName,
+        nric: targetRec.nric,
+        contact: targetRec.contact,
+        gender: targetRec.gender,
+        group: targetRec.group,
+        logisticsGroup: targetRec.logisticsGroup,
+        bus: targetRec.bus,
+        isGroupIC: targetRec.isGroupIC
+      }],
+      groupMembers: [],
+      logisticsGroup: targetRec.logisticsGroup || '',
+      isGroupIC: false,
+      icJunctures: []
+    };
+  }
+  targetNric = requestedNric;
+}
+
+const currentUserRecord = data.find(r => r.nric === targetNric);
 if (!currentUserRecord) return {status: 'error', message: 'Profile not found.'};
 
 let family = [];
@@ -476,8 +837,8 @@ data.forEach(row => {
 });
 
 family.sort((a, b) => {
- if (a.nric === nric) return -1;
- if (b.nric === nric) return 1;
+ if (a.nric === targetNric) return -1;
+ if (b.nric === targetNric) return 1;
  return 0;
 });
 
@@ -486,9 +847,17 @@ let groupMembers = []; let icJunctures = []; if (currentUserRecord.isGroupIC && 
  icJunctures = JSON.parse(props.getProperty('IC_JUNCTURES_' + myGrp.replace(/\s+/g, '_').toUpperCase()) || '[]'); groupMembers = data.filter(r => String(r.logisticsGroup).trim() === myGrp).map(row => { let expRaw = row.passportExpiry; let dobRaw = row.dob; if (expRaw && typeof expRaw === 'string' && expRaw.includes('T')) { const d = new Date(expRaw); if(!isNaN(d.getTime())) expRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } if (dobRaw && typeof dobRaw === 'string' && dobRaw.includes('T')) { const d = new Date(dobRaw); if(!isNaN(d.getTime())) dobRaw = Utilities.formatDate(d, Session.getScriptTimeZone(), 'dd MMM yyyy'); } return { role: row.role, fullName: row.fullName, shortName: row.shortName, nric: row.nric, contact: row.contact, emergencyName: row.emergencyName, emergencyContact: row.emergencyContact, emergencyRelation: row.emergencyRelation, diet: row.diet, medical: row.medical, otherPoints: row.otherPoints, logisticsGroup: row.logisticsGroup, bus: row.bus, isGroupIC: row.isGroupIC, pocNric: row.pocNric, group: row.group }; }); } return { status: 'success', family: family, groupMembers: groupMembers, logisticsGroup: currentUserRecord.logisticsGroup, isGroupIC: currentUserRecord.isGroupIC, icJunctures: icJunctures };
 }
 
-function updateProfile(member, isAdmin = false) {
+function updateProfile(member, isAdmin = false, auth = null) {
+if (!member || !member.nric) return { status: 'error', message: 'Missing participant NRIC.' };
 const props = PropertiesService.getScriptProperties();
 if (!isAdmin && props.getProperty('ALLOW_EDITS') !== 'true') return { status: 'error', message: 'Editing locked.' };
+if (!isAdmin && auth) {
+  const ctx = getUserFamilyContext(auth.nric);
+  const targetNric = String(member.nric || '').trim().toUpperCase();
+  if (!ctx.familyNrics.has(targetNric)) {
+    return { status: 'error', message: 'Unauthorized: you can only edit your own family members.' };
+  }
+}
 const ss = getDatabase();
 const sheet = ss.getSheetByName("Raw Data"); 
 
@@ -500,8 +869,9 @@ const data = sheet.getDataRange().getValues();
 for (let i = 1; i < data.length; i++) {
 if (String(data[i][11]).trim().toUpperCase() === String(member.nric || '').trim().toUpperCase()) {
   const rData = data[i];
+  const effectiveRole = isAdmin ? (member.role || rData[2] || '') : (rData[2] || '');
   rData[1] = member.email || '';
-  rData[2] = member.role || '';
+  rData[2] = effectiveRole;
   rData[3] = member.fullName || '';
   rData[4] = member.relatedTrainee || '';
   rData[5] = member.relationship || '';
@@ -525,9 +895,8 @@ if (String(data[i][11]).trim().toUpperCase() === String(member.nric || '').trim(
 
   sheet.getRange(i+1, 1, 1, rData.length).setValues([rData]);
   
-  
   // Write-Through: Invalidate dependent caches
-  if (member.role === 'CAREGIVER') {
+  if (String(effectiveRole).trim().toUpperCase() === 'CAREGIVER') {
       const desiredNames = (member.relatedTrainee || '').split('|').map(n => n.trim().toLowerCase()).filter(n => n);
       const targetPoc = String(rData[21] || rData[11] || '').trim().toUpperCase();
       
@@ -552,7 +921,6 @@ if (String(data[i][11]).trim().toUpperCase() === String(member.nric || '').trim(
   }
   removeLargeCache(getCacheKey('ROSTER'));
   removeLargeCache(getCacheKey('LOGISTICS'));
-  precomputeAppCache(); 
   return { status: 'success' };
 }
 }
@@ -565,7 +933,7 @@ function getPublicTrainees() {
 const rosterRes = fetchAdminRoster();
 const trainees = rosterRes.roster
    .filter(p => p.role === 'TRAINEE')
-   .map(p => ({ name: p.fullName, shortName: p.shortName }));
+   .map(p => ({ name: p.fullName, fullName: p.fullName, shortName: p.shortName }));
 return { status: 'success', trainees };
 }
 
@@ -792,6 +1160,80 @@ putLargeCache(cacheKey, JSON.stringify(res));
 return res;
 }
 
+function fetchLogisticsScoped(auth, forceRebuild = false) {
+  const full = fetchLogistics(forceRebuild);
+  if (auth && auth.role === 'admin') return full;
+  const ctx = getUserFamilyContext(auth ? auth.nric : '');
+  const activePairings = (full.pairings || []).filter(p => p.status === 'ACTIVE');
+  const allowedNrics = new Set([...ctx.familyNrics, ...ctx.groupMembersNrics]);
+
+  // Add paired volunteers/trainees for the user's family
+  activePairings.forEach(p => {
+    if (ctx.familyNrics.has(p.traineeNric)) allowedNrics.add(p.volNric);
+    if (ctx.familyNrics.has(p.volNric)) allowedNrics.add(p.traineeNric);
+  });
+
+  // Find rooms occupied by the user's family or paired trainees/volunteers
+  const relevantRooms = (full.rooms || []).filter(r =>
+    !r.isDeleted &&
+    Array.isArray(r.occupants) &&
+    r.occupants.some(n => allowedNrics.has(String(n || '').trim().toUpperCase()))
+  );
+  relevantRooms.forEach(r => {
+    (r.occupants || []).forEach(n => allowedNrics.add(String(n || '').trim().toUpperCase()));
+  });
+
+  // Also include logistics group members if user has a logisticsGroup (for My Group view)
+  const myGroup = ctx.self && ctx.self.logisticsGroup ? String(ctx.self.logisticsGroup).trim() : '';
+  if (myGroup) {
+    (full.participants || []).forEach(p => {
+      if (String(p.logisticsGroup || '').trim() === myGroup) {
+        allowedNrics.add(p.nric);
+      }
+    });
+  }
+
+  const scopedParticipants = (full.participants || [])
+    .filter(p => allowedNrics.has(p.nric))
+    .map(p => {
+      const isFamilyOrIcGroup = ctx.familyNrics.has(p.nric) || ctx.groupMembersNrics.has(p.nric);
+      return {
+        role: p.role,
+        name: p.name,
+        relatedTrainee: p.relatedTrainee,
+        shortName: p.shortName,
+        group: p.group,
+        gender: p.gender,
+        nric: p.nric,
+        pocNric: p.pocNric,
+        bus: p.bus,
+        logisticsGroup: p.logisticsGroup,
+        sleeping: isFamilyOrIcGroup ? p.sleeping : '',
+        contact: p.contact,
+        emergencyName: isFamilyOrIcGroup ? p.emergencyName : '',
+        emergencyContact: isFamilyOrIcGroup ? p.emergencyContact : '',
+        emergencyRelation: isFamilyOrIcGroup ? p.emergencyRelation : '',
+        diet: isFamilyOrIcGroup ? p.diet : '',
+        medical: isFamilyOrIcGroup ? p.medical : '',
+        otherPoints: isFamilyOrIcGroup ? p.otherPoints : '',
+        isGroupIC: p.isGroupIC
+      };
+    });
+
+  const scopedPairings = activePairings.filter(p =>
+    allowedNrics.has(p.traineeNric) || allowedNrics.has(p.volNric)
+  );
+
+  return {
+    status: 'success',
+    participants: scopedParticipants,
+    pairings: scopedPairings,
+    rooms: relevantRooms,
+    groups: [],
+    buses: []
+  };
+}
+
 function fetchPairingsOnly(forceRebuild = false) {
 const cacheKey = getCacheKey('PAIRINGS');
 if(!forceRebuild) {
@@ -905,7 +1347,8 @@ const ss = getDatabase();
 let sheet = ss.getSheetByName("Rooms");
 if (!sheet) {
   sheet = ss.insertSheet("Rooms");
-  sheet.appendRow(["Room ID", "Name", "Occupants NRICs (Comma separated)", "Timestamp", "Updated By"]);
+  sheet.appendRow(["Room ID", "Room Name", "Capacity", "Occupants", "Last Updated", "Updated By", "Is Deleted"]);
+  sheet.setFrozenRows(1);
 }
 
 const lock = LockService.getScriptLock();
@@ -1012,7 +1455,32 @@ putLargeCache(cacheKey, JSON.stringify(res));
 return res;
 }
 
-function syncAttendanceUpdate(juncture, updates, takenBy) {
+function fetchAttendanceDataScoped(juncture, auth, forceRebuild = false) {
+  const full = fetchAttendanceData(juncture, forceRebuild);
+  if (auth && auth.role === 'admin') return full;
+  const ctx = getUserFamilyContext(auth ? auth.nric : '');
+  if (!ctx.self || !ctx.self.isGroupIC) {
+    throw new Error('FORBIDDEN: Group IC or Admin access required.');
+  }
+  const filtered = {};
+  Object.keys(full.data || {}).forEach(k => {
+    if (ctx.groupMembersNrics.has(k)) filtered[k] = full.data[k];
+  });
+  return { status: 'success', data: filtered };
+}
+
+function syncAttendanceUpdate(juncture, updates, takenBy, auth = null) {
+if (!Array.isArray(updates)) return { status: 'error', message: 'Invalid updates payload.' };
+if (auth && auth.role !== 'admin') {
+  const ctx = getUserFamilyContext(auth.nric);
+  if (!ctx.self || !ctx.self.isGroupIC) {
+    return { status: 'error', message: 'FORBIDDEN: Only Group ICs or Admins can update attendance.' };
+  }
+  const unauthorized = updates.some(u => !ctx.groupMembersNrics.has(String(u.nric || '').trim().toUpperCase()));
+  if (unauthorized) {
+    return { status: 'error', message: 'FORBIDDEN: You can only update attendance for your own group.' };
+  }
+}
 const ss = getDatabase();
 const sheet = ss.getSheetByName("Attendance");
 if(!sheet) return { status: 'error', message: 'Sheet not found.' };
@@ -1029,10 +1497,16 @@ if (data[i][0] === juncture) {
 }
 
 let dataChanged = false;
-updates.forEach(u => {
-const nric = String(u.nric).trim().toUpperCase();
+const normalizedUpdates = updates.map(u => ({
+  nric: String(u.nric || '').trim().toUpperCase(),
+  status: Boolean(u.status),
+  ts: Number(u.ts) || Date.now()
+}));
+
+normalizedUpdates.forEach(u => {
+const nric = u.nric;
 const status = u.status ? 'true' : 'false';
-const ts = u.ts || Date.now();
+const ts = u.ts;
 const tsDate = new Date(ts);
 
 if (existingMap[nric] !== undefined) {
@@ -1060,10 +1534,10 @@ const str = getLargeCache(cacheKey);
 if(str) {
 try {
   const cData = JSON.parse(str);
-  updates.forEach(u => {
-    const nric = String(u.nric).trim().toUpperCase();
-    if(!cData.data[nric] || u.ts > cData.data[nric].ts) {
-      cData.data[nric] = { status: u.status, ts: u.ts };
+  if (!cData.data) cData.data = {};
+  normalizedUpdates.forEach(u => {
+    if(!cData.data[u.nric] || u.ts > (cData.data[u.nric].ts || 0)) {
+      cData.data[u.nric] = { status: u.status, ts: u.ts };
     }
   });
   putLargeCache(cacheKey, JSON.stringify(cData));
@@ -1080,6 +1554,68 @@ finally { lock.releaseLock(); }
 // ==========================================
 // FINANCE ENGINE & RECEIPTS
 // ==========================================
+function fetchFinanceScoped(auth, forceRebuild = false) {
+  const full = fetchFinance(forceRebuild);
+  if (auth && auth.role === 'admin') return full;
+
+  const rawData = full.data || { config: {}, options: [] };
+  const rawConfig = rawData.config || {};
+  const rawOptions = Array.isArray(rawData.options) ? rawData.options : (Array.isArray(rawData) ? rawData : []);
+  const finalOpt = rawConfig.finalOptionId
+    ? rawOptions.find(o => o.id === rawConfig.finalOptionId)
+    : null;
+  const safeOptions = finalOpt
+    ? [{
+        id: finalOpt.id,
+        title: finalOpt.title || '',
+        fields: Array.isArray(finalOpt.fields)
+          ? finalOpt.fields.map(f => ({ id: f.id, name: f.name }))
+          : []
+      }]
+    : [];
+
+  if (!auth) {
+    // Public landing receipt upload only needs finalized category labels & rates
+    return {
+      status: 'success',
+      data: {
+        config: { finalOptionId: rawConfig.finalOptionId || '' },
+        options: safeOptions
+      },
+      rates: full.rates || { SGD: 1 }
+    };
+  }
+
+  // Authenticated participant: scope feeDeviations & feesReceived to their own family POC
+  const ctx = getUserFamilyContext(auth.nric);
+  const myFeeDeviations = {};
+  const myFeesReceived = {};
+  const pocKeys = Array.from(new Set([ctx.pocNric, ...ctx.familyNrics]));
+  pocKeys.forEach(k => {
+    if (rawConfig.feeDeviations && rawConfig.feeDeviations[k] !== undefined) {
+      myFeeDeviations[k] = rawConfig.feeDeviations[k];
+    }
+    if (rawConfig.feesReceived && rawConfig.feesReceived[k] !== undefined) {
+      myFeesReceived[k] = rawConfig.feesReceived[k];
+    }
+  });
+
+  return {
+    status: 'success',
+    data: {
+      config: {
+        finalOptionId: rawConfig.finalOptionId || '',
+        perPersonFee: rawConfig.perPersonFee || 0,
+        payNowNumber: rawConfig.payNowNumber || '',
+        feeDeviations: myFeeDeviations,
+        feesReceived: myFeesReceived
+      },
+      options: safeOptions
+    },
+    rates: full.rates || { SGD: 1 }
+  };
+}
+
 function fetchFinance(forceRebuild = false) {
 const cacheKey = getCacheKey('FINANCE');
 if(!forceRebuild) {
@@ -1091,13 +1627,15 @@ const ss = getDatabase();
 let sheet = ss.getSheetByName("Finance Options");
 if (!sheet) {
 sheet = ss.insertSheet("Finance Options");
-sheet.getRange("A1").setValue("JSON Data - Do Not Edit");
+sheet.appendRow(["JSON Data - Do Not Edit"]);
+sheet.appendRow([""]);
+sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
 }
 
 let ratesObj = { "SGD": 1 };
 try {
 const ratesData = sheet.getRange(3, 1, 13, 3).getValues();
-ratesData.forEach(r => { if(r[0] && r[1] && !isNaN(r[2])) ratesObj[String(r[0])] = parseFloat(r[2]); });
+ratesData.forEach(r => { if(r[0] && r[1] && !isNaN(r[2]) && parseFloat(r[2]) > 0) ratesObj[String(r[0]).trim().toUpperCase()] = parseFloat(r[2]); });
 } catch(e){}
 
 const data = sheet.getDataRange().getValues();
@@ -1114,6 +1652,12 @@ return res;
 function saveFinance(payload) {
 const ss = getDatabase();
 let sheet = ss.getSheetByName("Finance Options");
+if (!sheet) {
+  sheet = ss.insertSheet("Finance Options");
+  sheet.appendRow(["JSON Data - Do Not Edit"]);
+  sheet.appendRow([""]);
+  sheet.appendRow(["MYR", "MYR to SGD Rate:", '=GOOGLEFINANCE("CURRENCY:MYRSGD")']);
+}
 
 const lock = LockService.getScriptLock();
 try {
@@ -1156,6 +1700,18 @@ return fetchFinance();
 finally { lock.releaseLock(); }
 }
 
+function fetchReceiptsScoped(auth, forceRebuild = false) {
+  const full = fetchReceipts(forceRebuild);
+  if (auth && auth.role === 'admin') return full;
+  const ctx = getUserFamilyContext(auth ? auth.nric : '');
+  const scoped = (full.receipts || []).filter(r =>
+    !r.isDeleted &&
+    (ctx.familyNrics.has(String(r.uploaderNric || '').trim().toUpperCase()) ||
+     ctx.familyNrics.has(String(r.paidByNric || '').trim().toUpperCase()))
+  );
+  return { status: 'success', receipts: scoped };
+}
+
 function fetchReceipts(forceRebuild = false) {
 const cacheKey = getCacheKey('RECEIPTS');
 if(!forceRebuild) {
@@ -1194,12 +1750,30 @@ putLargeCache(cacheKey, JSON.stringify(res));
 return res;
 }
 
-function uploadReceipt(payload) {
+function uploadReceipt(payload, auth = null) {
+if (!payload || typeof payload !== 'object') return { status: 'error', message: 'Invalid receipt payload.' };
+const isAdmin = Boolean(auth && auth.role === 'admin');
+const amountNum = parseFloat(payload.amount);
+if (isNaN(amountNum) || amountNum === 0) return { status: 'error', message: 'Invalid non-zero amount required.' };
+if (payload.categoryId === "Fees Payment Screenshot") {
+  if (!auth) return { status: 'error', message: 'AUTH_REQUIRED: Login required to upload trip fee screenshots.' };
+  if (amountNum < 0) return { status: 'error', message: 'Payment screenshot amount must be positive.' };
+  if (!isAdmin) {
+    const ctx = getUserFamilyContext(auth.nric);
+    const upNric = String(payload.uploaderNric || '').trim().toUpperCase();
+    const paidNric = String(payload.paidByNric || upNric).trim().toUpperCase();
+    if (!ctx.familyNrics.has(upNric) && !ctx.familyNrics.has(paidNric)) {
+      return { status: 'error', message: 'FORBIDDEN: You can only upload fee screenshots for your own family.' };
+    }
+  }
+}
+
 const ss = getDatabase();
 let sheet = ss.getSheetByName("Receipts");
 if (!sheet) {
   sheet = ss.insertSheet("Receipts");
-  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed", "Uploader Name"]);
+  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed", "Uploader Name"]);
+  sheet.setFrozenRows(1);
 }
 
 const tripFolder = getTripFolder();
@@ -1220,7 +1794,9 @@ if (payload.categoryId === "Fees Payment Screenshot") {
 
 let fileUrl = "";
 if (payload.fileData) {
-const blob = Utilities.newBlob(Utilities.base64Decode(payload.fileData), payload.mimeType, payload.fileName);
+const safeMime = payload.mimeType || 'application/octet-stream';
+const safeFileName = String(payload.fileName || 'receipt.png').replace(/[\\/:*?"<>|]/g, '_');
+const blob = Utilities.newBlob(Utilities.base64Decode(payload.fileData), safeMime, safeFileName);
 const file = targetFolder.createFile(blob);
 fileUrl = file.getUrl();
 }
@@ -1231,20 +1807,27 @@ const lock = LockService.getScriptLock();
 try {
 lock.waitLock(15000);
 
-if (payload.categoryId === "Fees Payment Screenshot" && payload.overwriteReceiptId) {
+if (payload.overwriteReceiptId && auth) {
+  const ctx = isAdmin ? null : getUserFamilyContext(auth.nric);
   const data = sheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
-    if (String(row[0]).trim() === String(payload.overwriteReceiptId).trim() && row[10] !== true) {
-      // Mark old row as deleted
+    if (String(row[0]).trim() === String(payload.overwriteReceiptId).trim() && String(row[10]).toUpperCase() !== 'TRUE') {
+      const rowUp = String(row[2] || '').trim().toUpperCase();
+      const rowPaid = String(row[11] || '').trim().toUpperCase();
+      if (!isAdmin && ctx && !ctx.familyNrics.has(rowUp) && !ctx.familyNrics.has(rowPaid)) {
+        continue;
+      }
       sheet.getRange(i + 1, 11).setValue(true);
-      // Attempt to trash old file in Drive
       const oldUrl = row[8];
       if (oldUrl) {
         try {
-          const match = oldUrl.match(/id=([^&]+)/) || oldUrl.match(/d\/([^\/]+)/);
+          const match = String(oldUrl).match(/id=([^&]+)/) || String(oldUrl).match(/d\/([^\/]+)/);
           if (match && match[1]) {
-            DriveApp.getFileById(match[1]).setTrashed(true);
+            const oldFile = DriveApp.getFileById(match[1]);
+            if (isItemInsideFolder(oldFile, tripFolder)) {
+              oldFile.setTrashed(true);
+            }
           }
         } catch(e) {}
       }
@@ -1253,22 +1836,33 @@ if (payload.categoryId === "Fees Payment Screenshot" && payload.overwriteReceipt
 }
 
 sheet.appendRow([
-newId, new Date(), payload.uploaderNric, payload.currency, payload.amount, payload.rate, 
-payload.sgdAmount, payload.categoryId, fileUrl, payload.remarks, false, payload.paidByNric || payload.uploaderNric, false, payload.uploaderName || ''
+newId, new Date(), payload.uploaderNric || '', payload.currency || 'SGD', amountNum, parseFloat(payload.rate) || 1, 
+parseFloat(payload.sgdAmount) || amountNum, payload.categoryId || '', fileUrl, payload.remarks || '', false, payload.paidByNric || payload.uploaderNric || '', false, payload.uploaderName || ''
 ]);
 
 fetchReceipts(true);
-return fetchReceipts();
+if (!auth) {
+  return { status: 'success', receiptId: newId, fileUrl: fileUrl };
+}
+const scopedRes = fetchReceiptsScoped(auth, false);
+scopedRes.receiptId = newId;
+scopedRes.fileUrl = fileUrl;
+return scopedRes;
 } catch (e) { return { status: 'error', message: e.message }; }
 finally { lock.releaseLock(); }
 }
 
-function syncReceipts(updates) {
+function syncReceipts(updates, auth = null) {
+if (!Array.isArray(updates)) return { status: 'error', message: 'Invalid updates array.' };
+const isAdmin = Boolean(auth && auth.role === 'admin');
+const ctx = (!isAdmin && auth) ? getUserFamilyContext(auth.nric) : null;
+
 const ss = getDatabase();
 let sheet = ss.getSheetByName("Receipts");
 if (!sheet) {
   sheet = ss.insertSheet("Receipts");
-  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By", "Is Reimbursed", "Uploader Name"]);
+  sheet.appendRow(["Receipt ID", "Timestamp", "Uploader NRIC", "Currency", "Amount", "Rate", "SGD Amount", "Category ID", "File URL", "Remarks", "Is Deleted", "Paid By NRIC", "Is Reimbursed", "Uploader Name"]);
+  sheet.setFrozenRows(1);
 }
 
 const lock = LockService.getScriptLock();
@@ -1295,34 +1889,45 @@ if(id && id !== "Receipt ID") existingMap[id] = i;
 
 let dataChanged = false;
 updates.forEach(u => {
-const isDel = u.isDeleted ? 'TRUE' : 'FALSE';
-const isReim = u.isReimbursed ? 'TRUE' : 'FALSE';
-if (existingMap[u.id] !== undefined) {
-  const rowIndex = existingMap[u.id];
-  const existingTsVal = new Date(data[rowIndex][1]).getTime();
-  const existingTs = isNaN(existingTsVal) ? 0 : existingTsVal;
-  if (u.ts > existingTs) {
-    data[rowIndex][1] = new Date(u.ts);
-    data[rowIndex][2] = u.uploaderNric;
-    data[rowIndex][3] = u.currency;
-    data[rowIndex][4] = u.amount;
-    data[rowIndex][5] = u.rate;
-    data[rowIndex][6] = u.sgdAmount;
-    data[rowIndex][7] = u.categoryId;
-    data[rowIndex][8] = u.fileUrl;
-    data[rowIndex][9] = u.remarks;
-    data[rowIndex][10] = isDel;
-    data[rowIndex][11] = u.paidByNric || u.uploaderNric;
-    data[rowIndex][12] = isReim;
-    data[rowIndex][13] = u.uploaderName || '';
-    dataChanged = true;
+if (!u || !u.id || existingMap[u.id] === undefined) return;
+const rowIndex = existingMap[u.id];
+if (!isAdmin && ctx) {
+  const rowUp = String(data[rowIndex][2] || '').trim().toUpperCase();
+  const rowPaid = String(data[rowIndex][11] || '').trim().toUpperCase();
+  if (!ctx.familyNrics.has(rowUp) && !ctx.familyNrics.has(rowPaid)) {
+    return; // Non-admin cannot modify another family's receipt
   }
+}
+const existingTsVal = new Date(data[rowIndex][1]).getTime();
+const existingTs = isNaN(existingTsVal) ? 0 : existingTsVal;
+const updateTs = Number(u.ts) || Date.now();
+if (updateTs > existingTs) {
+  data[rowIndex][1] = new Date(updateTs);
+  if (isAdmin) {
+    // Merge only fields explicitly supplied so partial updates never wipe existing columns
+    if (u.uploaderNric !== undefined) data[rowIndex][2] = u.uploaderNric;
+    if (u.currency !== undefined) data[rowIndex][3] = u.currency;
+    if (u.amount !== undefined) data[rowIndex][4] = u.amount;
+    if (u.rate !== undefined) data[rowIndex][5] = u.rate;
+    if (u.sgdAmount !== undefined) data[rowIndex][6] = u.sgdAmount;
+    if (u.categoryId !== undefined) data[rowIndex][7] = u.categoryId;
+    if (u.fileUrl !== undefined) data[rowIndex][8] = u.fileUrl;
+    if (u.remarks !== undefined) data[rowIndex][9] = u.remarks;
+    if (u.isDeleted !== undefined) data[rowIndex][10] = u.isDeleted ? 'TRUE' : 'FALSE';
+    if (u.paidByNric !== undefined) data[rowIndex][11] = u.paidByNric || data[rowIndex][2];
+    if (u.isReimbursed !== undefined) data[rowIndex][12] = u.isReimbursed ? 'TRUE' : 'FALSE';
+    if (u.uploaderName !== undefined) data[rowIndex][13] = u.uploaderName || '';
+  } else if (u.isDeleted === true) {
+    // Non-admins may only soft-delete their own family's payment screenshot
+    data[rowIndex][10] = 'TRUE';
+  }
+  dataChanged = true;
 }
 });
 if(dataChanged) sheet.getRange(1, 1, data.length, targetCols).setValues(data);
 
 fetchReceipts(true);
-return fetchReceipts();
+return fetchReceiptsScoped(auth, false);
 } catch (e) { return { status: 'error', message: e.message }; }
 finally { lock.releaseLock(); }
 }
@@ -1461,8 +2066,8 @@ else { list = list.filter(c => c.nric !== nric); }
 props.setProperty('COMMITTEE_LIST', JSON.stringify(list)); return getCommitteeList();
 }
 
-function modifyProjectGroups(groupName, isAdding, callerNric, colorClass) {
-if (callerNric !== 'ADMIN') return { status: 'error', message: 'Unauthorized' };
+function modifyProjectGroups(groupName, isAdding, auth, colorClass) {
+if (!auth || !auth.isMainAdmin) return { status: 'error', message: 'Unauthorized' };
 const props = PropertiesService.getScriptProperties(); groupName = String(groupName || '').trim();
 let list = JSON.parse(props.getProperty('PROJECT_GROUPS') || '[]');
 let colors = JSON.parse(props.getProperty('PROJECT_COLORS') || '{}');
@@ -1482,9 +2087,17 @@ props.setProperty('ATTENDANCE_JUNCTURES', JSON.stringify(list)); return { status
 }
 
 
-function modifyICJunctures(actionType, oldName, newName, groupName) {
+function modifyICJunctures(actionType, oldName, newName, groupName, auth = null) {
+    const cleanGroup = String(groupName || '').trim();
+    if (!cleanGroup) return { status: 'error', message: 'Missing group name.' };
+    if (auth && auth.role !== 'admin') {
+      const ctx = getUserFamilyContext(auth.nric);
+      if (!ctx.self || !ctx.self.isGroupIC || String(ctx.self.logisticsGroup || '').trim() !== cleanGroup) {
+        return { status: 'error', message: 'FORBIDDEN: Only this group IC or Admin can modify custom junctures.' };
+      }
+    }
     const props = PropertiesService.getScriptProperties(); 
-    const key = 'IC_JUNCTURES_' + groupName.replace(/\s+/g, '_').toUpperCase();
+    const key = 'IC_JUNCTURES_' + cleanGroup.replace(/\s+/g, '_').toUpperCase();
     let list = JSON.parse(props.getProperty(key) || '[]');
     if (actionType === 'add' && newName && !list.includes(newName)) list.push(newName);
     else if (actionType === 'remove' && oldName) list = list.filter(j => j !== oldName);
@@ -1493,8 +2106,8 @@ function modifyICJunctures(actionType, oldName, newName, groupName) {
     return { status: 'success', icJunctures: list };
 }
 
-function saveSortingRules(rules, callerNric) { PropertiesService.getScriptProperties().setProperty('SORTING_RULES', JSON.stringify(rules)); return { status: 'success', sortingRules: rules }; }
-function saveCustomViewsOrder(order, callerNric) { PropertiesService.getScriptProperties().setProperty('CUSTOM_VIEWS_ORDER', JSON.stringify(order)); return { status: 'success', customViewsOrder: order }; }
+function saveSortingRules(rules) { PropertiesService.getScriptProperties().setProperty('SORTING_RULES', JSON.stringify(rules)); return { status: 'success', sortingRules: rules }; }
+function saveCustomViewsOrder(order) { PropertiesService.getScriptProperties().setProperty('CUSTOM_VIEWS_ORDER', JSON.stringify(order)); return { status: 'success', customViewsOrder: order }; }
 
 
 // ==========================================
@@ -1511,9 +2124,53 @@ if (parents.hasNext()) return parents.next();
 throw new Error("Trip parent folder not found.");
 }
 
+function isItemInsideFolder(item, rootFolder) {
+  if (!item || !rootFolder) return false;
+  const rootId = rootFolder.getId();
+  if (item.getId() === rootId) return true;
+  const queue = [item];
+  const seen = {};
+  let hops = 0;
+  while (queue.length > 0 && hops < 50) {
+    hops++;
+    const curr = queue.shift();
+    let parents;
+    try { parents = curr.getParents(); } catch (e) { continue; }
+    while (parents.hasNext()) {
+      const p = parents.next();
+      const pid = p.getId();
+      if (pid === rootId) return true;
+      if (!seen[pid]) {
+        seen[pid] = true;
+        queue.push(p);
+      }
+    }
+  }
+  return false;
+}
+
+function resolveTripFolder(targetFolderId) {
+  const tripFolder = getTripFolder();
+  if (!targetFolderId || targetFolderId === 'root') return tripFolder;
+  const folder = DriveApp.getFolderById(targetFolderId);
+  if (!isItemInsideFolder(folder, tripFolder)) {
+    throw new Error('Access denied: folder is outside the trip directory.');
+  }
+  return folder;
+}
+
+function resolveTripItem(itemId, isFolder) {
+  const tripFolder = getTripFolder();
+  const item = isFolder ? DriveApp.getFolderById(itemId) : DriveApp.getFileById(itemId);
+  if (!isItemInsideFolder(item, tripFolder)) {
+    throw new Error('Access denied: item is outside the trip directory.');
+  }
+  return item;
+}
+
 function getDriveContents(targetFolderId) {
 try {
-let folder = (!targetFolderId || targetFolderId === 'root') ? getTripFolder() : DriveApp.getFolderById(targetFolderId);
+let folder = resolveTripFolder(targetFolderId);
 const files = []; const folders = [];
 const fileIter = folder.getFiles();
 while(fileIter.hasNext()) {
@@ -1528,21 +2185,23 @@ return { status: 'success', currentFolderId: folder.getId(), currentFolderName: 
 } catch (e) { return { status: 'error', message: e.message }; }
 }
 
-function uploadDriveFile(fId, fName, mime, data) { try { let folder = fId === 'root' ? getTripFolder() : DriveApp.getFolderById(fId); let blob = Utilities.newBlob(Utilities.base64Decode(data), mime, fName); const createdFile = folder.createFile(blob); Utilities.sleep(1500); const contents = getDriveContents(fId); if (contents && contents.status === 'success') { contents.uploadedFile = { id: createdFile.getId(), name: createdFile.getName(), url: createdFile.getUrl(), mimeType: createdFile.getMimeType() }; } return contents; } catch (e) { return { status: 'error', message: e.message }; } }
-function createDriveFolder(pId, fName) { try { let parent = pId === 'root' ? getTripFolder() : DriveApp.getFolderById(pId); parent.createFolder(fName); Utilities.sleep(1500); return getDriveContents(pId); } catch (e) { return { status: 'error', message: e.message }; } }
-function createGoogleDoc(fId, fName, type) { try { let folder = fId === 'root' ? getTripFolder() : DriveApp.getFolderById(fId); let fileId; if (type === 'doc') fileId = DocumentApp.create(fName).getId(); else if (type === 'sheet') fileId = SpreadsheetApp.create(fName).getId(); else fileId = SlidesApp.create(fName).getId(); DriveApp.getFileById(fileId).moveTo(folder); Utilities.sleep(1500); return getDriveContents(fId); } catch (e) { return { status: 'error', message: e.message }; } }
-function renameDriveItem(id, isFolder, newName, currFid) { try { newName = String(newName || '').trim(); if(isFolder) DriveApp.getFolderById(id).setName(newName); else DriveApp.getFileById(id).setName(newName); Utilities.sleep(1000); return getDriveContents(currFid); } catch (e) { return { status: 'error', message: e.message }; } }
-function deleteDriveItem(id, isFolder, currFid) { try { if(isFolder) DriveApp.getFolderById(id).setTrashed(true); else DriveApp.getFileById(id).setTrashed(true); Utilities.sleep(1000); return getDriveContents(currFid); } catch (e) { return { status: 'error', message: e.message }; } }
+function uploadDriveFile(fId, fName, mime, data) { try { let folder = resolveTripFolder(fId); let blob = Utilities.newBlob(Utilities.base64Decode(data), mime || 'application/octet-stream', String(fName || 'upload').replace(/[\\/:*?"<>|]/g, '_')); const createdFile = folder.createFile(blob); const contents = getDriveContents(fId); if (contents && contents.status === 'success') { contents.uploadedFile = { id: createdFile.getId(), name: createdFile.getName(), url: createdFile.getUrl(), mimeType: createdFile.getMimeType() }; } return contents; } catch (e) { return { status: 'error', message: e.message }; } }
+function createDriveFolder(pId, fName) { try { let parent = resolveTripFolder(pId); parent.createFolder(String(fName || 'New Folder').trim()); return getDriveContents(pId); } catch (e) { return { status: 'error', message: e.message }; } }
+function createGoogleDoc(fId, fName, type) { try { let folder = resolveTripFolder(fId); let fileId; if (type === 'doc') fileId = DocumentApp.create(fName).getId(); else if (type === 'sheet') fileId = SpreadsheetApp.create(fName).getId(); else fileId = SlidesApp.create(fName).getId(); DriveApp.getFileById(fileId).moveTo(folder); return getDriveContents(fId); } catch (e) { return { status: 'error', message: e.message }; } }
+function renameDriveItem(id, isFolder, newName, currFid) { try { newName = String(newName || '').trim(); const item = resolveTripItem(id, isFolder); item.setName(newName); return getDriveContents(currFid); } catch (e) { return { status: 'error', message: e.message }; } }
+function deleteDriveItem(id, isFolder, currFid) { try { const item = resolveTripItem(id, isFolder); if (isFolder && item.getId() === getTripFolder().getId()) throw new Error('Cannot delete root trip folder.'); item.setTrashed(true); return getDriveContents(currFid); } catch (e) { return { status: 'error', message: e.message }; } }
 function bulkDriveOperation(action, items, targetFid, singleNewName) {
 try {
-let targetFolder = null; if (action === 'copy' || action === 'move') targetFolder = targetFid === 'root' ? getTripFolder() : DriveApp.getFolderById(targetFid);
+let targetFolder = null; if (action === 'copy' || action === 'move') targetFolder = resolveTripFolder(targetFid);
+const tripRootId = getTripFolder().getId();
 for (let i = 0; i < items.length; i++) {
 const item = items[i]; const nameToUse = (items.length === 1 && singleNewName) ? singleNewName : item.name;
-if (action === 'delete') { if (item.isFolder) DriveApp.getFolderById(item.id).setTrashed(true); else DriveApp.getFileById(item.id).setTrashed(true); } 
-else if (action === 'move') { if (item.isFolder) { let folder = DriveApp.getFolderById(item.id); folder.moveTo(targetFolder); if (folder.getName() !== nameToUse) folder.setName(nameToUse); } else { let file = DriveApp.getFileById(item.id); file.moveTo(targetFolder); if (file.getName() !== nameToUse) file.setName(nameToUse); } } 
-else if (action === 'copy') { if (item.isFolder) { let sourceFolder = DriveApp.getFolderById(item.id); let newFolder = targetFolder.createFolder(nameToUse); copyFolderRecursive(sourceFolder, newFolder); } else { let sourceFile = DriveApp.getFileById(item.id); sourceFile.makeCopy(nameToUse, targetFolder); } }
+const resolved = resolveTripItem(item.id, item.isFolder);
+if (action === 'delete') { if (item.isFolder && resolved.getId() === tripRootId) throw new Error('Cannot delete root trip folder.'); resolved.setTrashed(true); } 
+else if (action === 'move') { resolved.moveTo(targetFolder); if (resolved.getName() !== nameToUse) resolved.setName(nameToUse); } 
+else if (action === 'copy') { if (item.isFolder) { let newFolder = targetFolder.createFolder(nameToUse); copyFolderRecursive(resolved, newFolder); } else { resolved.makeCopy(nameToUse, targetFolder); } }
 }
-Utilities.sleep(1500); return getDriveContents(targetFid);
+return getDriveContents(targetFid);
 } catch (e) { return { status: 'error', message: e.message }; }
 }
 function copyFolderRecursive(src, dest) { let files = src.getFiles(); while (files.hasNext()) { let file = files.next(); file.makeCopy(file.getName(), dest); } let folders = src.getFolders(); while (folders.hasNext()) { let subFolder = folders.next(); let newSubFolder = dest.createFolder(subFolder.getName()); copyFolderRecursive(subFolder, newSubFolder); } }
@@ -1562,9 +2221,8 @@ function setTripFile(fileType, fileId, fileName, fileUrl) {
   fileUrl = String(fileUrl || '').trim();
 
   if (fileId) {
+    const file = resolveTripItem(fileId, false);
     try {
-      const file = DriveApp.getFileById(fileId);
-      // Ensure anyone with link has view permission
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       if (!fileUrl) fileUrl = file.getUrl();
       if (!fileName) fileName = file.getName();
@@ -1595,23 +2253,109 @@ function setTripFile(fileType, fileId, fileName, fileUrl) {
     }
   }
 
-  return getAppConfig();
+  return getAppConfig({ role: 'admin', isMainAdmin: true });
+}
+
+const ARCHIVE_INDEX_FILENAME = 'ARCHIVED_TRIPS_INDEX.json';
+const ARCHIVE_INDEX_CACHE_KEY = 'ARCHIVED_TRIPS_REGISTRY_V1';
+
+function getArchiveIndexFile(createIfMissing) {
+  const mainFolder = DriveApp.getFolderById(Drive_Folder_ID);
+  const iter = mainFolder.getFilesByName(ARCHIVE_INDEX_FILENAME);
+  if (iter.hasNext()) return iter.next();
+  if (!createIfMissing) return null;
+  return mainFolder.createFile(ARCHIVE_INDEX_FILENAME, '[]', MimeType.PLAIN_TEXT);
+}
+
+function loadArchivedTripsRegistry(forceReload = false) {
+  const cache = CacheService.getScriptCache();
+  if (!forceReload) {
+    try {
+      const cached = cache.get(ARCHIVE_INDEX_CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+  }
+
+  let archives = [];
+  let loadedFromDrive = false;
+  try {
+    const file = getArchiveIndexFile(false);
+    if (file) {
+      const parsed = JSON.parse(file.getBlob().getDataAsString() || '[]');
+      if (Array.isArray(parsed)) {
+        archives = parsed;
+        loadedFromDrive = true;
+      }
+    }
+  } catch (e) {
+    console.warn('loadArchivedTripsRegistry Drive read warning:', e.message);
+  }
+
+  // One-time migration from legacy PropertiesService ARCHIVED_TRIPS (9 KB limit) into Drive JSON
+  const props = PropertiesService.getScriptProperties();
+  const legacyRaw = props.getProperty('ARCHIVED_TRIPS');
+  if (legacyRaw) {
+    try {
+      const legacy = JSON.parse(legacyRaw);
+      if (Array.isArray(legacy) && legacy.length > 0) {
+        const seenIds = new Set(archives.map(a => String(a.id || '').trim()));
+        const seenSheets = new Set(archives.map(a => String(a.sheetId || '').trim()).filter(Boolean));
+        let merged = false;
+        legacy.forEach(item => {
+          if (!item || !item.id) return;
+          const id = String(item.id).trim();
+          const sid = String(item.sheetId || '').trim();
+          if (!seenIds.has(id) && (!sid || !seenSheets.has(sid))) {
+            archives.push(item);
+            seenIds.add(id);
+            if (sid) seenSheets.add(sid);
+            merged = true;
+          }
+        });
+        if (merged || !loadedFromDrive) {
+          saveArchivedTripsRegistry(archives);
+        }
+        try { props.deleteProperty('ARCHIVED_TRIPS'); } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  try {
+    const jsonStr = JSON.stringify(archives);
+    if (jsonStr.length < 95000) cache.put(ARCHIVE_INDEX_CACHE_KEY, jsonStr, 300);
+  } catch (e) {}
+
+  return archives;
+}
+
+function saveArchivedTripsRegistry(list) {
+  const safeList = Array.isArray(list) ? list : [];
+  const file = getArchiveIndexFile(true);
+  file.setContent(JSON.stringify(safeList, null, 2));
+  try {
+    CacheService.getScriptCache().remove(ARCHIVE_INDEX_CACHE_KEY);
+  } catch (e) {}
 }
 
 function listArchivedTrips() {
-const props = PropertiesService.getScriptProperties();
-let archives = [];
-try {
-  archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
-  if (!Array.isArray(archives)) archives = [];
-} catch (e) {
-  archives = [];
-}
-return { status: 'success', archives: archives };
+  const archives = loadArchivedTripsRegistry(false);
+  archives.sort((a, b) => (new Date(b.archivedAt || 0).getTime() || 0) - (new Date(a.archivedAt || 0).getTime() || 0));
+  return { status: 'success', archives: archives };
 }
 
-function deleteArchivedTrip(targetArchiveId, targetSheetId, callerNric) {
-if (String(callerNric || '').trim().toUpperCase() !== 'ADMIN') {
+function getArchivedTripMeta(archiveId) {
+  const cleanId = String(archiveId || '').trim();
+  const archives = loadArchivedTripsRegistry(false);
+  const found = archives.find(a => String(a.id || '').trim() === cleanId);
+  if (!found) return { status: 'error', message: 'Archived trip not found.' };
+  return { status: 'success', archive: found };
+}
+
+function deleteArchivedTrip(targetArchiveId, targetSheetId, auth) {
+if (!auth || !auth.isMainAdmin) {
   return { status: 'error', message: 'Only Main Admin can remove archived trips from the app.' };
 }
 const cleanId = String(targetArchiveId || '').trim();
@@ -1619,59 +2363,108 @@ const cleanSheetId = String(targetSheetId || '').trim();
 if (!cleanId && !cleanSheetId) {
   return { status: 'error', message: 'Missing archive identifier.' };
 }
-// SAFETY GUARANTEE: Never call DriveApp or trash/delete any Google Drive file or folder.
-// Only remove the metadata index entry from Script Properties.
-const props = PropertiesService.getScriptProperties();
-let archives = [];
+// SAFETY GUARANTEE: Never call DriveApp.setTrashed on any trip spreadsheet or folder.
+// Only remove the metadata index entry from ARCHIVED_TRIPS_INDEX.json.
+const lock = LockService.getScriptLock();
 try {
-  archives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
-  if (!Array.isArray(archives)) archives = [];
+  lock.waitLock(15000);
+  const archives = loadArchivedTripsRegistry(true);
+  const beforeCount = archives.length;
+  const filtered = archives.filter(function(item) {
+    if (!item) return false;
+    if (cleanId && String(item.id || '').trim() === cleanId) return false;
+    if (cleanSheetId && String(item.sheetId || '').trim() === cleanSheetId) return false;
+    return true;
+  });
+  saveArchivedTripsRegistry(filtered);
+  return {
+    status: 'success',
+    removedCount: beforeCount - filtered.length,
+    remainingCount: filtered.length,
+    driveFilesUntouched: true
+  };
 } catch (e) {
-  archives = [];
+  return { status: 'error', message: e.message };
+} finally {
+  lock.releaseLock();
 }
-const beforeCount = archives.length;
-const filtered = archives.filter(function(item) {
-  if (!item) return false;
-  if (cleanId && String(item.id || '').trim() === cleanId) return false;
-  if (cleanSheetId && String(item.sheetId || '').trim() === cleanSheetId) return false;
-  return true;
-});
-props.setProperty('ARCHIVED_TRIPS', JSON.stringify(filtered));
-return {
-  status: 'success',
-  removedCount: beforeCount - filtered.length,
-  remainingCount: filtered.length,
-  driveFilesUntouched: true
-};
 }
 
-function archiveAndReset(customArchiveId, archivedBy) {
+function countFolderFilesShallow(folder) {
+  if (!folder) return 0;
+  let count = 0;
+  try {
+    const fIter = folder.getFiles();
+    while (fIter.hasNext()) { fIter.next(); count++; }
+    const dIter = folder.getFolders();
+    let subChecked = 0;
+    while (dIter.hasNext() && subChecked < 15) {
+      subChecked++;
+      const sub = dIter.next();
+      const sfIter = sub.getFiles();
+      while (sfIter.hasNext()) { sfIter.next(); count++; }
+    }
+  } catch (e) {}
+  return count;
+}
+
+function archiveAndReset(customArchiveId, archivedBy, extraDriveEmails, auth) {
 const props = PropertiesService.getScriptProperties(); const dbId = getDbId();
 let folderId = '';
 let folderName = '';
-let revokedAccountsCount = 0;
+const revokedDriveAccounts = [];
+const oldJunctures = props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly'];
+
+// 0. Compute archive stats BEFORE wiping properties
+let archiveStats = null;
+let folder = null;
+try {
+  folder = getTripFolder();
+  if (folder) {
+    folderId = folder.getId();
+    folderName = folder.getName();
+  }
+} catch (folderErr) {}
+
+try {
+  const roster = fetchAdminRoster(false).roster || [];
+  const rooms = (fetchRoomsOnly(false).rooms || []).filter(r => !r.isDeleted);
+  const receipts = (fetchReceipts(false).receipts || []).filter(r => !r.isDeleted && r.categoryId !== 'TRIP_FEE');
+  const minutes = (fetchMinutes(false).minutes || []).filter(m => !m.isDeleted);
+  const regularJunctures = oldJunctures.filter(j => !String(j).startsWith('__BUS__'));
+  const busJunctures = oldJunctures.filter(j => String(j).startsWith('__BUS__'));
+  const totalSpendSgd = receipts.reduce((sum, r) => sum + (parseFloat(r.sgdAmount) || 0), 0);
+  archiveStats = {
+    participants: roster.length,
+    trainees: roster.filter(p => p.role === 'TRAINEE').length,
+    caregivers: roster.filter(p => p.role === 'CAREGIVER').length,
+    volunteers: roster.filter(p => p.role === 'VOLUNTEER').length,
+    rooms: rooms.length,
+    junctures: regularJunctures.length,
+    busJunctures: busJunctures.length,
+    receipts: receipts.length,
+    totalSpendSgd: Math.round(totalSpendSgd * 100) / 100,
+    minutes: minutes.length,
+    files: countFolderFilesShallow(folder)
+  };
+} catch (statsErr) {}
 
 // 1. Revoke ALL accounts granted via the app under Drive Access Management
 try {
   const accessObj = JSON.parse(props.getProperty('APP_GRANTED_ACCESS') || '{}');
-  const grantedEmails = Object.keys(accessObj || {});
-  let folder = null;
-  try {
-    folder = getTripFolder();
-    if (folder) {
-      folderId = folder.getId();
-      folderName = folder.getName();
-    }
-  } catch (folderErr) {}
+  const extraList = Array.isArray(extraDriveEmails) ? extraDriveEmails : [];
+  const grantedEmails = Array.from(new Set(
+    [...Object.keys(accessObj || {}), ...extraList]
+      .map(e => String(e || '').trim().toLowerCase())
+      .filter(Boolean)
+  ));
 
   let dbFile = null;
   if (dbId) {
     try { dbFile = DriveApp.getFileById(dbId); } catch (fileErr) {}
   }
 
-  grantedEmails.forEach(function(rawEmail) {
-    const email = String(rawEmail || '').trim().toLowerCase();
-    if (!email) return;
+  grantedEmails.forEach(function(email) {
     let revoked = false;
     if (folder) {
       try { folder.removeEditor(email); revoked = true; } catch (e) {}
@@ -1681,7 +2474,7 @@ try {
       try { dbFile.removeEditor(email); revoked = true; } catch (e) {}
       try { dbFile.removeViewer(email); revoked = true; } catch (e) {}
     }
-    if (revoked) revokedAccountsCount++;
+    if (revoked) revokedDriveAccounts.push(email);
   });
 } catch (e) {}
 
@@ -1693,7 +2486,7 @@ if (dbId) {
   try { DriveApp.getFileById(dbId).setName(`${t} ${y} (Archived ${d})`); } catch(e){}
 
   archivedRecord = {
-    id: customArchiveId || ('arch_' + new Date().getTime()),
+    id: customArchiveId || ('arch_' + new Date().getTime() + '_' + Utilities.getUuid().substring(0, 6)),
     tripTitle: t,
     tripYear: y,
     tripStartDate: props.getProperty('TRIP_START_DATE') || '',
@@ -1704,11 +2497,12 @@ if (dbId) {
     sheetId: dbId,
     folderId: folderId,
     folderName: folderName || `${t} ${y}`,
+    stats: archiveStats,
     committee: props.getProperty('COMMITTEE_LIST') ? JSON.parse(props.getProperty('COMMITTEE_LIST')) : [],
     helpline: props.getProperty('HELPLINE_CONTACTS') ? JSON.parse(props.getProperty('HELPLINE_CONTACTS')) : [],
     projectGroups: props.getProperty('PROJECT_GROUPS') ? JSON.parse(props.getProperty('PROJECT_GROUPS')) : [],
     projectColors: props.getProperty('PROJECT_COLORS') ? JSON.parse(props.getProperty('PROJECT_COLORS')) : {},
-    junctures: props.getProperty('ATTENDANCE_JUNCTURES') ? JSON.parse(props.getProperty('ATTENDANCE_JUNCTURES')) : ['Morning Assembly'],
+    junctures: oldJunctures,
     sortingRules: props.getProperty('SORTING_RULES') ? JSON.parse(props.getProperty('SORTING_RULES')) : ['project', 'family', 'role', 'name'],
     customViewsOrder: props.getProperty('CUSTOM_VIEWS_ORDER') ? JSON.parse(props.getProperty('CUSTOM_VIEWS_ORDER')) : ['reset_filter', 'medical.html', 'diet.html', 'expired.html', 'other.html'],
     tripInfographicId: props.getProperty('TRIP_INFOGRAPHIC_ID') || '',
@@ -1719,12 +2513,17 @@ if (dbId) {
     tripInfoDocUrl: props.getProperty('TRIP_INFODOC_URL') || ''
   };
 
+  const lock = LockService.getScriptLock();
   try {
-    const existingArchives = JSON.parse(props.getProperty('ARCHIVED_TRIPS') || '[]');
-    const updatedArchives = Array.isArray(existingArchives) ? existingArchives : [];
-    updatedArchives.unshift(archivedRecord);
-    props.setProperty('ARCHIVED_TRIPS', JSON.stringify(updatedArchives));
-  } catch (e) {}
+    lock.waitLock(15000);
+    const existingArchives = loadArchivedTripsRegistry(true);
+    existingArchives.unshift(archivedRecord);
+    saveArchivedTripsRegistry(existingArchives);
+  } catch (e) {
+    console.error('Failed to persist archive registry:', e.message);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }
 
 // 2. Wipe all trip-specific properties so the entire app is reset and ready for a new overseas trip
@@ -1758,15 +2557,22 @@ props.setProperty('REGISTRATION_OPEN', 'false');
 props.setProperty('ALLOW_EDITS', 'false');
 props.setProperty('APP_GRANTED_ACCESS', '{}');
 
-const cache = CacheService.getScriptCache();
-// Wipe caches related to this trip instance
+// 3. Wipe ALL v2 caches related to this trip instance (including attendance junctures)
 try {
-const types = ['LOGISTICS', 'ROSTER', 'FINANCE', 'RECEIPTS', 'MINUTES', 'ROOMS', 'PAIRINGS'];
-let keys = [];
-types.forEach(t => { keys.push(t + "_" + dbId); keys.push(t + "_" + dbId + "_count"); for(let i=0; i<15; i++) keys.push(t + "_" + dbId + "_" + i); });
-cache.removeAll(keys);
+  const types = ['LOGISTICS', 'ROSTER', 'FINANCE', 'RECEIPTS', 'MINUTES', 'ROOMS', 'PAIRINGS'];
+  types.forEach(t => removeLargeCache(t + "_v2_" + dbId));
+  oldJunctures.forEach(j => removeLargeCache('ATTENDANCE_' + j + "_v2_" + dbId));
 } catch(e) {}
-return { status: 'success', archivedTrip: archivedRecord, revokedAccountsCount: revokedAccountsCount };
+
+const freshSettings = getAppConfig(auth || { role: 'admin', isMainAdmin: true });
+freshSettings.hasActiveTrip = false;
+return {
+  status: 'success',
+  archivedTrip: archivedRecord,
+  revokedAccountsCount: revokedDriveAccounts.length,
+  revokedDriveAccounts: revokedDriveAccounts,
+  freshSettings: freshSettings
+};
 }
 function deleteParticipant(nric) {
   const ss = getDatabase();
@@ -1834,11 +2640,15 @@ if (sheet.getMaxColumns() < targetLength) {
 }
 
 updates.forEach(u => {
-  if (existingMap[u.nric] !== undefined) {
-    const rowIndex = existingMap[u.nric];
-    if (data[rowIndex][colIndex] !== u.value) {
-        // Target only the specific cell to update
-        sheet.getRange(rowIndex + 1, colIndex + 1).setValue(u.value || '');
+  const cleanNric = String(u.nric || '').trim().toUpperCase();
+  if (existingMap[cleanNric] !== undefined) {
+    const rowIndex = existingMap[cleanNric];
+    const currentVal = column === 'isGroupIC'
+      ? (String(data[rowIndex][colIndex] || '').trim().toLowerCase() === 'true')
+      : String(data[rowIndex][colIndex] || '');
+    const nextVal = column === 'isGroupIC' ? Boolean(u.value) : String(u.value || '');
+    if (currentVal !== nextVal) {
+        sheet.getRange(rowIndex + 1, colIndex + 1).setValue(column === 'isGroupIC' ? (nextVal ? 'TRUE' : 'FALSE') : nextVal);
         dataChanged = true;
     }
   }
@@ -1930,12 +2740,15 @@ function clearGlobalCache() {
 // ==========================================
 // DATA EXTRACTION
 // ==========================================
-function extractData(extractType, excludedNrics, customConfig) {
+function extractData(extractType, excludedNrics, customConfig, folderId) {
+  let tempSheetId = null;
   try {
     const props = PropertiesService.getScriptProperties();
-    const tripTitle = props.getProperty('TRIP_TITLE') || 'TOT';
-    const tripYear = props.getProperty('TRIP_YEAR') || new Date().getFullYear();
-    const rosterData = fetchAdminRoster(false).roster;
+    const isArchiveReadOnly = Boolean(ACTIVE_ARCHIVE_SHEET_ID);
+    const tripTitle = (ACTIVE_ARCHIVE_META && ACTIVE_ARCHIVE_META.tripTitle) || props.getProperty('TRIP_TITLE') || 'TOT';
+    const tripYear = (ACTIVE_ARCHIVE_META && ACTIVE_ARCHIVE_META.tripYear) || props.getProperty('TRIP_YEAR') || new Date().getFullYear();
+    const safeExcluded = Array.isArray(excludedNrics) ? excludedNrics.map(n => String(n || '').trim().toUpperCase()) : [];
+    const rosterData = (fetchAdminRoster(false).roster || []).map(p => ({ ...p }));
     
     // Enrich with logistics data (rooms & pairings)
     try {
@@ -1983,19 +2796,17 @@ function extractData(extractType, excludedNrics, customConfig) {
     }
     
     // Sort array so that it's consistent.
-    rosterData.sort((a,b) => String(a.fullName).localeCompare(String(b.fullName)));
+    rosterData.sort((a,b) => String(a.fullName || '').localeCompare(String(b.fullName || '')));
     
-    const targetRoster = rosterData.filter(p => !excludedNrics.includes(p.nric));
+    const targetRoster = rosterData.filter(p => !safeExcluded.includes(String(p.nric || '').trim().toUpperCase()));
     
-    const folder = getTripFolder();
-    let fileId;
     let exportFileName = 'Extraction';
     
     if (extractType === 'insurance') {
       const fileName = `Insurance Submission_${tripTitle}_${tripYear}`;
       exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
-      fileId = ss.getId();
+      tempSheetId = ss.getId();
       const sheet = ss.getSheets()[0];
       sheet.setName("Insurance");
       
@@ -2039,31 +2850,27 @@ function extractData(extractType, excludedNrics, customConfig) {
       const dataRange = sheet.getRange(1, 1, rows.length, rows[0].length);
       dataRange.setValues(rows);
       
-      // 1. Column Widths
-      sheet.setColumnWidth(1, 40); // No.
-      sheet.setColumnWidth(2, 250); // Name
-      sheet.setColumnWidth(3, 150); // NRIC
-      sheet.setColumnWidth(4, 120); // DOB
-      sheet.setColumnWidth(5, 50); // Age
-      sheet.setColumnWidth(6, 120); // Nationality
-      sheet.setColumnWidth(7, 80); // Gender
-      sheet.setColumnWidth(8, 120); // Contact No
-      sheet.setColumnWidth(9, 150); // Relationship
-      sheet.setColumnWidth(10, 100); // Transport
-      sheet.setColumnWidth(11, 200); // Project Group
+      sheet.setColumnWidth(1, 40);
+      sheet.setColumnWidth(2, 250);
+      sheet.setColumnWidth(3, 150);
+      sheet.setColumnWidth(4, 120);
+      sheet.setColumnWidth(5, 50);
+      sheet.setColumnWidth(6, 120);
+      sheet.setColumnWidth(7, 80);
+      sheet.setColumnWidth(8, 120);
+      sheet.setColumnWidth(9, 150);
+      sheet.setColumnWidth(10, 100);
+      sheet.setColumnWidth(11, 200);
       
-      // 2. Justify left and wrap text
       dataRange.setHorizontalAlignment("left");
       dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-      
-      // 5. Bold row 1
       sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
       
     } else if (extractType === 'bus') {
       const fileName = `Bus for ICA Submission_${tripTitle}_${tripYear}`;
       exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
-      fileId = ss.getId();
+      tempSheetId = ss.getId();
       
       // Group by Bus
       const buses = {};
@@ -2078,6 +2885,7 @@ function extractData(extractType, excludedNrics, customConfig) {
       }
       
       let isFirst = true;
+      const usedTabNames = new Set();
       for (const b in buses) {
         let sheet;
         let tabName = 'Unassigned';
@@ -2085,6 +2893,17 @@ function extractData(extractType, excludedNrics, customConfig) {
           let clean = b.replace(/bus/i, '').trim();
           tabName = 'Bus ' + clean;
         }
+        tabName = tabName.replace(/[\\/*?:[\]]/g, '_').trim().slice(0, 31) || 'Sheet';
+        if (usedTabNames.has(tabName.toLowerCase())) {
+          let suffix = 2;
+          let candidate = `${tabName.slice(0, 26)} (${suffix})`;
+          while (usedTabNames.has(candidate.toLowerCase())) {
+            suffix++;
+            candidate = `${tabName.slice(0, 26)} (${suffix})`;
+          }
+          tabName = candidate;
+        }
+        usedTabNames.add(tabName.toLowerCase());
         
         if (isFirst) {
           sheet = ss.getSheets()[0];
@@ -2094,7 +2913,6 @@ function extractData(extractType, excludedNrics, customConfig) {
           sheet = ss.insertSheet(tabName);
         }
         
-        // Rows 1-7 bus info
         sheet.getRange("B1").setValue("Departure from Singapore Date");
         sheet.getRange("B2").setValue("Estimated time to reach checkpoint");
         sheet.getRange("B3").setValue("Arrival to Singapore Date");
@@ -2108,21 +2926,19 @@ function extractData(extractType, excludedNrics, customConfig) {
         sheet.getRange("C7").setVerticalAlignment("top").setWrap(true);
         sheet.setRowHeight(7, 130);
         
-        // Row 9 Header (Note: Row 8 is blank)
         const header = ["S/N", "Full Name as per Passport", "Gender", "Date of Birth", "Passport No.", "Passport Expiry Date", "Nationality", "Medical Conditions", "Remarks", "Clients / Volunteers / Caregivers"];
         sheet.getRange("A9:J9").setValues([header]).setFontWeight("bold").setWrap(true).setVerticalAlignment("top").setHorizontalAlignment("left");
         
-        // Formatting column widths
-        sheet.setColumnWidth(1, 40); // S/N
-        sheet.setColumnWidth(2, 280); // Full Name
-        sheet.setColumnWidth(3, 80); // Gender
-        sheet.setColumnWidth(4, 120); // DOB
-        sheet.setColumnWidth(5, 120); // Passport No
-        sheet.setColumnWidth(6, 120); // Passport Expiry
-        sheet.setColumnWidth(7, 120); // Nationality
-        sheet.setColumnWidth(8, 200); // Medical Conditions
-        sheet.setColumnWidth(9, 150); // Remarks
-        sheet.setColumnWidth(10, 200); // Role
+        sheet.setColumnWidth(1, 40);
+        sheet.setColumnWidth(2, 280);
+        sheet.setColumnWidth(3, 80);
+        sheet.setColumnWidth(4, 120);
+        sheet.setColumnWidth(5, 120);
+        sheet.setColumnWidth(6, 120);
+        sheet.setColumnWidth(7, 120);
+        sheet.setColumnWidth(8, 200);
+        sheet.setColumnWidth(9, 150);
+        sheet.setColumnWidth(10, 200);
         
         const rows = [];
         const busParticipants = buses[b];
@@ -2171,11 +2987,11 @@ function extractData(extractType, excludedNrics, customConfig) {
       const fileName = (customConfig && customConfig.sheetName) ? String(customConfig.sheetName).trim() : 'Custom Extraction';
       exportFileName = fileName;
       const ss = SpreadsheetApp.create(fileName);
-      fileId = ss.getId();
+      tempSheetId = ss.getId();
       const sheet = ss.getSheets()[0];
       sheet.setName("Extraction");
       
-      const colDefs = (customConfig && customConfig.columns) || [];
+      const colDefs = (customConfig && Array.isArray(customConfig.columns)) ? customConfig.columns : [];
       const colLabels = {
         fullName: 'Full Name', shortName: 'Short Name', nric: 'NRIC / FIN', email: 'Email Address', role: 'Role', gender: 'Gender', contact: 'Contact Number', address: 'Home Address', nationality: 'Nationality', passportNo: 'Passport No.', passportExpiry: 'Passport Expiry Date', dob: 'Date of Birth', diet: 'Dietary Restrictions', emergencyName: 'Emergency Contact Name', emergencyContact: 'Emergency Contact Number', emergencyRelation: 'Emergency Contact Relationship', sleeping: 'Sleeping Arrangement', otherPoints: 'Other Points to Note', medical: 'Medical Conditions', bus: 'Bus', logisticsGroup: 'Logistics Group', group: 'Project Group', relatedTrainee: 'Related Trainee(s)', relationship: 'Relationship to Trainee', room: 'Room Assignment', pairings: 'Pairings'
       };
@@ -2216,43 +3032,63 @@ function extractData(extractType, excludedNrics, customConfig) {
       dataRange.setHorizontalAlignment("left");
       dataRange.setVerticalAlignment("middle");
       dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
-      
       sheet.getRange(1, 1, 1, rows[0].length).setFontWeight("bold");
+    } else {
+      return { status: 'error', message: 'Invalid extraction type.' };
     }
 
-    let fileUrl = '';
-    let finalFileName = exportFileName;
-    if (fileId) {
-      SpreadsheetApp.flush();
-      const tempSheetId = fileId;
-      const exportUrl = "https://docs.google.com/spreadsheets/d/" + tempSheetId + "/export?format=xlsx";
-      const response = UrlFetchApp.fetch(exportUrl, {
-        headers: {
-          Authorization: "Bearer " + ScriptApp.getOAuthToken()
-        },
-        muteHttpExceptions: true
-      });
-      if (response.getResponseCode() !== 200) {
-        try { DriveApp.getFileById(tempSheetId).setTrashed(true); } catch (cleanErr) {}
-        throw new Error("Failed to export Excel file (HTTP " + response.getResponseCode() + ")");
-      }
-      const excelName = exportFileName.toLowerCase().endsWith(".xlsx")
-        ? exportFileName
-        : exportFileName.replace(/\.(xls|csv)$/i, "") + ".xlsx";
-      const xlsxBlob = response.getBlob()
-        .setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        .setName(excelName);
-      const excelFile = folder.createFile(xlsxBlob);
-      fileId = excelFile.getId();
-      fileUrl = excelFile.getUrl();
-      finalFileName = excelFile.getName();
-      try {
-        DriveApp.getFileById(tempSheetId).setTrashed(true);
-      } catch (cleanErr) {}
+    const EXCEL_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    SpreadsheetApp.flush();
+    const exportUrl = "https://docs.google.com/spreadsheets/d/" + tempSheetId + "/export?format=xlsx";
+    const response = UrlFetchApp.fetch(exportUrl, {
+      headers: {
+        Authorization: "Bearer " + ScriptApp.getOAuthToken()
+      },
+      muteHttpExceptions: true
+    });
+    if (response.getResponseCode() !== 200) {
+      throw new Error("Failed to export Excel file (HTTP " + response.getResponseCode() + ")");
     }
-    
-    return { status: 'success', fileId: fileId, fileName: finalFileName, fileUrl: fileUrl };
+    const sanitizedBase = String(exportFileName || 'Extraction')
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .replace(/\.(xlsx|xls|csv)$/i, '')
+      .trim() || 'Extraction';
+    const excelName = sanitizedBase + ".xlsx";
+    const xlsxBlob = response.getBlob()
+      .setContentType(EXCEL_MIME)
+      .setName(excelName);
+    const fileData = Utilities.base64Encode(xlsxBlob.getBytes());
+
+    if (isArchiveReadOnly) {
+      return {
+        status: 'success',
+        fileId: '',
+        fileName: excelName,
+        fileUrl: '',
+        mimeType: EXCEL_MIME,
+        fileData: fileData,
+        archiveReadOnlyExport: true
+      };
+    }
+
+    const targetFolder = resolveTripFolder(folderId || 'root');
+    const excelFile = targetFolder.createFile(xlsxBlob);
+    const contents = getDriveContents(folderId || 'root');
+    return {
+      status: 'success',
+      fileId: excelFile.getId(),
+      fileName: excelFile.getName(),
+      fileUrl: excelFile.getUrl(),
+      mimeType: EXCEL_MIME,
+      fileData: fileData,
+      folders: contents && contents.status === 'success' ? contents.folders : undefined,
+      files: contents && contents.status === 'success' ? contents.files : undefined
+    };
   } catch(e) {
     return { status: 'error', message: e.message };
+  } finally {
+    if (tempSheetId) {
+      try { DriveApp.getFileById(tempSheetId).setTrashed(true); } catch (cleanErr) {}
+    }
   }
 }

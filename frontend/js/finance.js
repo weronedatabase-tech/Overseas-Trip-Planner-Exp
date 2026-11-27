@@ -483,7 +483,9 @@ async function executeFinanceSync() {
     }
   } catch (e) {
     setFinanceSyncButtonState("error");
-    updates.forEach((u) => pendingFinanceUpdates.set(u.id, u));
+    updates.forEach((u) => {
+      if (!pendingFinanceUpdates.has(u.id)) pendingFinanceUpdates.set(u.id, u);
+    });
   } finally {
     isFinanceSyncing = false;
   }
@@ -491,6 +493,7 @@ async function executeFinanceSync() {
 
 function queueReceiptUpdate(receipt) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  lastLocalChange = Date.now();
   receipt.ts = Date.now();
   pendingReceiptUpdates.set(receipt.id, receipt);
   setFinanceSyncButtonState("saving");
@@ -526,7 +529,9 @@ async function executeReceiptSync() {
     renderFeeTracker();
   } catch (e) {
     setFinanceSyncButtonState("error");
-    updates.forEach((u) => pendingReceiptUpdates.set(u.id, u));
+    updates.forEach((u) => {
+      if (!pendingReceiptUpdates.has(u.id)) pendingReceiptUpdates.set(u.id, u);
+    });
   } finally {
     isReceiptSyncing = false;
   }
@@ -3122,41 +3127,47 @@ function renderReceiptsBrowser() {
       `;
     }
 
+    const escFin = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+    const escFinJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => escFin(s);
+    const safeRecUrl = typeof window.sanitizeExternalUrl === "function" ? window.sanitizeExternalUrl(r.fileUrl) : "";
+    const amtNum = Number(r.amount || 0);
+    const sgdNum = Number(r.sgdAmount || 0);
+
     rowsHtml += `
-    <div id="receipt-card-${r.id}" class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
+    <div id="receipt-card-${escFin(r.id)}" class="bg-white dark:bg-gray-800/50 p-3.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md flex flex-col gap-3 relative transition hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600">
         <!-- Top row: Date, Category, Users on left / Amounts and Rate on right -->
         <div class="flex justify-between items-start w-full gap-3">
             <div class="flex flex-col min-w-0">
-                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-0.5 tracking-wider uppercase">${dateStr}</span>
-                <span class="text-sm font-black text-primary truncate max-w-[200px] sm:max-w-md md:max-w-xl" title="${catName}">${catName}</span>
+                <span class="text-[10px] font-bold text-gray-400 dark:text-gray-500 mb-0.5 tracking-wider uppercase">${escFin(dateStr)}</span>
+                <span class="text-sm font-black text-primary truncate max-w-[200px] sm:max-w-md md:max-w-xl" title="${escFin(catName)}">${escFin(catName)}</span>
                 <div class="flex flex-col mt-1.5 leading-tight">
-                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Uploaded by: ${uploaderName}">Up: ${uploaderName}</span>
-                    <span class="text-[11px] font-black text-green-600 dark:text-green-400 uppercase truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Paid by: ${payerName}">Paid: ${payerName}</span>
+                    <span class="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Uploaded by: ${escFin(uploaderName)}">Up: ${escFin(uploaderName)}</span>
+                    <span class="text-[11px] font-black text-green-600 dark:text-green-400 uppercase truncate max-w-[180px] sm:max-w-md md:max-w-xl" title="Paid by: ${escFin(payerName)}">Paid: ${escFin(payerName)}</span>
                 </div>
             </div>
             <div class="flex flex-col items-end shrink-0">
-                <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${r.currency} ${r.amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
-                <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5 mb-1">SGD ${r.sgdAmount.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400">${escFin(r.currency || "SGD")} ${amtNum.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                <span class="text-sm font-black text-purple-600 dark:text-purple-400 mt-0.5 mb-1">SGD ${sgdNum.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 ${rateHtml}
             </div>
         </div>
 
         <!-- Remarks -->
-        ${r.remarks ? `<div class="text-xs font-medium text-gray-500 dark:text-gray-400 italic break-words" title="${r.remarks}">"${r.remarks}"</div>` : ""}
+        ${r.remarks ? `<div class="text-xs font-medium text-gray-500 dark:text-gray-400 italic break-words" title="${escFin(r.remarks)}">"${escFin(r.remarks)}"</div>` : ""}
 
         <!-- Actions -->
         <div class="flex items-center justify-between gap-2.5 pt-3 border-t border-gray-100 dark:border-gray-700 w-full">
-            <button id="btn-reimbursed-${r.id}" onclick="toggleReceiptReimbursed('${r.id}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
+            <button id="btn-reimbursed-${escFin(r.id)}" onclick="toggleReceiptReimbursed('${escFinJs(r.id)}', ${!r.isReimbursed})" class="text-[10px] sm:text-xs font-bold px-2.5 py-1.5 rounded border transition focus:outline-none uppercase tracking-wider whitespace-nowrap ${isReimClass}">
                 ${r.isReimbursed ? "Reimbursed" : "Pending"}
             </button>
             <div class="flex items-center gap-1.5">
-                ${r.fileUrl ? `<a id="btn-view-receipt-${r.id}" href="${r.fileUrl}" target="_blank" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
-                <button id="btn-edit-receipt-${r.id}" onclick="openEditReceiptModal('${r.id}')" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Edit Receipt">
+                ${safeRecUrl ? `<a id="btn-view-receipt-${escFin(r.id)}" href="${escFin(safeRecUrl)}" target="_blank" rel="noopener noreferrer" class="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 p-1.5 bg-green-50 dark:bg-green-900/30 rounded focus:outline-none flex items-center justify-center transition" title="View Receipt"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></a>` : ""}
+                <button id="btn-edit-receipt-${escFin(r.id)}" onclick="openEditReceiptModal('${escFinJs(r.id)}')" class="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Edit Receipt">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                   </svg>
                 </button>
-                <button id="btn-delete-receipt-${r.id}" onclick="openDeleteReceiptModal('${r.id}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Delete Receipt">
+                <button id="btn-delete-receipt-${escFin(r.id)}" onclick="openDeleteReceiptModal('${escFinJs(r.id)}')" class="text-red-500 hover:text-red-600 transition p-1.5 bg-red-50 dark:bg-red-900/30 rounded focus:outline-none flex items-center justify-center cursor-pointer" title="Delete Receipt">
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
@@ -3546,11 +3557,15 @@ function handleEditSgdAmountInput() {
 
 async function saveEditedReceipt(e) {
   e.preventDefault();
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
 
   const id = document.getElementById("editRecId").value;
   const rec = globalReceipts.find((r) => r.id === id);
   if (!rec) {
-    alert("Receipt not found.");
+    showToast("Receipt not found.", true);
     return;
   }
 
@@ -3587,10 +3602,17 @@ async function saveEditedReceipt(e) {
 
   let finalFileUrl = document.getElementById("editRecFileUrl").value.trim() || rec.fileUrl || "";
 
-  // Check if a new file was chosen
+  // Check if a new file was chosen (upload directly to Google Drive via GAS)
   const fileInput = document.getElementById("editRecFileInput");
   if (fileInput && fileInput.files && fileInput.files.length > 0) {
     const file = fileInput.files[0];
+    if (file.size > 8 * 1024 * 1024) {
+      if (errorEl) {
+        errorEl.textContent = "File exceeds 8MB limit.";
+        errorEl.classList.remove("hidden-force");
+      }
+      return;
+    }
     if (saveBtn) {
       saveBtn.disabled = true;
       saveBtn.innerHTML = `
@@ -3614,22 +3636,27 @@ async function saveEditedReceipt(e) {
         reader.readAsDataURL(file);
       });
 
-      const uploadResp = await fetch("/api/upload-file", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileName: file.name,
-          mimeType: file.type,
-          fileData: base64Data,
-          API_URL: typeof SCRIPT_URL !== "undefined" ? SCRIPT_URL : "",
-        }),
+      const uploadJson = await apiCall("uploadDriveFile", {
+        folderId: "root",
+        fileName: `${Date.now()}_${file.name}`,
+        mimeType: file.type || "application/octet-stream",
+        fileData: base64Data,
       });
-      const uploadJson = await uploadResp.json();
-      if (uploadJson && (uploadJson.fileUrl || uploadJson.localUrl)) {
-        finalFileUrl = uploadJson.fileUrl || uploadJson.localUrl;
+      if (uploadJson && uploadJson.uploadedFile && uploadJson.uploadedFile.url) {
+        finalFileUrl = uploadJson.uploadedFile.url;
+      } else {
+        throw new Error("Drive upload did not return a file URL.");
       }
     } catch (err) {
-      console.warn("File upload error:", err);
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = "<span>Save Changes</span>";
+      }
+      if (errorEl) {
+        errorEl.textContent = "File upload failed: " + (err.message || err);
+        errorEl.classList.remove("hidden-force");
+      }
+      return;
     }
   }
 
@@ -4213,15 +4240,18 @@ window.showContactPaymentPopup = function (pocNric) {
       finalExpected,
       orderNo,
     );
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}`;
+    const qrUrl =
+      typeof window.generateQrDataUrl === "function"
+        ? window.generateQrDataUrl(qrStr)
+        : "";
     qrHtml = `
             <div class="border-t-2 border-gray-100 dark:border-gray-700 pt-4 mt-2">
                 <p class="text-[11px] font-bold uppercase tracking-widest text-center text-gray-500 dark:text-gray-400 mb-3">Family Payment QR</p>
                 <div class="flex justify-center bg-white p-3 rounded-xl border-2 border-gray-200 w-max mx-auto shadow-md">
-                    <img src="${qrUrl}" alt="PayNow QR" class="w-48 h-48 object-contain rounded">
+                    ${qrUrl ? `<img src="${qrUrl}" alt="PayNow QR" class="w-48 h-48 object-contain rounded">` : `<span class="text-xs font-bold text-gray-400 p-4">QR unavailable offline</span>`}
                 </div>
                 <div class="text-center mt-3 text-xs font-bold text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-900 rounded-lg py-2">
-                    PayNow Ref: <span class="font-mono ml-1 text-primary">${orderNo}</span>
+                    PayNow Ref: <span class="font-mono ml-1 text-primary">${typeof window.escapeHtml === "function" ? window.escapeHtml(orderNo) : orderNo}</span>
                 </div>
             </div>
         `;
@@ -4561,7 +4591,12 @@ window.handleAdminFeeFileSelect = function (input) {
   if (file.type.startsWith("image/")) {
     if (pdfPreview) pdfPreview.classList.add("hidden-force");
     if (imgPreview) {
-      imgPreview.src = URL.createObjectURL(file);
+      if (imgPreview.dataset.blobUrl) {
+        URL.revokeObjectURL(imgPreview.dataset.blobUrl);
+      }
+      const nextBlobUrl = URL.createObjectURL(file);
+      imgPreview.dataset.blobUrl = nextBlobUrl;
+      imgPreview.src = nextBlobUrl;
       imgPreview.classList.remove("hidden-force");
     }
   } else if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
@@ -4588,7 +4623,11 @@ window.clearAdminFeeSelectedFile = function () {
   if (promptEl) promptEl.classList.remove("hidden-force");
   if (previewEl) previewEl.classList.add("hidden-force");
   if (imgPreview) {
-    imgPreview.src = "";
+    if (imgPreview.dataset.blobUrl) {
+      URL.revokeObjectURL(imgPreview.dataset.blobUrl);
+      delete imgPreview.dataset.blobUrl;
+    }
+    imgPreview.removeAttribute("src");
     imgPreview.classList.add("hidden-force");
   }
   if (pdfPreview) pdfPreview.classList.add("hidden-force");
@@ -4596,12 +4635,17 @@ window.clearAdminFeeSelectedFile = function () {
 
 window.submitAdminFeeScreenshot = async function (e) {
   e.preventDefault();
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
 
   const pocNric = document.getElementById("adminFeePocNric").value.trim();
   const overwriteReceiptId = document.getElementById("adminFeeOverwriteReceiptId").value.trim();
   const fileInput = document.getElementById("adminFeeFileInput");
   const errEl = document.getElementById("adminFeeModalError");
   const submitBtn = document.getElementById("adminFeeSubmitBtn");
+  const prevSubmitLabel = document.getElementById("adminFeeSubmitBtnText")?.textContent || (overwriteReceiptId ? "Overwrite Screenshot" : "Upload Screenshot");
 
   if (errEl) errEl.classList.add("hidden-force");
 
@@ -4614,13 +4658,13 @@ window.submitAdminFeeScreenshot = async function (e) {
   }
 
   const file = fileInput.files[0];
-  const members = globalLogistics?.participants?.filter((p) => p.pocNric === pocNric) || [];
+  const members = globalLogistics?.participants?.filter((p) => (p.pocNric || p.nric) === pocNric) || [];
   const payerNric = document.getElementById("adminFeePayerSelect").value || pocNric;
   const payerMember = members.find((m) => m.nric === payerNric) || members[0] || { nric: payerNric, fullName: payerNric };
   const amount = parseFloat(document.getElementById("adminFeeAmount").value) || 0;
-  if (isNaN(amount) || amount === 0) {
+  if (isNaN(amount) || amount <= 0) {
     if (errEl) {
-      errEl.textContent = "Please enter a valid non-zero amount.";
+      errEl.textContent = "Please enter a valid positive amount.";
       errEl.classList.remove("hidden-force");
     }
     return;
@@ -4651,14 +4695,12 @@ window.submitAdminFeeScreenshot = async function (e) {
       reader.readAsDataURL(file);
     });
 
-    // If overwriting a specific receipt, mark old receipt deleted locally
     if (overwriteReceiptId) {
       const oldRec = globalReceipts.find((r) => r.id === overwriteReceiptId);
       if (oldRec) {
         oldRec.isDeleted = true;
         oldRec.ts = Date.now();
         locallyDeletedReceiptIds.add(overwriteReceiptId);
-        pendingReceiptUpdates.set(overwriteReceiptId, oldRec);
       }
     }
 
@@ -4726,13 +4768,16 @@ window.submitAdminFeeScreenshot = async function (e) {
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
-      const submitText = document.getElementById("adminFeeSubmitBtnText");
-      submitBtn.innerHTML = `<span id="adminFeeSubmitBtnText">${submitText ? submitText.textContent : "Upload Screenshot"}</span>`;
+      submitBtn.innerHTML = `<span id="adminFeeSubmitBtnText">${typeof window.escapeHtml === "function" ? window.escapeHtml(prevSubmitLabel) : prevSubmitLabel}</span>`;
     }
   }
 };
 
 window.deleteAdminFeeScreenshot = async function (receiptId, pocNric) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
+    showToast("Read-only mode: archived trips cannot be modified.", true);
+    return;
+  }
   if (
     !(await appConfirm(
       "Are you sure you want to remove this payment screenshot?",

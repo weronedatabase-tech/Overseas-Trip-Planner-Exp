@@ -506,7 +506,10 @@ async function promptRenameDriveItem(id, isFolder, oldName) {
   }
 }
 
+let driveLoadRequestId = 0;
+
 async function loadDriveFolder(folderId, folderName, isBack = false) {
+  const reqId = ++driveLoadRequestId;
   if (!isBack) {
     if (
       currentDrivePath.length === 0 ||
@@ -521,11 +524,12 @@ async function loadDriveFolder(folderId, folderName, isBack = false) {
   const loadText = document.getElementById("driveLoadingText");
   if (overlay) {
     overlay.classList.remove("hidden-force");
-    loadText.textContent = "Loading folder...";
+    if (loadText) loadText.textContent = "Loading folder...";
   }
 
   try {
     const res = await apiCall("getDriveContents", { folderId: folderId });
+    if (reqId !== driveLoadRequestId) return;
 
     if (currentDrivePath.length === 1 && folderId === "root") {
       currentDrivePath[0].name = res.currentFolderName;
@@ -533,15 +537,16 @@ async function loadDriveFolder(folderId, folderName, isBack = false) {
       updateDriveHeader();
     }
 
-    renderDriveContents(res.folders, res.files);
+    renderDriveContents(res.folders || [], res.files || []);
   } catch (e) {
+    if (reqId !== driveLoadRequestId) return;
     showToast("Failed to load folder contents.", true);
     if (!isBack && currentDrivePath.length > 1) {
       currentDrivePath.pop();
       updateDriveHeader();
     }
   } finally {
-    if (overlay) overlay.classList.add("hidden-force");
+    if (reqId === driveLoadRequestId && overlay) overlay.classList.add("hidden-force");
   }
 }
 
@@ -579,8 +584,16 @@ function refreshCurrentDriveFolder(btn) {
 }
 
 function openDriveFile(url) {
+  const safeUrl =
+    typeof window.sanitizeExternalUrl === "function"
+      ? window.sanitizeExternalUrl(url)
+      : url;
+  if (!safeUrl) {
+    showToast("Invalid file URL.", true);
+    return;
+  }
   const a = document.createElement("a");
-  a.href = url;
+  a.href = safeUrl;
   a.target = "_blank";
   a.rel = "noopener noreferrer";
   document.body.appendChild(a);

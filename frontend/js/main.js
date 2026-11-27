@@ -6,7 +6,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const savedSession = localStorage.getItem("userSession");
-  if (savedSession) currentUser = JSON.parse(savedSession);
+  if (savedSession) {
+    try {
+      currentUser = JSON.parse(savedSession);
+    } catch (e) {
+      localStorage.removeItem("userSession");
+      currentUser = null;
+    }
+  }
 
   if (
     localStorage.getItem("theme") === "dark" ||
@@ -14,8 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
       window.matchMedia("(prefers-color-scheme: dark)").matches)
   ) {
     document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("light");
   } else {
     document.documentElement.classList.remove("dark");
+    document.documentElement.classList.add("light");
   }
 
   const devModeBar = document.getElementById("devModeBar");
@@ -35,12 +44,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Check Authentication boundaries
+  // Check Authentication boundaries (supports GitHub Pages subpaths like /repo-name/)
   const path = window.location.pathname;
   const isPublic =
     path.endsWith("index.html") ||
     path.endsWith("register.html") ||
-    path === "/" ||
+    path.endsWith("/") ||
     path === "";
   if (!currentUser && !isPublic) {
     navigateTo("index.html");
@@ -68,7 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
         .querySelectorAll(".admin-only")
         .forEach((el) => el.classList.add("hidden-force"));
     }
-    if (currentUser.nric === "ADMIN") {
+    if (currentUser.role === "admin") {
       const navProfile = document.getElementById("nav-profile");
       if (navProfile) navProfile.classList.add("hidden-force");
     }
@@ -255,10 +264,13 @@ async function showParticipantSummaryModal(nric) {
         : [];
     }
 
+    const esc = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const escJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => esc(String(s == null ? "" : s).replace(/\\/g, "\\\\").replace(/'/g, "\\'"));
+
     let groupOpts = `<option value="">Select...</option>`;
     if (appSettings.projectGroups) {
       appSettings.projectGroups.forEach((g) => {
-        groupOpts += `<option value="${g}" ${m.group === g ? "selected" : ""}>${g}</option>`;
+        groupOpts += `<option value="${esc(g)}" ${m.group === g ? "selected" : ""}>${esc(g)}</option>`;
       });
     }
     if (
@@ -266,7 +278,7 @@ async function showParticipantSummaryModal(nric) {
       (!appSettings.projectGroups ||
         !appSettings.projectGroups.includes(m.group))
     ) {
-      groupOpts += `<option value="${m.group}" selected>${m.group} (Archived)</option>`;
+      groupOpts += `<option value="${esc(m.group)}" selected>${esc(m.group)} (Archived)</option>`;
     }
     const dynColor = getProjectColor(m.group);
 
@@ -284,10 +296,10 @@ async function showParticipantSummaryModal(nric) {
                         : f.role === "CAREGIVER"
                           ? "text-purple-600 dark:text-purple-400"
                           : "text-orange-600 dark:text-orange-400";
-                    return `<div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer" onclick="showParticipantSummaryModal('${f.nric}')">
+                    return `<div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50 dark:bg-gray-800/50 p-2 rounded border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition cursor-pointer" onclick="showParticipantSummaryModal('${escJs(f.nric)}')">
                          <div class="flex items-center gap-2 mb-1 md:mb-0">
-                            <span class="text-[10px] font-black ${fRoleColor} bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wider shrink-0">${f.role.substring(0, 3)}</span>
-                            <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${f.fullName || f.name || "Unknown"}${f.shortName ? " (" + f.shortName + ")" : ""}</span>
+                            <span class="text-[10px] font-black ${fRoleColor} bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wider shrink-0">${esc(String(f.role || "").substring(0, 3))}</span>
+                            <span class="font-bold text-xs text-gray-800 dark:text-gray-200">${esc(f.fullName || f.name || "Unknown")}${f.shortName ? " (" + esc(f.shortName) + ")" : ""}</span>
                          </div>
                          <div class="text-sm font-mono text-gray-600 dark:text-gray-400 font-semibold bg-white dark:bg-gray-900 px-2 py-0.5 rounded border-2 border-gray-200 dark:border-gray-700">
                             ${renderPhoneLink(f.contact)}
@@ -416,43 +428,43 @@ async function showParticipantSummaryModal(nric) {
       <div id="gpm-view">
         <div class="flex justify-between items-start border-b-2 border-gray-100 dark:border-gray-800 pb-2 mb-3">
           <div class="flex items-center flex-wrap gap-1.5">
-            <span class="font-extrabold text-[13px] md:text-sm px-2 py-0.5 rounded shadow-md border ${dynColor} leading-tight">${m.fullName}</span> 
-            <span class="text-xs font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${m.role}</span>
+            <span class="font-extrabold text-[13px] md:text-sm px-2 py-0.5 rounded shadow-md border ${dynColor} leading-tight">${esc(m.fullName)}</span> 
+            <span class="text-xs font-black ${mRoleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${esc(m.role)}</span>
           </div>
           <div class="flex gap-2">
             ${
               typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()
                 ? `<span class="text-[11px] font-bold px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">Read-Only</span>`
                 : `<button onclick="document.getElementById('gpm-view').classList.add('hidden-force'); document.getElementById('gpm-edit').classList.remove('hidden-force'); if(typeof setupNationalityDropdown === 'function') setupNationalityDropdown('gpmNat');" class="text-primary dark:text-green-400 text-xs font-bold hover:bg-green-50 dark:hover:bg-gray-800 px-2 py-1 rounded transition focus:outline-none border border-transparent hover:border-green-200 dark:hover:border-gray-700 shadow-md">Edit</button>
-            <button onclick="deleteParticipant('${m.nric}')" class="text-red-600 dark:text-red-400 text-xs font-bold bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded transition focus:outline-none border border-red-200 dark:border-red-900/50 shadow-md">Delete</button>`
+            <button onclick="deleteParticipant('${escJs(m.nric)}')" class="text-red-600 dark:text-red-400 text-xs font-bold bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-900/50 px-2 py-1 rounded transition focus:outline-none border border-red-200 dark:border-red-900/50 shadow-md">Delete</button>`
             }
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-800 dark:text-gray-200">
-          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${m.shortName || "-"}</p></div>
+          <div><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Short Name</p><p class="font-semibold">${esc(m.shortName || "-")}</p></div>
           <div class="border-t-2 md:border-t-0 border-gray-100 dark:border-gray-800 pt-2 md:pt-0">
              <p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Pairing</p>
-             ${m.role === "CAREGIVER" && logPairing !== "None" ? `<div class="w-full">${logPairing}</div>` : `<p class="font-black text-lg text-purple-600 dark:text-purple-400 truncate w-full" title="${logPairing}">${logPairing}</p>`}
+             ${m.role === "CAREGIVER" && logPairing !== "None" ? `<div class="w-full">${logPairing}</div>` : `<p class="font-black text-lg text-purple-600 dark:text-purple-400 truncate w-full" title="${esc(logPairing)}">${esc(logPairing)}</p>`}
           </div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p>${logRoom && logRoom !== "None" ? `<button type="button" onclick="if(window.showRoomOccupantsModal) window.showRoomOccupantsModal('${m.nric}', '${(logRoom || '').replace(/'/g, "\\'")}')" class="font-black text-lg text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5 text-left cursor-pointer focus:outline-none" title="Tap to see who is in ${logRoom}"><span class="truncate">${logRoom}</span><span class="text-sm">👥</span></button>` : `<p class="font-black text-lg text-blue-600 dark:text-blue-400 truncate w-full" title="${logRoom}">${logRoom}</p>`}</div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${logGroup}">${logGroup}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-teal-600 dark:text-teal-400 truncate w-full" title="${logBus}">${logBus}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Room</p>${logRoom && logRoom !== "None" ? `<button type="button" onclick="if(window.showRoomOccupantsModal) window.showRoomOccupantsModal('${escJs(m.nric)}', '${escJs(logRoom)}')" class="font-black text-lg text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1.5 text-left cursor-pointer focus:outline-none" title="Tap to see who is in ${esc(logRoom)}"><span class="truncate">${esc(logRoom)}</span><span class="text-sm">👥</span></button>` : `<p class="font-black text-lg text-blue-600 dark:text-blue-400 truncate w-full" title="${esc(logRoom)}">${esc(logRoom)}</p>`}</div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Group</p><p class="font-black text-lg text-amber-600 dark:text-amber-400 truncate w-full" title="${esc(logGroup)}">${esc(logGroup)}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Bus</p><p class="font-black text-lg text-teal-600 dark:text-teal-400 truncate w-full" title="${esc(logBus)}">${esc(logBus)}</p></div>
           
-          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-red-600 dark:text-red-400">${m.diet || "None"}</p></div>
-          ${m.role === "TRAINEE" ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-red-600 dark:text-red-400">${m.medical || "None"}</p></div>` : ""}
-          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${m.email || "N/A"}">${m.email || "N/A"}</span></div></div>
+          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Dietary Needs</p><p class="font-bold text-red-600 dark:text-red-400">${esc(m.diet || "None")}</p></div>
+          ${m.role === "TRAINEE" ? `<div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Medical Conditions and Medications to take note of</p><p class="font-bold text-red-600 dark:text-red-400">${esc(m.medical || "None")}</p></div>` : ""}
+          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Contact & Email</p><div class="font-semibold flex flex-col gap-0.5"><span>${renderPhoneLink(m.contact)}</span><span class="text-gray-600 dark:text-gray-400 font-medium truncate w-full" title="${esc(m.email || "N/A")}">${esc(m.email || "N/A")}</span></div></div>
 
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${m.nric}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${formatDDMmmYYYY(m.dob)}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${m.gender} | ${m.nationality}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${m.group || "None"}</span></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${m.address}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${m.passportNo}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="font-semibold">${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : "-"}</p></div>
-          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold flex items-center gap-1">${m.emergencyName} (${m.emergencyRelation}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">NRIC / FIN</p><p class="font-semibold uppercase">${esc(m.nric)}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Date of Birth</p><p class="font-semibold">${esc(formatDDMmmYYYY(m.dob))}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Gender & Nat.</p><p class="font-semibold">${esc(m.gender)} | ${esc(m.nationality)}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-1">Project</p><span class="font-bold text-xs px-1.5 py-0.5 rounded border inline-block shadow-md ${dynColor}">${esc(m.group || "None")}</span></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Home Address</p><p class="font-semibold">${esc(m.address || "-")}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport No.</p><p class="font-semibold uppercase">${esc(m.passportNo || "-")}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Passport Expiry</p><p class="font-semibold">${esc(m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : "-")}</p></div>
+          <div class="border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Emerg. Contact</p><div class="font-semibold flex items-center gap-1">${esc(m.emergencyName || "")} (${esc(m.emergencyRelation || "")}) - <span class="font-mono">${renderPhoneLink(m.emergencyContact)}</span></div></div>
           
-          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Sleeping Arrangement Request</p><p class="font-semibold text-green-600 dark:text-green-400">${m.sleeping || "No special request"}</p></div>
-          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${m.otherPoints || "None"}</p></div>
+          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Sleeping Arrangement Request</p><p class="font-semibold text-green-600 dark:text-green-400">${esc(m.sleeping || "No special request")}</p></div>
+          <div class="md:col-span-2 border-t-2 border-gray-100 dark:border-gray-800 pt-2"><p class="font-bold text-gray-400 dark:text-gray-500 text-xs uppercase tracking-wider mb-0.5">Other Points to Note</p><p class="font-semibold">${esc(m.otherPoints || "None")}</p></div>
           ${familyHtml}
         </div>
       </div>
@@ -460,27 +472,27 @@ async function showParticipantSummaryModal(nric) {
       <form id="gpm-edit" onsubmit="event.preventDefault(); submitAdminProfileEdit(this.querySelector('button[type=submit]'));" class="hidden-force space-y-3">
         <h4 class="font-black text-sm mb-1 border-b-2 border-gray-100 dark:border-gray-800 pb-1.5 text-gray-900 dark:text-white tracking-tight">Edit Details (Admin)</h4>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Full Name</label><input type="text" id="gpmName" value="${m.fullName}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Short Name</label><input type="text" id="gpmShortName" value="${m.shortName || ""}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Email</label><input type="text" id="gpmEmail" value="${m.email}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Contact</label><input type="text" id="gpmContact" value="${m.contact}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Full Name</label><input type="text" id="gpmName" value="${esc(m.fullName || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Short Name</label><input type="text" id="gpmShortName" value="${esc(m.shortName || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Email</label><input type="text" id="gpmEmail" value="${esc(m.email || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Contact</label><input type="text" id="gpmContact" value="${esc(m.contact || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Role</label><select id="gpmRole" onchange="document.getElementById('gpmRelated').closest('.relative').className = this.value === 'CAREGIVER' ? 'block relative' : 'hidden-force relative'; document.getElementById('gpmRelation').parentElement.className = this.value === 'CAREGIVER' ? 'block' : 'hidden-force'; document.getElementById('gpmMedical').parentElement.className = this.value === 'TRAINEE' ? 'md:col-span-2' : 'hidden-force';" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"><option ${m.role === "TRAINEE" ? "selected" : ""}>TRAINEE</option><option ${m.role === "CAREGIVER" ? "selected" : ""}>CAREGIVER</option><option ${m.role === "VOLUNTEER" ? "selected" : ""}>VOLUNTEER</option></select></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Gender</label><select id="gpmGender" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"><option ${m.gender === "Male" ? "selected" : ""}>Male</option><option ${m.gender === "Female" ? "selected" : ""}>Female</option></select></div>
           <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Project</label><select id="gpmGroup" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white">${groupOpts}</select></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Date of Birth</label><input type="text" id="gpmDob" value="${formatDDMmmYYYY(m.dob)}" readonly onclick="openDatePicker('gpmDob', 'dob')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md" placeholder="DD Mmm YYYY"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Nationality</label><input type="text" id="gpmNat" value="${m.nationality}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Passport No</label><input type="text" id="gpmPass" value="${m.passportNo}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white uppercase"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Passport Expiry</label><input type="text" id="gpmExp" value="${m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : ""}" readonly onclick="openDatePicker('gpmExp', 'exp')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md" placeholder="DD Mmm YYYY"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Dietary</label><input type="text" id="gpmDiet" value="${m.diet}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Home Address</label><textarea id="gpmAddress" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.address}</textarea></div>
-          <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Other Points</label><textarea id="gpmOther" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.otherPoints || ""}</textarea></div>
-<div class="${m.role === "TRAINEE" ? "md:col-span-2" : "hidden-force"}"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Medical Conditions</label><textarea id="gpmMedical" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${m.medical || ""}</textarea></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Name</label><input type="text" id="gpmEmName" value="${m.emergencyName}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Contact</label><input type="text" id="gpmEmContact" value="${m.emergencyContact}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Relation</label><input type="text" id="gpmEmRel" value="${m.emergencyRelation}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Sleeping Arrangement Request</label><input type="text" id="gpmSleep" value="${m.sleeping}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
-          <div class="${m.role === "CAREGIVER" ? "block" : "hidden-force"} relative"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Related Trainees' Name(s)</label><input type="text" id="gpmRelated" placeholder="Search trainee..." value="${m.relatedTrainee || ""}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
-          <div class="${m.role === "CAREGIVER" ? "block" : "hidden-force"}"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Relationship to Trainee(s)</label><input type="text" id="gpmRelation" value="${m.relationship || ""}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Date of Birth</label><input type="text" id="gpmDob" value="${esc(formatDDMmmYYYY(m.dob))}" readonly onclick="openDatePicker('gpmDob', 'dob')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md" placeholder="DD Mmm YYYY"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Nationality</label><input type="text" id="gpmNat" value="${esc(m.nationality || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Passport No</label><input type="text" id="gpmPass" value="${esc(m.passportNo || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white uppercase"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Passport Expiry</label><input type="text" id="gpmExp" value="${esc(m.passportExpiry ? formatDDMmmYYYY(m.passportExpiry) : "")}" readonly onclick="openDatePicker('gpmExp', 'exp')" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs text-center font-semibold cursor-pointer bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md" placeholder="DD Mmm YYYY"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Dietary</label><input type="text" id="gpmDiet" value="${esc(m.diet || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Home Address</label><textarea id="gpmAddress" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${esc(m.address || "")}</textarea></div>
+          <div class="md:col-span-2"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Other Points</label><textarea id="gpmOther" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${esc(m.otherPoints || "")}</textarea></div>
+<div class="${m.role === "TRAINEE" ? "md:col-span-2" : "hidden-force"}"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Medical Conditions</label><textarea id="gpmMedical" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white" rows="2">${esc(m.medical || "")}</textarea></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Name</label><input type="text" id="gpmEmName" value="${esc(m.emergencyName || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Contact</label><input type="text" id="gpmEmContact" value="${esc(m.emergencyContact || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Emerg. Relation</label><input type="text" id="gpmEmRel" value="${esc(m.emergencyRelation || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Sleeping Arrangement Request</label><input type="text" id="gpmSleep" value="${esc(m.sleeping || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
+          <div class="${m.role === "CAREGIVER" ? "block" : "hidden-force"} relative"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Related Trainees' Name(s)</label><input type="text" id="gpmRelated" placeholder="Search trainee..." value="${esc(m.relatedTrainee || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary shadow-md"></div>
+          <div class="${m.role === "CAREGIVER" ? "block" : "hidden-force"}"><label class="text-xs font-bold mb-0.5 text-gray-500 block uppercase">Relationship to Trainee(s)</label><input type="text" id="gpmRelation" value="${esc(m.relationship || "")}" class="w-full p-2 border-2 border-gray-300 dark:border-gray-700 rounded-lg text-xs font-semibold bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"></div>
         </div>
         <div class="flex justify-end gap-2 mt-4 pt-4 border-t-2 border-gray-100 dark:border-gray-800">
           <button type="button" onclick="document.getElementById('gpm-edit').classList.add('hidden-force'); document.getElementById('gpm-view').classList.remove('hidden-force');" class="px-4 py-2 text-xs font-bold text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition">Cancel</button>
@@ -493,7 +505,7 @@ async function showParticipantSummaryModal(nric) {
     `;
   } catch (e) {
     if (cont)
-      cont.innerHTML = `<p class="text-xs font-bold text-red-500 text-center py-4">${e.message || "Failed to load details."}</p>`;
+      cont.innerHTML = `<p class="text-xs font-bold text-red-500 text-center py-4">${(typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s || ""))(e.message || "Failed to load details.")}</p>`;
   }
 
   if (typeof setupTokenInput === "function") {
@@ -834,6 +846,7 @@ window.showRoomOccupantsModal = async function (nric, fallbackRoomName) {
     TRAINEE: "trn",
   };
 
+  const escRm = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   const occupantsListHtml = occupants
     .map((occ) => {
       const isViewer =
@@ -868,14 +881,14 @@ window.showRoomOccupantsModal = async function (nric, fallbackRoomName) {
       if (roleUpper === "CAREGIVER") {
         const traineeShortName = getCaregiverTraineeShortName(occ);
         if (traineeShortName) {
-          caregiverTraineeHtml = `<span class="font-bold text-purple-600 dark:text-purple-400 text-xs md:text-sm leading-none">[${traineeShortName.toUpperCase()}]</span>`;
+          caregiverTraineeHtml = `<span class="font-bold text-purple-600 dark:text-purple-400 text-xs md:text-sm leading-none">[${escRm(traineeShortName.toUpperCase())}]</span>`;
         }
       }
 
       const contactHtml =
         occ.contact && typeof window.renderPhoneLink === "function"
           ? window.renderPhoneLink(occ.contact)
-          : occ.contact || "";
+          : escRm(occ.contact || "");
 
       return `
         <div class="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 transition-colors ${
@@ -883,16 +896,16 @@ window.showRoomOccupantsModal = async function (nric, fallbackRoomName) {
         }">
           <div class="flex items-center gap-3 min-w-0 flex-1">
             <div class="w-8 h-8 rounded-full flex items-center justify-center font-black text-xs shrink-0 shadow-xs ${avatarBg}">
-              ${initials}
+              ${escRm(initials)}
             </div>
             <div class="min-w-0 flex flex-col gap-0.5">
               <div class="flex items-center flex-wrap gap-1.5 leading-tight">
-                <span class="font-extrabold text-sm md:text-base text-gray-900 dark:text-white truncate">${shortName}</span>
-                <span class="text-[10px] md:text-xs uppercase font-black px-1.5 py-0.5 rounded border leading-none shadow-xs ${rBadgeColor}">${rTag}</span>
+                <span class="font-extrabold text-sm md:text-base text-gray-900 dark:text-white truncate">${escRm(shortName)}</span>
+                <span class="text-[10px] md:text-xs uppercase font-black px-1.5 py-0.5 rounded border leading-none shadow-xs ${rBadgeColor}">${escRm(rTag)}</span>
                 ${caregiverTraineeHtml}
               </div>
               <div class="flex items-center flex-wrap gap-x-2 gap-y-0.5 text-[11px] text-gray-500 dark:text-gray-400">
-                ${fullName && fullName !== shortName ? `<span class="truncate">${fullName}</span>` : ""}
+                ${fullName && fullName !== shortName ? `<span class="truncate">${escRm(fullName)}</span>` : ""}
                 ${contactHtml && contactHtml !== "-" ? `<span class="font-mono text-gray-600 dark:text-gray-300 font-semibold">${contactHtml}</span>` : ""}
               </div>
             </div>
@@ -925,8 +938,8 @@ window.showRoomOccupantsModal = async function (nric, fallbackRoomName) {
               🛏️
             </span>
             <div class="min-w-0">
-              <h3 class="font-black text-base md:text-lg text-gray-900 dark:text-white truncate">${room.name}</h3>
-              <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">${occupants.length} Occupant${occupants.length === 1 ? "" : "s"}${room.capacity ? ` • Capacity: ${room.capacity}` : ""}${subtitleContext}</p>
+              <h3 class="font-black text-base md:text-lg text-gray-900 dark:text-white truncate">${escRm(room.name)}</h3>
+              <p class="text-[11px] font-semibold text-gray-500 dark:text-gray-400">${occupants.length} Occupant${occupants.length === 1 ? "" : "s"}${room.capacity ? ` • Capacity: ${escRm(room.capacity)}` : ""}${escRm(subtitleContext)}</p>
             </div>
           </div>
           <button onclick="closeRoomOccupantsModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 p-1.5 rounded-lg focus:outline-none transition-colors text-xl leading-none font-bold cursor-pointer" aria-label="Close">
@@ -1069,7 +1082,7 @@ function renderLandingInfographic() {
 
   if (infoId || infoUrl) {
     let imgSrc = "";
-    if (infoUrl && (infoUrl.startsWith("/uploads/") || infoUrl.startsWith("data:") || infoUrl.startsWith("blob:"))) {
+    if (infoUrl && (infoUrl.startsWith("data:") || infoUrl.startsWith("blob:"))) {
       imgSrc = infoUrl;
     } else if (infoId) {
       imgSrc = `https://lh3.googleusercontent.com/d/${infoId}`;
@@ -1137,8 +1150,9 @@ function renderLandingHelpline() {
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 font-semibold">Contact the following people for assistance.</p>
         <div class="flex flex-col gap-3">`;
 
+  const escHelp = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   appSettings.helpline.forEach((h) => {
-    html += `<div class="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-xl shadow-md"><span class="font-bold text-sm">${h.name}</span>${renderPhoneLink(h.phone)}</div>`;
+    html += `<div class="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-xl shadow-md"><span class="font-bold text-sm">${escHelp(h.name)}</span>${renderPhoneLink(h.phone)}</div>`;
   });
 
   html += `</div></div>`;
@@ -1166,8 +1180,9 @@ function renderProfileHelpline() {
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-4 font-semibold">Contact the following people for assistance.</p>
         <div class="flex flex-col gap-3">`;
 
+  const escHelpP = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   appSettings.helpline.forEach((h) => {
-    html += `<div class="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-xl shadow-md"><span class="font-bold text-sm">${h.name}</span>${renderPhoneLink(h.phone)}</div>`;
+    html += `<div class="w-full flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 py-3 rounded-xl shadow-md"><span class="font-bold text-sm">${escHelpP(h.name)}</span>${renderPhoneLink(h.phone)}</div>`;
   });
 
   html += `</div></div>`;
@@ -1604,8 +1619,36 @@ window.hideLoading = function () {
 
 const htmlCache = new Map();
 
+function cleanupCurrentPage() {
+  try {
+    if (typeof stopAttendancePolling === "function") stopAttendancePolling();
+  } catch (e) {}
+  try {
+    if (typeof stopLogisticsPolling === "function") stopLogisticsPolling();
+  } catch (e) {}
+  try {
+    if (typeof stopFinancePolling === "function") stopFinancePolling();
+  } catch (e) {}
+  try {
+    if (typeof stopMinutesPolling === "function") stopMinutesPolling();
+  } catch (e) {}
+  // Reset page-scoped initPage so destination pages without initPage never re-run a stale initializer
+  window.initPage = null;
+}
+
 async function loadPage(url) {
   const urlKey = url.split("?")[0];
+  const isPublicTarget =
+    urlKey === "index.html" ||
+    urlKey === "register.html" ||
+    urlKey === "" ||
+    urlKey === "./";
+  if (!currentUser && !isPublicTarget) {
+    history.replaceState(null, "", "index.html");
+    return loadPage("index.html");
+  }
+
+  cleanupCurrentPage();
   showLoading();
   try {
     let html;
@@ -1679,7 +1722,7 @@ async function loadPage(url) {
             .querySelectorAll(".admin-only")
             .forEach((el) => el.classList.add("hidden-force"));
         }
-        if (currentUser.nric === "ADMIN") {
+        if (currentUser.role === "admin") {
           const navProfile = document.getElementById("nav-profile");
           if (navProfile) navProfile.classList.add("hidden-force");
         }

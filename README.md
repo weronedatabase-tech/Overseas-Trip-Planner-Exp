@@ -1,6 +1,6 @@
 # Overseas Trip Planner
 
-A modular, real-time web application for planning and managing overseas trips—covering participant registration, logistics, rooming and bus allocations, attendance tracking, multi-currency finance and receipt management, meeting minutes, and Excel (`.xlsx`) data extractions. Built with Vanilla JavaScript, Tailwind CSS, an Express + WebSocket server, and a Google Apps Script backend.
+A modular web application for planning and managing overseas trips—covering participant registration, logistics, rooming and bus allocations, attendance tracking, multi-currency finance and receipt management, meeting minutes, and Excel (`.xlsx`) data extractions. Built with a 100% static Vanilla JavaScript + Tailwind CSS frontend (compatible with both **GitHub Pages** and **Google AI Studio**) backed exclusively by **Google Apps Script, Google Drive, and Google Sheets**.
 
 ---
 
@@ -124,11 +124,9 @@ A modular, real-time web application for planning and managing overseas trips—
    ```
    The application runs on `http://localhost:3000`.
 
-3. **Server Capabilities (`server.js`)**:
-   - Serves all static HTML, CSS, and JS files.
-   - Provides `/api/gas-proxy` to forward requests to Google Apps Script while applying local overrides and fallbacks.
-   - Generates formatted `.xlsx` spreadsheets via `exceljs` for Insurance, Bus for ICA, and Custom data extractions.
-   - Hosts a WebSocket server (`/ws-sync`) for real-time state synchronization across connected clients.
+3. **Preview Server (`server.js`)**:
+   - Minimal static-only file server for local / Google AI Studio previews, exposing only public frontend assets (`*.html`, `frontend/`, `assets/`, `manifest.json`, `favicon.svg`, `backend/config.js`).
+   - All API requests go directly from the browser to Google Apps Script (`API_URL`) with signed HMAC-SHA256 session tokens—identical to GitHub Pages deployments.
 
 ---
 

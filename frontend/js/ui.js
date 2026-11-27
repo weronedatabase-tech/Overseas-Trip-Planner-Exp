@@ -304,24 +304,8 @@ window.appPrompt = function (
   });
 };
 
-// Polyfill window.alert, window.confirm, window.prompt with app UI dialogs
-window.alert = function (msg) {
-  if (typeof window.appAlert === "function") {
-    return window.appAlert(msg);
-  }
-};
-window.confirm = function (msg) {
-  if (typeof window.appConfirm === "function") {
-    return window.appConfirm(msg);
-  }
-  return true;
-};
-window.prompt = function (msg, defaultValue = "") {
-  if (typeof window.appPrompt === "function") {
-    return window.appPrompt(msg, defaultValue);
-  }
-  return defaultValue || "";
-};
+// Keep native synchronous window.confirm / window.prompt intact;
+// app code uses async appAlert(), appConfirm(), and appPrompt() explicitly.
 
 window.cleanTrailingComma = function (input) {
   setTimeout(() => {
@@ -356,17 +340,68 @@ function setBtnLoading(btn, isLoading) {
   }
 }
 
-function toggleTheme() {
-  document.documentElement.classList.toggle("dark");
-  localStorage.setItem(
-    "theme",
-    document.documentElement.classList.contains("dark") ? "dark" : "light",
+window.escapeHtml = function (str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
+window.escapeJsAttr = function (str) {
+  return window.escapeHtml(
+    String(str == null ? "" : str)
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, "")
+      .replace(/\n/g, " "),
   );
+};
+
+window.sanitizeExternalUrl = function (url) {
+  if (!url) return "";
+  try {
+    const parsed = new URL(String(url).trim(), window.location.origin);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return parsed.href;
+    }
+  } catch (e) {}
+  return "";
+};
+
+window.sanitizeCsvCell = function (val) {
+  let s = String(val == null ? "" : val).replace(/"/g, '""');
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  return `"${s}"`;
+};
+
+window.generateQrDataUrl = function (text) {
+  if (!text) return "";
+  try {
+    if (typeof window.qrcode === "function") {
+      const qr = window.qrcode(0, "M");
+      qr.addData(String(text));
+      qr.make();
+      return qr.createDataURL(6, 4);
+    }
+  } catch (e) {
+    console.warn("Local QR generation failed:", e);
+  }
+  return "";
+};
+
+function toggleTheme() {
+  const isDark = document.documentElement.classList.toggle("dark");
+  document.documentElement.classList.toggle("light", !isDark);
+  localStorage.setItem("theme", isDark ? "dark" : "light");
 }
 
 const projectColorPalette = [
   "bg-slate-100 border-slate-400 text-slate-900 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-100",
-  "bg-gray-100 border-gray-400 text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-slate-100",
+  "bg-gray-100 border-gray-400 text-gray-900 dark:bg-gray-900 dark:border-gray-600 dark:text-gray-100",
   "bg-zinc-100 border-zinc-400 text-zinc-900 dark:bg-zinc-900 dark:border-zinc-600 dark:text-zinc-100",
   "bg-neutral-100 border-neutral-400 text-neutral-900 dark:bg-neutral-900 dark:border-neutral-600 dark:text-neutral-100",
   "bg-stone-100 border-stone-400 text-stone-900 dark:bg-stone-900 dark:border-stone-600 dark:text-stone-100",
@@ -378,7 +413,7 @@ const projectColorPalette = [
   "bg-teal-100 border-teal-400 text-teal-900 dark:bg-teal-900 dark:border-teal-600 dark:text-teal-100",
   "bg-cyan-100 border-cyan-400 text-cyan-900 dark:bg-cyan-900 dark:border-cyan-600 dark:text-cyan-100",
   "bg-sky-100 border-sky-400 text-sky-900 dark:bg-sky-900 dark:border-sky-600 dark:text-sky-100",
-  "bg-green-100 border-green-400 text-green-900 dark:bg-green-900 dark:border-green-600 dark:text-green-100",
+  "bg-blue-100 border-blue-400 text-blue-900 dark:bg-blue-900 dark:border-blue-600 dark:text-blue-100",
   "bg-indigo-100 border-indigo-400 text-indigo-900 dark:bg-indigo-900 dark:border-indigo-600 dark:text-indigo-100",
   "bg-violet-100 border-violet-400 text-violet-900 dark:bg-violet-900 dark:border-violet-600 dark:text-violet-100",
   "bg-purple-100 border-purple-400 text-purple-900 dark:bg-purple-900 dark:border-purple-600 dark:text-purple-100",
@@ -427,7 +462,7 @@ function renderHeaderLegend() {
     if (!proj) return;
     const colorCls = getProjectColor(proj);
     const shortName = getProjectAbbreviation(proj);
-    html += `<span class="px-1.5 py-0.5 rounded text-[11px] md:text-xs font-bold border shadow-md cursor-help ${colorCls}" title="${proj}">${shortName}</span>`;
+    html += `<span class="px-1.5 py-0.5 rounded text-[11px] md:text-xs font-bold border shadow-md cursor-help ${window.escapeHtml(colorCls)}" title="${window.escapeHtml(proj)}">${window.escapeHtml(shortName)}</span>`;
   });
   if (deskCont) deskCont.innerHTML = html;
   if (mobCont) mobCont.innerHTML = html;
@@ -542,13 +577,13 @@ function applyGlobalSorting(participants) {
         if (cmp !== 0) return cmp;
       }
       if (rule === "family") {
-        const aPoc = a.pocNric;
-        const bPoc = b.pocNric;
+        const aPoc = a.pocNric || a.nric || "";
+        const bPoc = b.pocNric || b.nric || "";
         const aFam = familyCounts[aPoc] > 1 ? 1 : 0;
         const bFam = familyCounts[bPoc] > 1 ? 1 : 0;
         if (aFam !== bFam) return bFam - aFam;
         if (aFam === 1 && bFam === 1) {
-          const cmp = aPoc.localeCompare(bPoc);
+          const cmp = String(aPoc).localeCompare(String(bPoc));
           if (cmp !== 0) return cmp;
         }
       }
@@ -792,13 +827,13 @@ window.renderPhoneLink = function (phone, extraClasses = "") {
     // dialNum retains the '+'
   }
 
-  return `<span class="inline-flex items-center gap-2 ${extraClasses}">
-        <span class="font-medium truncate">${phone}</span>
+  return `<span class="inline-flex items-center gap-2 ${window.escapeHtml(extraClasses)}">
+        <span class="font-medium truncate">${window.escapeHtml(phone)}</span>
         <span class="inline-flex items-center gap-1.5 shrink-0">
-            <a href="https://wa.me/${cleaned}" target="_blank" class="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors bg-green-50 dark:bg-green-900/30 p-1.5 rounded-md border-2 border-green-200 dark:border-green-800/50 shadow-md" title="Chat on WhatsApp" onclick="event.stopPropagation()">
+            <a href="https://wa.me/${encodeURIComponent(cleaned)}" target="_blank" rel="noopener noreferrer" class="text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300 transition-colors bg-green-50 dark:bg-green-900/30 p-1.5 rounded-md border-2 border-green-200 dark:border-green-800/50 shadow-md" title="Chat on WhatsApp" onclick="event.stopPropagation()">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
             </a>
-            <a href="tel:${dialNum}" title="Call" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-md border-2 border-blue-200 dark:border-blue-800/50 shadow-md" onclick="event.stopPropagation()">
+            <a href="tel:${encodeURIComponent(dialNum)}" title="Call" class="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors bg-blue-50 dark:bg-blue-900/30 p-1.5 rounded-md border-2 border-blue-200 dark:border-blue-800/50 shadow-md" onclick="event.stopPropagation()">
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
@@ -808,45 +843,27 @@ window.renderPhoneLink = function (phone, extraClasses = "") {
 };
 
 window.formatDDMmmYYYY = function (dateStr) {
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
   if (dateStr instanceof Date) {
     if (isNaN(dateStr.getTime())) return "-";
     const day = String(dateStr.getDate()).padStart(2, "0");
-    const months = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
     return `${day} ${months[dateStr.getMonth()]} ${dateStr.getFullYear()}`;
   }
   if (typeof dateStr === "number") dateStr = new Date(dateStr);
   if (!dateStr || (typeof dateStr === "string" && dateStr.trim() === ""))
     return "-";
+  if (typeof dateStr === "string") {
+    const isoOnly = dateStr.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoOnly) {
+      return `${isoOnly[3]} ${months[parseInt(isoOnly[2], 10) - 1]} ${isoOnly[1]}`;
+    }
+  }
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return dateStr;
   const day = String(d.getDate()).padStart(2, "0");
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
   return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
 };
 
@@ -1184,12 +1201,18 @@ window.setupTokenInput = function (inputId, getSuggestionsCallback) {
       const chip = document.createElement("span");
       chip.className =
         "inline-flex items-center px-2 py-1 rounded-md text-xs font-black bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 uppercase tracking-widest";
-      chip.innerHTML = `
-                ${t}
-                <button type="button" class="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 focus:outline-none flex-shrink-0" onclick="event.stopPropagation(); window.removeTokenFromInput('${inputId}', ${i})">
-                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-                </button>
-            `;
+      chip.appendChild(document.createTextNode(t));
+      const rmBtn = document.createElement("button");
+      rmBtn.type = "button";
+      rmBtn.className =
+        "ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 focus:outline-none flex-shrink-0";
+      rmBtn.innerHTML =
+        '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>';
+      rmBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        window.removeTokenFromInput(inputId, i);
+      });
+      chip.appendChild(rmBtn);
       chipContainer.appendChild(chip);
     });
     originalInput.value = currentTokens.join(" | ");
@@ -1429,7 +1452,7 @@ const ALL_NATIONALITIES = [
   "Malagasy",
   "Malawian",
   "Malaysian",
-  "Maldivan",
+  "Maldivian",
   "Malian",
   "Maltese",
   "Marshallese",
@@ -1746,6 +1769,7 @@ window.setupNationalityDropdown = function (inputId) {
 };
 
 function initDatePicker() {
+  if (!document.body) return;
   if (!document.getElementById("datePickerSheet")) {
     const div = document.createElement("div");
     div.id = "datePickerSheet";
@@ -1755,7 +1779,11 @@ function initDatePicker() {
     document.body.appendChild(div);
   }
 }
-initDatePicker();
+if (document.body) {
+  initDatePicker();
+} else {
+  document.addEventListener("DOMContentLoaded", initDatePicker);
+}
 
 var currentPickerTarget = null;
 var monthsArr = [
@@ -1872,6 +1900,7 @@ function highlightCenterItem(colId) {
   if (!visibleItems.length) return;
 
   let index = Math.round(col.scrollTop / 40);
+  if (index < 0) index = 0;
   if (index >= visibleItems.length) index = visibleItems.length - 1;
 
   visibleItems.forEach((item, i) => {
@@ -1927,14 +1956,19 @@ window.confirmPicker = function confirmPicker() {
     '#colYear .picker-item[data-selected="true"]',
   );
   if (d && m && y && currentPickerTarget) {
-    document.getElementById(currentPickerTarget).value =
-      `${d.dataset.val} ${m.dataset.val} ${y.dataset.val}`;
+    const targetEl = document.getElementById(currentPickerTarget);
+    if (targetEl) {
+      targetEl.value = `${d.dataset.val} ${m.dataset.val} ${y.dataset.val}`;
+      targetEl.dispatchEvent(new Event("input", { bubbles: true }));
+      targetEl.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }
   closePicker();
 };
 
 window.closePicker = function closePicker() {
-  document.getElementById("datePickerSheet").classList.add("hidden-force");
+  const sheet = document.getElementById("datePickerSheet");
+  if (sheet) sheet.classList.add("hidden-force");
 };
 
 window.openTripInfoDoc = function openTripInfoDoc() {
@@ -1951,21 +1985,19 @@ window.openTripInfoDoc = function openTripInfoDoc() {
 
   let targetUrl = url;
   if (!targetUrl && id) {
-    targetUrl = `https://drive.google.com/file/d/${id}/view?usp=sharing`;
+    targetUrl = `https://drive.google.com/file/d/${encodeURIComponent(id)}/view?usp=sharing`;
   }
 
-  if (!targetUrl && !id) {
+  const safeUrl = window.sanitizeExternalUrl(targetUrl);
+  if (!safeUrl) {
     if (typeof showToast === "function") {
       showToast("Trip Info document has not been set by Admin yet.", true);
-    } else {
-      alert("Trip Info document has not been set by Admin yet.");
     }
     return;
   }
 
-  // Open the Google Drive link directly instead of opening the file in a pop up
   const a = document.createElement("a");
-  a.href = targetUrl;
+  a.href = safeUrl;
   a.target = "_blank";
   a.rel = "noopener noreferrer";
   document.body.appendChild(a);

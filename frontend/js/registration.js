@@ -9,9 +9,12 @@ async function fetchPublicTrainees() {
   while (attempts < 3 && !success) {
     try {
       const res = await apiCall("getPublicTrainees");
-      if (res.status === "success" && res.trainees) {
+      if (res && res.status === "success" && Array.isArray(res.trainees)) {
         publicTrainees = res.trainees;
         success = true;
+      } else {
+        attempts++;
+        if (attempts < 3) await new Promise((r) => setTimeout(r, 1500));
       }
     } catch (e) {
       attempts++;
@@ -559,35 +562,49 @@ async function submitRegistration(btn) {
 
   for (let i = 0; i < blocks.length; i++) {
     let b = blocks[i];
+    const roleVal = b.querySelector(".reg-f-role").value;
+    const dobVal = (b.querySelector(".reg-f-dob").value || "").trim();
+    const expVal = (b.querySelector(".reg-f-exp").value || "").trim();
+    if (!dobVal) {
+      showToast(`Person ${i + 1}: Please select Date of Birth.`, true);
+      return;
+    }
+    if (!expVal) {
+      showToast(`Person ${i + 1}: Please select Passport Expiry Date.`, true);
+      return;
+    }
     finalData.push({
       fullName: b.querySelector(".reg-f-name").value,
       shortName: b.querySelector(".reg-f-shortname").value,
       email: b.querySelector(".reg-f-email").value,
-      role: b.querySelector(".reg-f-role").value,
+      role: roleVal,
       gender: b.querySelector(".reg-f-gender").value,
       contact: b.querySelector(".reg-f-contact").value,
-      dob: b.querySelector(".reg-f-dob").value,
+      dob: dobVal,
       group: b.querySelector(".reg-f-group").value,
       address: b.querySelector(".reg-f-address").value,
-      relatedTrainee: b.querySelector(".reg-f-related")
-        ? b.querySelector(".reg-f-related").value
-        : "",
-      relationship: b.querySelector(".reg-f-relation")
-        ? b.querySelector(".reg-f-relation").value
-        : "",
+      relatedTrainee:
+        roleVal === "CAREGIVER" && b.querySelector(".reg-f-related")
+          ? b.querySelector(".reg-f-related").value
+          : "",
+      relationship:
+        roleVal === "CAREGIVER" && b.querySelector(".reg-f-relation")
+          ? b.querySelector(".reg-f-relation").value
+          : "",
       nric: b.querySelector(".reg-f-nric").value.toUpperCase(),
       nationality: b.querySelector(".reg-f-nat").value,
       passportNo: b.querySelector(".reg-f-pass").value.toUpperCase(),
-      passportExpiry: b.querySelector(".reg-f-exp").value,
+      passportExpiry: expVal,
       diet: b.querySelector(".reg-f-diet").value,
       emergencyName: b.querySelector(".reg-f-emname").value,
       emergencyContact: b.querySelector(".reg-f-emcontact").value,
       emergencyRelation: b.querySelector(".reg-f-emrelation").value,
       sleeping: b.querySelector(".reg-f-sleep").value,
       otherPoints: b.querySelector(".reg-f-other").value,
-      medical: b.querySelector(".reg-f-medical")
-        ? b.querySelector(".reg-f-medical").value
-        : "",
+      medical:
+        roleVal === "TRAINEE" && b.querySelector(".reg-f-medical")
+          ? b.querySelector(".reg-f-medical").value
+          : "",
     });
   }
 
@@ -664,21 +681,23 @@ async function checkDuplicateField(inputEl, fieldType) {
     if (fieldType === "nric") payload.nric = val;
     else payload.passport = val;
 
-    const res = await apiCall("checkDuplicateParticipant", payload);
-    if (res.status === "error" && res.conflictType) {
+    await apiCall("checkDuplicateParticipant", payload);
+    if (warnEl) warnEl.classList.add("hidden-force");
+    inputEl.classList.remove("border-red-500", "ring-red-500");
+    inputEl.removeAttribute("data-invalid");
+  } catch (e) {
+    const resp = e && e.response ? e.response : null;
+    if (resp && resp.conflictType) {
+      const escReg = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s || "");
       if (warnEl) {
-        warnEl.innerHTML = `${res.conflictType} already exists. If you have already registered before, <a href="index.html" class="underline text-blue-600 hover:text-blue-800">login here</a> to make the necessary changes. Login format: NRIC/FIN + Year of Birth (e.g. S1234567A1989).`;
+        warnEl.innerHTML = `${escReg(resp.conflictType)} already exists. If you have already registered before, <a href="index.html" class="underline text-blue-600 hover:text-blue-800">login here</a> to make the necessary changes. Login format: NRIC/FIN + Year of Birth (e.g. S1234567A1989).`;
         warnEl.classList.remove("hidden-force");
       }
       inputEl.classList.add("border-red-500", "ring-red-500");
       inputEl.setAttribute("data-invalid", "true");
     } else {
-      if (warnEl) warnEl.classList.add("hidden-force");
-      inputEl.classList.remove("border-red-500", "ring-red-500");
-      inputEl.removeAttribute("data-invalid");
+      console.error("Duplicate check failed:", e);
     }
-  } catch (e) {
-    console.error("Duplicate check failed:", e);
   }
 }
 

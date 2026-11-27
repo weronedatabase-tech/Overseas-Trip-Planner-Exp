@@ -1061,7 +1061,7 @@ function renderColorPickerGrid() {
       isCurrent = colorCls === newProjectSelectedColor;
     } else {
       isCurrent =
-        colorCls === appSettings.projectColors[pendingColorGroupTarget];
+        colorCls === (appSettings.projectColors && appSettings.projectColors[pendingColorGroupTarget]);
       if (isCurrent) isUsed = false;
     }
 

@@ -154,8 +154,11 @@
       if (typeof attendanceState !== "undefined") attendanceState = {};
       if (typeof savedAttJuncture !== "undefined") savedAttJuncture = "";
       if (typeof savedAttAssignment !== "undefined") savedAttAssignment = "ALL";
-      if (typeof currentBusJuncture !== "undefined") currentBusJuncture = "";
-      if (typeof busAttendanceState !== "undefined") busAttendanceState = {};
+      if (typeof adhocBusState !== "undefined") adhocBusState = {};
+      if (typeof pendingAdhocBusUpdates !== "undefined" && pendingAdhocBusUpdates && pendingAdhocBusUpdates.clear) {
+        pendingAdhocBusUpdates.clear();
+      }
+      if (typeof extractGlobalRoster !== "undefined") extractGlobalRoster = [];
     } catch (e) {}
     try {
       if (typeof currentDrivePath !== "undefined") currentDrivePath = [];
@@ -171,6 +174,9 @@
     } catch (e) {}
     try {
       if (typeof stopAttendancePolling === "function") stopAttendancePolling();
+    } catch (e) {}
+    try {
+      if (typeof stopLogisticsPolling === "function") stopLogisticsPolling();
     } catch (e) {}
     try {
       if (typeof stopFinancePolling === "function") stopFinancePolling();
@@ -216,17 +222,7 @@
     if (!force && Array.isArray(cachedArchivedTrips)) {
       return cachedArchivedTrips;
     }
-    const res = await fetch("/api", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "listArchivedTrips",
-        payload: { force },
-        clientId: window.CLIENT_ID || "",
-        API_URL: typeof API_URL !== "undefined" ? API_URL : "",
-      }),
-    });
-    const data = await res.json();
+    const data = await apiCall("listArchivedTrips", { force });
     if (data && data.status === "success" && Array.isArray(data.archives)) {
       cachedArchivedTrips = data.archives.map(normalizeArchiveMeta);
       return cachedArchivedTrips;

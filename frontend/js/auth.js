@@ -12,8 +12,17 @@ async function attemptLogin(btn) {
 
   try {
     const res = await apiCall("login", { password: pass });
-    currentUser = { nric: res.nric, role: res.role, name: res.name };
+    currentUser = {
+      nric: res.nric,
+      role: res.role,
+      name: res.name,
+      isMainAdmin: Boolean(res.isMainAdmin || res.nric === "ADMIN"),
+      token: res.token || "",
+    };
     localStorage.setItem("userSession", JSON.stringify(currentUser));
+    if (typeof window.clearApiClientCache === "function") {
+      window.clearApiClientCache();
+    }
     if (currentUser.role === "admin") {
       const targetPage =
         typeof resolveAdminDefaultPage === "function"
@@ -35,10 +44,29 @@ async function attemptLogin(btn) {
 
 function logout(btn) {
   if (btn) setBtnLoading(btn, true);
-  localStorage.removeItem("userSession");
-  try {
-    sessionStorage.removeItem("activeArchiveTrip");
-  } catch (e) {}
+  [
+    "userSession",
+    "cachedAdminRoster",
+    "cachedLogistics",
+    "appSettings",
+    "activeGroupsList",
+    "activeBusesList",
+  ].forEach((k) => {
+    try {
+      localStorage.removeItem(k);
+    } catch (e) {}
+  });
+  ["activeArchiveTrip", "cachedAdminRoster", "cachedLogistics"].forEach((k) => {
+    try {
+      sessionStorage.removeItem(k);
+    } catch (e) {}
+  });
+  if (typeof window.clearApiClientCache === "function") {
+    window.clearApiClientCache();
+  }
+  if (window.ArchiveMode && typeof window.ArchiveMode.resetAllModuleCaches === "function") {
+    window.ArchiveMode.resetAllModuleCaches();
+  }
   currentUser = null;
   navigateTo("index.html");
 }
@@ -82,8 +110,18 @@ async function toggleLandingReceipt() {
             (o) => o.id === financeConfig.finalOptionId,
           );
           if (opt && opt.fields) {
+            const esc =
+              typeof window.escapeHtml === "function"
+                ? window.escapeHtml
+                : (s) =>
+                    String(s == null ? "" : s)
+                      .replace(/&/g, "&amp;")
+                      .replace(/</g, "&lt;")
+                      .replace(/>/g, "&gt;")
+                      .replace(/"/g, "&quot;")
+                      .replace(/'/g, "&#39;");
             opt.fields.forEach((f) => {
-              optionsHtml += `<option value="${f.id}">${f.name}</option>`;
+              optionsHtml += `<option value="${esc(f.id)}">${esc(f.name)}</option>`;
             });
           }
         }

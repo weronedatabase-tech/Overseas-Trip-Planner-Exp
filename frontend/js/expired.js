@@ -3,30 +3,47 @@ var expiredSearchQuery = "";
 var expiredFilterMode = "expiring"; // 'expiring' | 'missing' | 'all'
 var traineeShortNames = {};
 
+function addMonthsSafe(baseDate, monthsToAdd) {
+  const y = baseDate.getFullYear();
+  const m = baseDate.getMonth() + monthsToAdd;
+  const d = baseDate.getDate();
+  const lastDayOfTargetMonth = new Date(y, m + 1, 0).getDate();
+  return new Date(y, m, Math.min(d, lastDayOfTargetMonth));
+}
+
 function getTripExpiryThreshold() {
-  let tripEnd =
+  const rawEnd =
     typeof appSettings !== "undefined" && appSettings && appSettings.tripEndDate
-      ? new Date(appSettings.tripEndDate)
+      ? appSettings.tripEndDate
       : null;
+  let tripEnd = rawEnd ? parsePassportDate(rawEnd) : null;
   let minExpiry = null;
   if (tripEnd && !isNaN(tripEnd.getTime())) {
-    minExpiry = new Date(tripEnd);
-    minExpiry.setMonth(minExpiry.getMonth() + 6);
+    minExpiry = addMonthsSafe(tripEnd, 6);
   } else {
-    // Fallback: 6 months from today if trip end date is not set
-    minExpiry = new Date();
-    minExpiry.setMonth(minExpiry.getMonth() + 6);
+    const today = new Date();
+    minExpiry = addMonthsSafe(new Date(today.getFullYear(), today.getMonth(), today.getDate()), 6);
   }
   return { tripEnd, minExpiry };
 }
 
 function parsePassportDate(dateStr) {
   if (!dateStr) return null;
-  if (dateStr instanceof Date) return isNaN(dateStr.getTime()) ? null : dateStr;
-  let d = new Date(dateStr);
-  if (!isNaN(d.getTime())) return d;
+  if (dateStr instanceof Date) {
+    return isNaN(dateStr.getTime())
+      ? null
+      : new Date(dateStr.getFullYear(), dateStr.getMonth(), dateStr.getDate());
+  }
   if (typeof dateStr === "string") {
     const trimmed = dateStr.trim();
+    if (!trimmed) return null;
+    // 1. ISO date-only YYYY-MM-DD (parse as local midnight, never UTC)
+    const isoMatch = trimmed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (isoMatch) {
+      const d = new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+      if (!isNaN(d.getTime())) return d;
+    }
+    // 2. DD Mmm YYYY or DD/MM/YYYY or DD-MM-YYYY BEFORE native Date() to prevent US MM/DD swapping
     const parts = trimmed.split(/[\/\-\s]+/);
     if (parts.length === 3) {
       const months = {
@@ -37,26 +54,21 @@ function parsePassportDate(dateStr) {
       if (months[mLower] !== undefined) {
         const dd = parseInt(parts[0], 10);
         const yyyy = parseInt(parts[2], 10);
-        d = new Date(yyyy, months[mLower], dd);
+        const d = new Date(yyyy, months[mLower], dd);
         if (!isNaN(d.getTime())) return d;
       }
-      if (parts[2].length === 4) {
+      if (parts[2].length === 4 && /^\d+$/.test(parts[0]) && /^\d+$/.test(parts[1])) {
         const dd = parseInt(parts[0], 10);
         const mm = parseInt(parts[1], 10) - 1;
         const yyyy = parseInt(parts[2], 10);
-        d = new Date(yyyy, mm, dd);
-        if (!isNaN(d.getTime())) return d;
-      }
-      if (parts[0].length === 4) {
-        const yyyy = parseInt(parts[0], 10);
-        const mm = parseInt(parts[1], 10) - 1;
-        const dd = parseInt(parts[2], 10);
-        d = new Date(yyyy, mm, dd);
+        const d = new Date(yyyy, mm, dd);
         if (!isNaN(d.getTime())) return d;
       }
     }
   }
-  return null;
+  const fallback = new Date(dateStr);
+  if (isNaN(fallback.getTime())) return null;
+  return new Date(fallback.getFullYear(), fallback.getMonth(), fallback.getDate());
 }
 
 function buildExpiredUI() {
@@ -210,7 +222,8 @@ function handleExpiredSearch() {
 
 function renderExpiredTable() {
   const { minExpiry } = getTripExpiryThreshold();
-  const now = new Date();
+  const _today = new Date();
+  const now = new Date(_today.getFullYear(), _today.getMonth(), _today.getDate());
 
   // Compute counts across all records
   let expiringCount = 0;
@@ -272,8 +285,7 @@ function renderExpiredTable() {
     const isMissing = !p.passportExpiry || !expD || !hasPassportNo;
 
     if (expiredFilterMode === "expiring") {
-      // Must have an expiry date and expire before the 6-month threshold
-      return Boolean(expD && minExpiry && expD < minExpiry);
+      return Boolean(!isMissing && expD && minExpiry && expD < minExpiry);
     } else if (expiredFilterMode === "missing") {
       return isMissing;
     } else {
@@ -337,7 +349,8 @@ function renderExpiredTable() {
   if (data.length === 0) {
     let emptyMessage = "";
     if (expiredSearchQuery) {
-      emptyMessage = `<div class="p-8 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching "${expiredSearchQuery}".</div>`;
+      const escQ = typeof window.escapeHtml === "function" ? window.escapeHtml(expiredSearchQuery) : expiredSearchQuery;
+      emptyMessage = `<div class="p-8 text-center text-sm uppercase tracking-widest text-gray-500 dark:text-gray-400 font-bold">No records found matching "${escQ}".</div>`;
     } else if (expiredFilterMode === "expiring") {
       const cutoffStr =
         minExpiry && typeof formatDDMmmYYYY === "function"

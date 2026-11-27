@@ -574,9 +574,11 @@ async function executePairingSync() {
     }
     setSyncButtonState("saved");
   } catch (e) {
-    showToast("Sync failed. Retrying...", true);
+    showToast("Sync failed. Tap sync to retry.", true);
     setSyncButtonState("error");
-    batch.forEach((val, key) => pendingPairingsMap.set(key, val));
+    batch.forEach((val, key) => {
+      if (!pendingPairingsMap.has(key)) pendingPairingsMap.set(key, val);
+    });
   } finally {
     isPairingSyncing = false;
   }
@@ -1036,21 +1038,25 @@ async function autoAssignRooms() {
 
 function handleRoomDrop(nric, targetRoomId) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const targetRoom = globalLogistics.rooms.find((r) => r.id === targetRoomId);
+  if (targetRoom && !targetRoom.isDeleted) {
+    const alreadyInTarget = targetRoom.occupants.includes(nric);
+    if (!alreadyInTarget && targetRoom.occupants.length >= targetRoom.capacity) {
+      showToast("Room is full!", true);
+      renderRooms();
+      return;
+    }
+  }
+
   globalLogistics.rooms.forEach((r) => {
-    if (!r.isDeleted && r.occupants.includes(nric)) {
+    if (!r.isDeleted && r.id !== targetRoomId && r.occupants.includes(nric)) {
       r.occupants = r.occupants.filter((n) => n !== nric);
       r.ts = Date.now();
       queueRoomUpdate(r.id);
     }
   });
 
-  const targetRoom = globalLogistics.rooms.find((r) => r.id === targetRoomId);
-  if (targetRoom && !targetRoom.isDeleted) {
-    if (targetRoom.occupants.length >= targetRoom.capacity) {
-      showToast("Room is full!", true);
-      renderRooms();
-      return;
-    }
+  if (targetRoom && !targetRoom.isDeleted && !targetRoom.occupants.includes(nric)) {
     targetRoom.occupants.push(nric);
     targetRoom.ts = Date.now();
     queueRoomUpdate(targetRoom.id);
@@ -1060,6 +1066,7 @@ function handleRoomDrop(nric, targetRoomId) {
 }
 
 function unassignFromRoom(nric, roomId) {
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const room = globalLogistics.rooms.find((r) => r.id === roomId);
   if (room && !room.isDeleted) {
     room.occupants = room.occupants.filter((n) => n !== nric);
@@ -1120,7 +1127,9 @@ async function executeRoomSync() {
     setRoomSyncButtonState("saved");
   } catch (e) {
     setRoomSyncButtonState("error");
-    batch.forEach((val, key) => pendingRoomUpdates.set(key, val));
+    batch.forEach((val, key) => {
+      if (!pendingRoomUpdates.has(key)) pendingRoomUpdates.set(key, val);
+    });
   } finally {
     isRoomSyncing = false;
   }
@@ -1229,6 +1238,17 @@ function startRoomPolling() {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   roomPollInterval = setInterval(window.pollRoomsNow, 10000);
 }
+
+window.stopLogisticsPolling = function () {
+  if (pairingPollInterval) {
+    clearInterval(pairingPollInterval);
+    pairingPollInterval = null;
+  }
+  if (roomPollInterval) {
+    clearInterval(roomPollInterval);
+    roomPollInterval = null;
+  }
+};
 
 async function manualSyncRooms(btn) {
   if (pendingRoomUpdates.size > 0) {
@@ -2151,10 +2171,13 @@ async function executeGroupSync() {
     });
     setGroupSyncButtonState("saved");
   } catch (err) {
+    batch.forEach((u) => {
+      if (!pendingGroupUpdates.has(u.nric)) pendingGroupUpdates.set(u.nric, u);
+    });
     setGroupSyncButtonState("error");
+    showToast("Failed to save group changes. Tap sync to retry.", true);
   } finally {
     isGroupSyncing = false;
-    if (pendingGroupUpdates.size > 0) triggerGroupSync();
   }
 }
 
@@ -2168,10 +2191,13 @@ async function executeBusSync() {
     await apiCall("syncAssignments", { updates: batch, column: "bus" });
     setBusSyncButtonState("saved");
   } catch (err) {
+    batch.forEach((u) => {
+      if (!pendingBusUpdates.has(u.nric)) pendingBusUpdates.set(u.nric, u);
+    });
     setBusSyncButtonState("error");
+    showToast("Failed to save bus changes. Tap sync to retry.", true);
   } finally {
     isBusSyncing = false;
-    if (pendingBusUpdates.size > 0) triggerBusSync();
   }
 }
 
@@ -3076,6 +3102,8 @@ function renderGroupBusOptions() {
   }
 
   filteredList.forEach((item) => {
+    const escL = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+    const escLJs = typeof window.escapeJsAttr === "function" ? window.escapeJsAttr : (s) => escL(s);
     let nameStr = activeAssignType === "room" ? item.name : item;
     let idVal = activeAssignType === "room" ? item.id : item;
 
@@ -3091,33 +3119,31 @@ function renderGroupBusOptions() {
               .join(", ")
           : "None";
       if (!activeAssignNric) {
-        // Manage Mode
         icHtml = `<div class="mt-1 flex items-center gap-2 flex-wrap">
-                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${icName}</span>
-                    <button onclick="window.openGroupICSheet('${nameStr.replace(/'/g, "\\'")}')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition">Manage ICs</button>
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${escL(icName)}</span>
+                    <button onclick="window.openGroupICSheet('${escLJs(nameStr)}')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 transition">Manage ICs</button>
                 </div>`;
       } else {
-        // Assign Mode
         icHtml = `<div class="mt-1">
-                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${icName}</span>
+                    <span class="text-[10px] uppercase font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"><i class="fa-solid fa-crown mr-1"></i>ICs: ${escL(icName)}</span>
                 </div>`;
       }
     }
 
     html += `
-        <div class="sheet-list-item p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between transition hover:bg-gray-50 dark:hover:bg-gray-750" data-name="${nameStr.toLowerCase()}">
-            <div class="${activeAssignNric ? "cursor-pointer " : ""}flex-1" ${activeAssignNric ? `onclick="selectGroupBusOption('${idVal}')"` : ""}>
-                <div class="font-bold text-gray-900 dark:text-white text-sm">${activeAssignType === "group" ? "Group " : activeAssignType === "bus" ? "Bus " : "Room "}${nameStr}</div>
+        <div class="sheet-list-item p-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md flex items-center justify-between transition hover:bg-gray-50 dark:hover:bg-gray-800" data-name="${escL(nameStr.toLowerCase())}">
+            <div class="${activeAssignNric ? "cursor-pointer " : ""}flex-1" ${activeAssignNric ? `onclick="selectGroupBusOption('${escLJs(idVal)}')"` : ""}>
+                <div class="font-bold text-gray-900 dark:text-white text-sm">${activeAssignType === "group" ? "Group " : activeAssignType === "bus" ? "Bus " : "Room "}${escL(nameStr)}</div>
                 ${icHtml}
             </div>
-            <button onclick="${activeAssignType === "room" ? `deleteRoom('${idVal}')` : `removeGroupBusFromPopup('${idVal}')`}" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-2 rounded-lg transition" title="Delete"><i class="fa-solid fa-trash text-sm"></i></button>
+            <button onclick="${activeAssignType === "room" ? `deleteRoom('${escLJs(idVal)}')` : `removeGroupBusFromPopup('${escLJs(idVal)}')`}" class="text-red-600 dark:text-red-400 hover:text-red-700 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 p-2 rounded-lg transition" title="Delete"><i class="fa-solid fa-trash text-sm"></i></button>
         </div>`;
   });
 
   // Add new
   html += `
     <div onclick="addGroupBusFromPopup()" class="cursor-pointer p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-        <span class="font-bold text-primary text-sm flex items-center gap-2"><i class="fa-solid fa-plus"></i> Add New ${activeAssignType === "group" ? "Group" : "Bus"}</span>
+        <span class="font-bold text-primary text-sm flex items-center gap-2"><i class="fa-solid fa-plus"></i> Add New ${activeAssignType === "group" ? "Group" : activeAssignType === "bus" ? "Bus" : "Room"}</span>
     </div>`;
 
   html += `</div>`;

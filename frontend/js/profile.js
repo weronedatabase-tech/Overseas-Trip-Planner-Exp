@@ -32,7 +32,6 @@ async function loadProfileData() {
       }),
       apiCall("fetchLogistics").catch((e) => {
         console.warn("Failed to load logistics:", e);
-        alert("Profile Log error: " + (e.message || e));
         return null;
       }),
     ]);
@@ -57,9 +56,12 @@ async function loadProfileData() {
     globalLogistics = logRes || null;
 
     additionalProfiles = {};
+    const selfProfile =
+      loadedFamily.find((f) => f.nric === currentUser.nric) || loadedFamily[0];
+    const tripRole = selfProfile ? String(selfProfile.role || "").toUpperCase() : "";
     if (currentUser && globalLogistics && globalLogistics.pairings) {
       const nricsToFetch = new Set();
-      if (currentUser.role === "VOLUNTEER") {
+      if (tripRole === "VOLUNTEER") {
         const myPairs = globalLogistics.pairings.filter(
           (p) => p.volNric === currentUser.nric && p.status === "ACTIVE",
         );
@@ -75,9 +77,9 @@ async function loadProfileData() {
               nricsToFetch.add(op.volNric);
             });
         });
-      } else if (currentUser.role === "CAREGIVER") {
-        const myPoc = currentUser.pocNric || currentUser.nric;
-        const myTrainees = globalLogistics.participants.filter(
+      } else if (tripRole === "CAREGIVER") {
+        const myPoc = (selfProfile && selfProfile.pocNric) || currentUser.nric;
+        const myTrainees = (globalLogistics.participants || []).filter(
           (x) => x.role === "TRAINEE" && (x.pocNric || x.nric) === myPoc,
         );
         myTrainees.forEach((t) => {
@@ -756,9 +758,11 @@ function renderProfileFullView() {
 
 function generatePaymentPortalHtml() {
   if (!finConfig.showPaymentSection) return "";
-  const targetMembers = loadedFamily;
-  const hasCaregiver = targetMembers.some((m) => m.role === "CAREGIVER");
-  let targetNric = loadedFamily[0].pocNric;
+  const targetMembers = loadedFamily || [];
+  if (targetMembers.length === 0) return "";
+  const escP = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+  let targetNric = targetMembers[0]?.pocNric || targetMembers[0]?.nric || (currentUser && currentUser.nric) || "";
+  if (!targetNric) return "";
 
   const baseFee = finConfig.perPersonFee || 0;
   const size = targetMembers.length;
@@ -773,7 +777,7 @@ function generatePaymentPortalHtml() {
     targetNric.substring(0, 4).toUpperCase() +
     "-" +
     Math.abs(_hash).toString(10).slice(-4).padStart(4, "0");
-  window._currentOrderRef = orderNo; // Update global state just in case it's used elsewhere
+  window._currentOrderRef = orderNo;
 
   let membersListHtml = targetMembers
     .map((m) => {
@@ -783,7 +787,7 @@ function generatePaymentPortalHtml() {
           : m.role === "CAREGIVER"
             ? "text-purple-600 dark:text-purple-400"
             : "text-orange-600 dark:text-orange-400";
-      return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-xs md:text-sm mr-0.5 border border-current px-0.5 rounded">${m.role.substring(0, 3)}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${m.shortName || m.fullName}</span></span>`;
+      return `<span class="inline-block mr-1.5"><span class="${roleColor} font-black text-xs md:text-sm mr-0.5 border border-current px-0.5 rounded">${escP(String(m.role || "").substring(0, 3))}</span><span class="font-bold text-xs text-gray-800 dark:text-gray-200">${escP(m.shortName || m.fullName)}</span></span>`;
     })
     .join("");
 
@@ -809,9 +813,10 @@ function generatePaymentPortalHtml() {
   const qrStr = payNowNum
     ? generatePayNowStr("0", payNowNum, finalExpected, orderNo)
     : "";
-  const qrUrl = qrStr
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(qrStr)}`
-    : "";
+  const qrUrl =
+    qrStr && typeof window.generateQrDataUrl === "function"
+      ? window.generateQrDataUrl(qrStr)
+      : "";
 
   return `<div class="flex flex-col gap-3">
    <div class="bg-gray-50 dark:bg-gray-950 p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 text-center">
@@ -825,7 +830,7 @@ function generatePaymentPortalHtml() {
          qrUrl
            ? `<img src="${qrUrl}" alt="PayNow QR Code" class="w-48 h-48 rounded-lg shadow-md border-2 border-gray-200 dark:border-gray-700 mb-2">
        <p class="text-xs font-bold text-gray-800 dark:text-gray-200 text-center">Scan with your banking app to PayNow</p>
-       <p class="text-xs md:text-sm font-medium text-gray-500 mt-1">Order Ref: <span class="font-mono font-bold">${orderNo}</span></p>`
+       <p class="text-xs md:text-sm font-medium text-gray-500 mt-1">Order Ref: <span class="font-mono font-bold">${escP(orderNo)}</span></p>`
            : `<p class="text-xs font-bold text-red-500 p-4 text-center">Admin has not set up PayNow details.</p>`
        }
    </div>
@@ -924,9 +929,9 @@ async function submitReceipt(e, suffix = "") {
 
   const amtInput = document.getElementById("recAmount" + suffix);
   const amountVal = amtInput ? parseFloat(amtInput.value) : 0;
-  if (isNaN(amountVal) || amountVal === 0) {
+  if (isNaN(amountVal) || amountVal <= 0) {
     if (err) {
-      err.textContent = "Please enter a valid non-zero transfer amount.";
+      err.textContent = "Please enter a valid positive transfer amount.";
       err.classList.remove("hidden-force");
     }
     return;
@@ -1105,7 +1110,7 @@ function generateMyReceiptsHtml() {
     let imgSrc = "";
     const isPdf = Boolean((rec.fileUrl && rec.fileUrl.toLowerCase().includes(".pdf")) || rec.mimeType === "application/pdf");
     if (rec.fileUrl) {
-      if (rec.fileUrl.startsWith("/uploads/") || rec.fileUrl.startsWith("data:") || rec.fileUrl.startsWith("blob:")) {
+      if (rec.fileUrl.startsWith("data:") || rec.fileUrl.startsWith("blob:")) {
         imgSrc = rec.fileUrl;
       } else {
         const match = rec.fileUrl.match(/[-\w]{25,}/);
@@ -1974,10 +1979,10 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
       setIcSyncButtonState("saved");
     } catch (e) {
       console.error("Failed to load attendance", e);
-      const c = document.getElementById("icAttendanceListContainer");
+      const c = document.getElementById("icAttendanceListContainer") || container;
       if (c) {
         c.innerHTML =
-          '<div class="text-red-500">Failed to load attendance data.</div>';
+          '<div class="text-red-500 font-bold text-xs p-4 text-center">Failed to load attendance data.</div>';
       }
       setIcSyncButtonState("error");
       return;
@@ -2089,14 +2094,16 @@ window.toggleIcAttendance = function (nric) {
   }
 
   const newStatus = !currentStatus;
+  const nowTs = Date.now();
+  lastLocalChange = nowTs;
 
-  pendingIcAttendanceUpdates.set(nric, { nric: nric, status: newStatus });
+  pendingIcAttendanceUpdates.set(nric, { nric: nric, status: newStatus, ts: nowTs });
 
   if (!currentIcAttendanceData[nric]) {
     currentIcAttendanceData[nric] = {};
   }
   currentIcAttendanceData[nric].status = newStatus;
-  currentIcAttendanceData[nric].timestamp = Date.now();
+  currentIcAttendanceData[nric].ts = nowTs;
   currentIcAttendanceData[nric].takenBy =
     currentUser.displayName || currentUser.name || currentUser.nric;
 
@@ -2113,18 +2120,17 @@ window.toggleIcAttendance = function (nric) {
   if (card && check && tsEl) {
     if (newStatus) {
       card.className =
-        "flex items-center justify-between p-2 rounded-lg border-2 bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 cursor-pointer select-none transition-colors";
+        "my-att-card flex items-center justify-between p-2 rounded-lg border-2 bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 cursor-pointer select-none transition-colors";
       check.className =
         "shrink-0 w-5 h-5 rounded border-2 bg-green-500 border-green-500 flex items-center justify-center transition-colors";
       check.innerHTML =
         '<svg class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
 
-      const now = new Date();
       tsEl.innerText = "Just now";
       tsEl.classList.remove("hidden-force");
     } else {
       card.className =
-        "flex items-center justify-between p-2 rounded-lg border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer select-none transition-colors";
+        "my-att-card flex items-center justify-between p-2 rounded-lg border-2 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 cursor-pointer select-none transition-colors";
       check.className =
         "shrink-0 w-5 h-5 rounded border-2 border-gray-300 dark:border-gray-600 flex items-center justify-center transition-colors";
       check.innerHTML = "";
@@ -2153,9 +2159,11 @@ window.executeIcAttendanceSync = async function () {
     });
     setIcSyncButtonState("saved");
   } catch (e) {
-    showToast("Sync failed. Retrying...", true);
+    showToast("Sync failed. Tap sync to retry.", true);
     setIcSyncButtonState("error");
-    batch.forEach((u) => pendingIcAttendanceUpdates.set(u.nric, u));
+    batch.forEach((u) => {
+      if (!pendingIcAttendanceUpdates.has(u.nric)) pendingIcAttendanceUpdates.set(u.nric, u);
+    });
   } finally {
     isIcAttendanceSyncing = false;
   }

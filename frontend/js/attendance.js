@@ -442,6 +442,26 @@ async function renderAttendanceChecklist() {
 }
 
 async function changeAttendanceContext() {
+  // Flush any pending updates for the previous juncture BEFORE switching context
+  if (attSyncTimeout) {
+    clearTimeout(attSyncTimeout);
+    attSyncTimeout = null;
+  }
+  if (pendingAttendanceUpdates.size > 0 && savedAttJuncture) {
+    const prevJuncture = savedAttJuncture;
+    const prevBatch = Array.from(pendingAttendanceUpdates.values());
+    pendingAttendanceUpdates.clear();
+    try {
+      await apiCall("syncAttendanceUpdate", {
+        juncture: prevJuncture,
+        updates: prevBatch,
+        takenBy: (currentUser && currentUser.name) || "Admin",
+      });
+    } catch (e) {
+      console.warn("Failed flushing previous juncture before switch:", e);
+    }
+  }
+
   const juncEl = document.getElementById("attJunctureSelect");
   const juncture = juncEl ? juncEl.value : "";
   savedAttJuncture = juncture;
@@ -1167,6 +1187,25 @@ function parseRemoteBusAttendanceData(remoteData) {
 }
 
 window.changeBusContext = async function () {
+  if (adhocBusSyncTimeout) {
+    clearTimeout(adhocBusSyncTimeout);
+    adhocBusSyncTimeout = null;
+  }
+  if (pendingAdhocBusUpdates.size > 0 && adhocBusState.juncture) {
+    const prevBusJunc = "__BUS__" + adhocBusState.juncture;
+    const prevBatch = Array.from(pendingAdhocBusUpdates.values());
+    pendingAdhocBusUpdates.clear();
+    try {
+      await apiCall("syncAttendanceUpdate", {
+        juncture: prevBusJunc,
+        updates: prevBatch,
+        takenBy: (currentUser && currentUser.name) || "Admin",
+      });
+    } catch (e) {
+      console.warn("Failed flushing previous bus juncture before switch:", e);
+    }
+  }
+
   const juncSel = document.getElementById("busJunctureSelect");
   const juncture = juncSel ? juncSel.value : "";
   adhocBusState.juncture = juncture;

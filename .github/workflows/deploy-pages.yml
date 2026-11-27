@@ -1,0 +1,55 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'backend/Code.js'
+      - 'backend/appsscript.json'
+      - '.github/workflows/deploy-gas.yml'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Stage public static frontend files only
+        run: |
+          rm -rf _site
+          mkdir -p _site/backend
+          cp index.html register.html dashboard.html roster.html logistics.html \
+             attendance.html finance.html minutes.html files.html settings.html \
+             diet.html expired.html medical.html other.html \
+             manifest.json favicon.svg .nojekyll _site/
+          cp -r frontend _site/frontend
+          cp -r assets _site/assets
+          cp backend/config.js _site/backend/config.js
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '_site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -4,9 +4,14 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0"
     />
     <title>Register | Overseas Trip</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <script>
+      (function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");}}catch(e){}})();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="frontend/js/tailwind.config.js"></script>
     <link rel="stylesheet" href="frontend/css/styles.css" />
@@ -141,7 +146,9 @@
     <script src="frontend/js/live-sync.js"></script>
     <script src="frontend/js/state.js"></script>
     <script src="frontend/js/ui.js"></script>
+    <script src="frontend/js/archive-mode.js"></script>
     <script src="frontend/js/main.js"></script>
+    <script src="frontend/js/auth.js"></script>
 
     <script src="frontend/js/registration.js"></script>
     <script>
@@ -150,9 +157,10 @@
           navigateTo("index.html");
           return;
         }
-        if (regMemberCount === 0) {
-          const el_membersContainer =
-            document.getElementById("membersContainer");
+        const el_membersContainer =
+          document.getElementById("membersContainer");
+        if (!el_membersContainer || el_membersContainer.children.length === 0) {
+          regMemberCount = 0;
           if (el_membersContainer) el_membersContainer.innerHTML = "";
           addRegMember();
         }

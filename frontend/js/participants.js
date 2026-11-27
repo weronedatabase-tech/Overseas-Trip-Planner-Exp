@@ -509,7 +509,7 @@ async function loadParticipantsData() {
           localStorage.removeItem("cachedLogistics");
         } catch (e) {}
       }
-      const tbody = document.getElementById("rosterBody");
+      const tbody = document.getElementById("rosterTableBody");
       if (tbody) {
         tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
           <div class="flex flex-col items-center justify-center gap-3">
@@ -522,7 +522,7 @@ async function loadParticipantsData() {
         </td></tr>`;
       }
     } else if (!adminRosterData || adminRosterData.length === 0) {
-      const tbody = document.getElementById("rosterBody");
+      const tbody = document.getElementById("rosterTableBody");
       if (tbody) {
         tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
           <div class="flex flex-col items-center justify-center gap-3">
@@ -538,7 +538,7 @@ async function loadParticipantsData() {
   } catch (e) {
     console.error("loadParticipantsData error:", e);
     if (!adminRosterData || adminRosterData.length === 0) {
-      const tbody = document.getElementById("rosterBody");
+      const tbody = document.getElementById("rosterTableBody");
       if (tbody) {
         tbody.innerHTML = `<tr><td colspan="100" class="text-center py-16">
           <div class="flex flex-col items-center justify-center gap-3">
@@ -881,7 +881,8 @@ function renderRosterTable() {
       ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 px-1 py-0.5 rounded font-bold border-2 border-red-200 dark:border-red-800 shadow-md text-xs md:text-sm inline-block whitespace-nowrap"
       : "text-gray-800 dark:text-gray-200 whitespace-nowrap text-sm font-medium";
 
-    const roleStr = p.role.substring(0, 3).toUpperCase();
+    const escR = typeof window.escapeHtml === "function" ? window.escapeHtml : (s) => String(s == null ? "" : s);
+    const roleStr = String(p.role || "").substring(0, 3).toUpperCase();
     const roleColor =
       p.role === "TRAINEE"
         ? "text-green-600 dark:text-green-400"
@@ -889,15 +890,15 @@ function renderRosterTable() {
           ? "text-purple-600 dark:text-purple-400"
           : "text-orange-600 dark:text-orange-400";
 
-    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${p.nric}">
+    html += `<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition cursor-pointer" data-nric="${escR(p.nric)}">
        <td class="py-1.5 px-2 align-top roster-col-fullName sticky left-0 z-10 bg-white dark:bg-gray-900 border-r-2 border-gray-200 dark:border-gray-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] group-hover:bg-gray-50 dark:group-hover:bg-gray-800/50" style="min-width: 150px; max-width: 300px;">
-           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${fullNameUpper}</div>
-           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${shortNameUpper}</div>` : ""}
+           <div class="${nameClass} text-xs md:text-sm leading-tight whitespace-normal break-words">${escR(fullNameUpper)}</div>
+           ${shortNameUpper && shortNameUpper !== fullNameUpper ? `<div class="text-sm text-gray-500 dark:text-gray-400 mt-0.5 font-medium whitespace-normal break-words">${escR(shortNameUpper)}</div>` : ""}
            <div class="flex items-center gap-1 mt-1 flex-wrap">
-               <span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span>
-               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${(p.group || "None").toUpperCase()}">${getProjectAbbreviation(p.group || "None")}</span>
+               <span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${escR(roleStr)}</span>
+               <span class="px-1 py-[1px] leading-tight rounded-sm border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block" title="${escR((p.group || "None").toUpperCase())}">${escR(getProjectAbbreviation(p.group || "None"))}</span>
            </div>
-           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${p.caregiverFor.toUpperCase()}]</div>` : ""}
+           ${p.caregiverFor ? `<div class="mt-1 font-bold text-purple-600 dark:text-purple-400 text-xs">[${escR(p.caregiverFor.toUpperCase())}]</div>` : ""}
        </td>`;
 
     rosterCols.forEach((c) => {
@@ -906,53 +907,53 @@ function renderRosterTable() {
         const baseClass = `px-3 py-2 align-top roster-col-${c.id} text-sm font-medium text-gray-800 dark:text-gray-200 ${["address", "medical", "diet", "otherPoints", "pairings", "sleeping"].includes(c.id) ? "whitespace-normal break-words min-w-[150px] max-w-[300px]" : "whitespace-nowrap"}`;
 
         if (c.id === "role") {
-          html += `<td class="${baseClass}" ${styleStr}><span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${roleStr}</span></td>`;
+          html += `<td class="${baseClass}" ${styleStr}><span class="text-xs font-black ${roleColor} bg-gray-50 dark:bg-gray-800 px-1 py-[1px] leading-tight rounded-sm border-2 border-gray-200 dark:border-gray-700 uppercase tracking-wide">${escR(roleStr)}</span></td>`;
         } else if (c.id === "group") {
-          html += `<td class="${baseClass}" ${styleStr}><span class="px-2 py-0.5 rounded border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block">${(p.group || "None").toUpperCase()}</span></td>`;
+          html += `<td class="${baseClass}" ${styleStr}><span class="px-2 py-0.5 rounded border shadow-md text-xs font-bold ${getProjectColor(p.group)} whitespace-normal break-words inline-block">${escR((p.group || "None").toUpperCase())}</span></td>`;
         } else if (c.id === "nric") {
-          html += `<td class="${baseClass} font-mono font-bold text-gray-700 dark:text-gray-300" ${styleStr}>${(p.nric || "").toUpperCase()}</td>`;
+          html += `<td class="${baseClass} font-mono font-bold text-gray-700 dark:text-gray-300" ${styleStr}>${escR((p.nric || "").toUpperCase())}</td>`;
         } else if (c.id === "passportNo") {
-          html += `<td class="${baseClass} font-mono uppercase text-gray-700 dark:text-gray-300" ${styleStr}>${(p.passportNo || "-").toUpperCase()}</td>`;
+          html += `<td class="${baseClass} font-mono uppercase text-gray-700 dark:text-gray-300" ${styleStr}>${escR((p.passportNo || "-").toUpperCase())}</td>`;
         } else if (c.id === "passportExpiry") {
-          html += `<td class="${baseClass}" ${styleStr}><span class="${expClass}">${formattedExpiry || "-"}</span></td>`;
+          html += `<td class="${baseClass}" ${styleStr}><span class="${expClass}">${escR(formattedExpiry || "-")}</span></td>`;
         } else if (c.id === "dob") {
-          html += `<td class="${baseClass}" ${styleStr}>${formattedDob || "-"}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${escR(formattedDob || "-")}</td>`;
         } else if (c.id === "diet") {
           const hasDiet =
             p.diet &&
             p.diet.trim() &&
             p.diet.trim().toLowerCase() !== "nil" &&
             p.diet.trim().toLowerCase() !== "none";
-          html += `<td class="${baseClass}" ${styleStr}>${hasDiet ? `<span class="text-red-700 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap leading-tight">${p.diet}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${hasDiet ? `<span class="text-red-700 dark:text-red-400 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap leading-tight">${escR(p.diet)}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
         } else if (c.id === "medical") {
           const hasMedical =
             p.medical &&
             p.medical.trim() &&
             p.medical.trim().toLowerCase() !== "nil" &&
             p.medical.trim().toLowerCase() !== "none";
-          html += `<td class="${baseClass}" ${styleStr}>${hasMedical ? `<span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap leading-tight">${p.medical}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${hasMedical ? `<span class="text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded inline-block whitespace-pre-wrap leading-tight">${escR(p.medical)}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
         } else if (c.id === "otherPoints") {
           const hasNotes =
             p.otherPoints &&
             p.otherPoints.trim() &&
             p.otherPoints.trim().toLowerCase() !== "nil" &&
             p.otherPoints.trim().toLowerCase() !== "none";
-          html += `<td class="${baseClass}" ${styleStr}>${hasNotes ? `<span class="text-orange-700 dark:text-orange-400 font-medium whitespace-pre-wrap leading-tight">${p.otherPoints}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${hasNotes ? `<span class="text-orange-700 dark:text-orange-400 font-medium whitespace-pre-wrap leading-tight">${escR(p.otherPoints)}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
         } else if (c.id === "sleeping") {
           const hasSleeping =
             p.sleeping &&
             p.sleeping.trim() &&
             p.sleeping.trim().toLowerCase() !== "nil" &&
             p.sleeping.trim().toLowerCase() !== "none";
-          html += `<td class="${baseClass}" ${styleStr}>${hasSleeping ? `<span class="text-indigo-700 dark:text-indigo-400 font-medium whitespace-pre-wrap leading-tight">${p.sleeping}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${hasSleeping ? `<span class="text-indigo-700 dark:text-indigo-400 font-medium whitespace-pre-wrap leading-tight">${escR(p.sleeping)}</span>` : `<span class="text-gray-400 italic">NONE</span>`}</td>`;
         } else if (c.id === "room") {
-          html += `<td class="${baseClass} font-bold" ${styleStr}>${(p.room || "UNASSIGNED").toUpperCase()}</td>`;
+          html += `<td class="${baseClass} font-bold" ${styleStr}>${escR((p.room || "UNASSIGNED").toUpperCase())}</td>`;
         } else if (c.id === "bus") {
-          html += `<td class="${baseClass} font-bold" ${styleStr}>${(p.bus || "UNASSIGNED").toUpperCase()}</td>`;
+          html += `<td class="${baseClass} font-bold" ${styleStr}>${escR((p.bus || "UNASSIGNED").toUpperCase())}</td>`;
         } else if (c.id === "pairings") {
-          html += `<td class="${baseClass}" ${styleStr}>${(p.pairings || "NONE").toUpperCase()}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${escR((p.pairings || "NONE").toUpperCase())}</td>`;
         } else if (c.id === "emergencyName") {
-          html += `<td class="${baseClass}" ${styleStr}>${(p.emergencyName || "-").toUpperCase()}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${escR((p.emergencyName || "-").toUpperCase())}</td>`;
         } else if (
           c.id === "contact" ||
           c.id === "emergencyContact" ||
@@ -960,7 +961,7 @@ function renderRosterTable() {
         ) {
           html += `<td class="${baseClass} font-mono font-bold" ${styleStr}>${renderPhoneLink(p[c.id])}</td>`;
         } else {
-          html += `<td class="${baseClass}" ${styleStr}>${(p[c.id] || "-").toString().toUpperCase()}</td>`;
+          html += `<td class="${baseClass}" ${styleStr}>${escR((p[c.id] || "-").toString().toUpperCase())}</td>`;
         }
       }
     });
@@ -1102,12 +1103,14 @@ window.generateChatGroupsList = function () {
           const shortName = (p.shortName || p.fullName || "").trim();
           const groupName = (p.logisticsGroup || p.group || "NOGROUP").trim();
 
+          const tripPrefix = ((appSettings && appSettings.tripTitle ? appSettings.tripTitle.replace(/[^a-zA-Z0-9]/g, "") : "TRIP") + (appSettings && appSettings.tripYear ? appSettings.tripYear : "")).toUpperCase();
           let firstName = "";
-          if (isVol) firstName = `TOT2026_VOL_${groupName}_${shortName}`;
-          else if (isCgv) firstName = `TOT2026_CAR_${groupName}_${shortName}`;
+          if (isVol) firstName = `${tripPrefix}_VOL_${groupName}_${shortName}`;
+          else if (isCgv) firstName = `${tripPrefix}_CAR_${groupName}_${shortName}`;
 
-          const safeName = `"${firstName.replace(/"/g, '""')}"`;
-          const safePhone = `"${cleaned}"`;
+          const csvCell = typeof window.sanitizeCsvCell === "function" ? window.sanitizeCsvCell : (v) => `"${String(v).replace(/"/g, '""')}"`;
+          const safeName = csvCell(firstName);
+          const safePhone = csvCell(cleaned);
 
           rows.push([safeName, safePhone]);
         }
