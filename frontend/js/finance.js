@@ -343,6 +343,11 @@ function switchFinanceSubTab(tabId) {
       "dark:text-gray-400",
     );
     targetBtn.classList.add("border-primary", "text-primary");
+    if (typeof targetBtn.scrollIntoView === "function") {
+      try {
+        targetBtn.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+      } catch (e) {}
+    }
   }
 
   renderAllFinanceTabs();
@@ -1414,8 +1419,8 @@ function renderFinanceOptions() {
             isFinal
               ? "bg-green-50/70 dark:bg-green-950/30"
               : "bg-gray-50/80 dark:bg-gray-800/50"
-          } border-b border-gray-200 dark:border-gray-800 flex flex-wrap justify-between items-center gap-2 shrink-0">
-            <div class="flex items-center flex-1 min-w-0 gap-2">
+          } border-b border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center gap-2 shrink-0">
+            <div class="flex items-center w-full sm:w-auto sm:flex-1 min-w-0 gap-2">
               <button
                 type="button"
                 onclick="toggleIndividualFinanceCollapse('${opt.id}')"
@@ -1431,7 +1436,7 @@ function renderFinanceOptions() {
                 value="${safeTitleAttr}"
                 onchange="updateFinanceOption('${opt.id}', 'title', this.value)"
                 placeholder="Option Title..."
-                class="font-black text-sm md:text-base bg-transparent border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary outline-none text-gray-900 dark:text-white flex-1 min-w-[90px] px-1 py-0.5 transition"
+                class="font-black text-sm md:text-base bg-transparent border-b-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary outline-none text-gray-900 dark:text-white flex-1 min-w-0 px-1 py-0.5 transition"
               />
               ${
                 isFinal
@@ -1440,7 +1445,7 @@ function renderFinanceOptions() {
               }
             </div>
 
-            <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+            <div class="flex items-center justify-end gap-1.5 shrink-0 w-full sm:w-auto sm:ml-auto">
               <button
                 type="button"
                 onclick="updateFinanceConfig('finalOptionId', '${isFinal ? "" : opt.id}')"
@@ -1494,7 +1499,7 @@ function renderFinanceOptions() {
           <!-- Key Metrics & Option Config Bar (Always visible even when collapsed) -->
           <div class="grid grid-cols-2 ${isWideCard ? "lg:grid-cols-4" : ""} gap-2 p-2.5 md:px-4 md:py-2.5 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
             <!-- Pax Count -->
-            <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70 min-w-0">
               <div class="min-w-0">
                 <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none truncate">Pax ${paxInputDisabled ? "(Global)" : ""}</span>
                 <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden sm:inline truncate">Headcount</span>
@@ -1506,7 +1511,7 @@ function renderFinanceOptions() {
                 ${paxInputDisabled ? "disabled" : ""}
                 oninput="updateFinanceOption('${opt.id}', 'pax', this.value)"
                 onchange="updateFinanceOption('${opt.id}', 'pax', this.value)"
-                class="hide-spinners w-14 sm:w-16 shrink-0 text-xs font-black font-mono tabular-nums px-1.5 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md text-center focus:outline-none focus:border-primary ${
+                class="hide-spinners w-full sm:w-16 shrink-0 text-xs font-black font-mono tabular-nums px-1.5 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md text-center focus:outline-none focus:border-primary ${
                   paxInputDisabled
                     ? "opacity-60 cursor-not-allowed bg-gray-100 dark:bg-gray-800 text-gray-500"
                     : "text-gray-900 dark:text-white"
@@ -1515,14 +1520,14 @@ function renderFinanceOptions() {
             </div>
 
             <!-- Display Currency -->
-            <div class="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70 min-w-0">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2 bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700/70 min-w-0">
               <div class="min-w-0">
                 <span class="block text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 leading-none truncate">Display</span>
                 <span class="text-[11px] font-semibold text-gray-500 dark:text-gray-400 hidden sm:inline truncate">Currency</span>
               </div>
               <select
                 onchange="updateFinanceOption('${opt.id}', 'displayCurrency', this.value)"
-                class="shrink-0 text-xs font-black px-2 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-primary cursor-pointer text-gray-900 dark:text-white"
+                class="w-full sm:w-auto shrink-0 text-xs font-black px-2 py-1 bg-white dark:bg-gray-950 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:border-primary cursor-pointer text-gray-900 dark:text-white"
               >
                 ${getCurrencyOptions(dispCurrency)}
               </select>
