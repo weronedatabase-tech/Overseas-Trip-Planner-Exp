@@ -32,7 +32,7 @@ function buildDietUI() {
                <option value="expired.html">Expired Passports</option>
                <option value="other.html">Other Notes</option>
            </select>
-           <button onclick="loadDietData()" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
+           <button onclick="loadDietData(true)" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
            </button>
        </div>
@@ -64,10 +64,10 @@ function buildDietUI() {
   loadDietData();
 }
 
-async function loadDietData() {
+async function loadDietData(forceFetch = false, silent = false) {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-  if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (!forceFetch && window.adminRosterData && window.adminRosterData.length > 0) {
     dietRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function")
       applyCaregiverLabels(dietRosterData);
@@ -89,11 +89,15 @@ async function loadDietData() {
     return;
   }
   const loader = document.getElementById("dietLoading");
-  if (loader) loader.classList.remove("hidden-force");
+  if (loader && !silent) loader.classList.remove("hidden-force");
 
   try {
-    const res = await apiCall("fetchAdminRoster");
-    dietRosterData = res.roster || [];
+    const res = await apiCall("fetchAdminRoster", { bypassLocalCache: true });
+    const nextRoster = res.roster || [];
+    const scroller = document.getElementById("dietTableContainer");
+    const prevTop = scroller ? scroller.scrollTop : 0;
+    const prevLeft = scroller ? scroller.scrollLeft : 0;
+    dietRosterData = nextRoster;
     window.adminRosterData = dietRosterData;
     if (typeof applyCaregiverLabels === "function")
       applyCaregiverLabels(dietRosterData);
@@ -112,12 +116,22 @@ async function loadDietData() {
     });
 
     renderDietTable();
+    if (scroller && silent) {
+      scroller.scrollTop = prevTop;
+      scroller.scrollLeft = prevLeft;
+    }
   } catch (e) {
-    showToast("Failed to load dietary data.", true);
+    if (!silent) showToast("Failed to load dietary data.", true);
   } finally {
-    if (loader) loader.classList.add("hidden-force");
+    if (loader && !silent) loader.classList.add("hidden-force");
   }
 }
+
+window.pollDietNow = async function () {
+  const el = document.getElementById("tab-diet");
+  if (!el || el.classList.contains("hidden-force")) return;
+  await loadDietData(true, true);
+};
 
 function handleDietSearch() {
   dietSearchQuery = document

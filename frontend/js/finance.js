@@ -213,6 +213,7 @@ async function buildFinanceUI() {
       startFinancePolling();
       const loader = document.getElementById("finLoadingOverlay");
       if (loader) loader.classList.add("hidden-force");
+      window.pollFinanceNow();
       // If cached rates are missing live currencies, refresh quietly in background
       if (Object.keys(globalFinanceRates).length < 5) {
         apiCall("fetchFinance", { force: true, refreshRates: true })
@@ -566,7 +567,36 @@ async function executeReceiptSync() {
   }
 }
 
-window.pollFinanceNow = async function () {
+let pendingRemoteFinanceRender = false;
+
+function isFinanceUiBusyForRender() {
+  const activeTag = document.activeElement ? document.activeElement.tagName : "";
+  if (activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT") return true;
+  if (document.querySelector("#editReceiptModal:not(.hidden-force)")) return true;
+  if (document.querySelector("#deleteReceiptModal:not(.hidden-force)")) return true;
+  if (document.querySelector("#adminFeeScreenshotModal:not(.hidden-force)")) return true;
+  if (document.querySelector("#adminPaymentContactModal:not(.hidden-force)")) return true;
+  return false;
+}
+
+function flushPendingFinanceRender() {
+  if (!pendingRemoteFinanceRender) return;
+  if (isFinanceUiBusyForRender() || finDndState.active) return;
+  pendingRemoteFinanceRender = false;
+  renderAllFinanceTabs();
+  if (pendingFinanceUpdates.size === 0 && pendingReceiptUpdates.size === 0) {
+    setFinanceSyncButtonState("saved");
+  }
+}
+
+document.addEventListener("focusout", () => {
+  if (pendingRemoteFinanceRender) setTimeout(flushPendingFinanceRender, 150);
+});
+document.addEventListener("click", () => {
+  if (pendingRemoteFinanceRender) setTimeout(flushPendingFinanceRender, 200);
+});
+
+window.pollFinanceNow = async function (msg) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
   const tab = document.getElementById("tab-finance");
   if (
@@ -578,23 +608,40 @@ window.pollFinanceNow = async function () {
   )
     return;
 
+  const domainList = Array.isArray(msg?.domains) ? msg.domains : msg?.domain ? [msg.domain] : [];
+  const needsLogistics = domainList.includes("all") || domainList.includes("roster") || domainList.includes("logistics");
+
   const fetchStartTime = Date.now();
 
   try {
-    const [finRes, recRes] = await Promise.all([
-      apiCall("fetchFinance").catch((e) => {
+    const [finRes, recRes, logRes] = await Promise.all([
+      apiCall("fetchFinance", { bypassLocalCache: true }).catch((e) => {
         console.warn("fetchFinance failed", e);
         return { data: { options: [], config: {} }, rates: { SGD: 1 } };
       }),
-      apiCall("fetchReceipts").catch((e) => {
+      apiCall("fetchReceipts", { bypassLocalCache: true }).catch((e) => {
         console.warn("fetchReceipts failed", e);
         return { receipts: [] };
       }),
+      needsLogistics
+        ? apiCall("fetchLogistics", { bypassLocalCache: true }).catch(() => null)
+        : Promise.resolve(null),
     ]);
 
     if (lastLocalChange > fetchStartTime) return;
 
     let hasChanges = false;
+
+    if (logRes && Array.isArray(logRes.participants)) {
+      if (typeof processDisplayNames === "function") processDisplayNames(logRes.participants);
+      if (typeof applyGlobalSorting === "function") {
+        logRes.participants = applyGlobalSorting(logRes.participants);
+      }
+      if (JSON.stringify(logRes.participants) !== JSON.stringify(globalLogistics?.participants || [])) {
+        globalLogistics = logRes;
+        hasChanges = true;
+      }
+    }
 
     if (recRes && Array.isArray(recRes.receipts)) {
       const incoming = recRes.receipts;
@@ -613,6 +660,7 @@ window.pollFinanceNow = async function () {
             cur.uploaderNric !== r.uploaderNric ||
             cur.paidByNric !== r.paidByNric ||
             cur.category !== r.category ||
+            cur.categoryId !== r.categoryId ||
             cur.fileUrl !== r.fileUrl ||
             cur.remarks !== r.remarks
           );
@@ -628,6 +676,7 @@ window.pollFinanceNow = async function () {
           }
           return r;
         });
+        window.globalReceipts = globalReceipts;
         hasChanges = true;
       }
     }
@@ -652,12 +701,15 @@ window.pollFinanceNow = async function () {
     if (finRes.data) {
       if (
         finRes.data.config &&
+        pendingFinanceUpdates.size === 0 &&
+        !financeSyncTimeout &&
         finRes.data.config.ts > (financeConfig.ts || 0)
       ) {
         financeConfig = finRes.data.config;
         if (!financeConfig.customRates) financeConfig.customRates = {};
         if (!financeConfig.feeDeviations) financeConfig.feeDeviations = {};
         if (!financeConfig.feesReceived) financeConfig.feesReceived = {};
+        window.financeConfig = financeConfig;
         hasChanges = true;
       }
 
@@ -686,20 +738,21 @@ window.pollFinanceNow = async function () {
           (o) => serverIds.includes(o.id) || pendingFinanceUpdates.has(o.id),
         );
         if (financeOptions.length !== initialLength) hasChanges = true;
+        window.financeOptions = financeOptions;
       }
     }
 
-    if (
-      hasChanges &&
-      document.activeElement.tagName !== "INPUT" &&
-      document.activeElement.tagName !== "TEXTAREA"
-    ) {
-      renderAllFinanceTabs();
-      if (
-        pendingFinanceUpdates.size === 0 &&
-        pendingReceiptUpdates.size === 0
-      )
-        setFinanceSyncButtonState("saved");
+    if (hasChanges) {
+      if (isFinanceUiBusyForRender()) {
+        pendingRemoteFinanceRender = true;
+      } else {
+        renderAllFinanceTabs();
+        if (
+          pendingFinanceUpdates.size === 0 &&
+          pendingReceiptUpdates.size === 0
+        )
+          setFinanceSyncButtonState("saved");
+      }
     }
   } catch (e) {}
 };
@@ -707,7 +760,7 @@ window.pollFinanceNow = async function () {
 function startFinancePolling() {
   if (financePollInterval) clearInterval(financePollInterval);
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
-  financePollInterval = setInterval(window.pollFinanceNow, 10000);
+  financePollInterval = setInterval(window.pollFinanceNow, 45000);
 }
 
 function stopFinancePolling() {

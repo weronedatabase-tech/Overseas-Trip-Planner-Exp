@@ -111,7 +111,7 @@ function buildExpiredUI() {
                <option value="expired.html" selected>Expired Passports</option>
                <option value="other.html">Other Notes</option>
            </select>
-           <button onclick="loadExpiredData()" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
+           <button onclick="loadExpiredData(true)" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
            </button>
        </div>
@@ -121,9 +121,9 @@ function buildExpiredUI() {
    <div class="py-1.5 px-2 md:px-3 bg-amber-50/70 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800/50 flex flex-wrap items-center justify-between gap-1.5 text-xs text-amber-900 dark:text-amber-200 shrink-0">
        <div class="flex items-center gap-1.5 flex-wrap">
            <span class="font-bold">Trip End Date:</span>
-           <span class="font-semibold underline">${tripEndFormatted}</span>
+           <span id="expiredTripEndLabel" class="font-semibold underline">${tripEndFormatted}</span>
            <span class="mx-1 opacity-50">•</span>
-           <span>Requirement: Minimum <strong>6 months</strong> validity beyond trip (<span class="font-bold text-red-600 dark:text-red-400">${cutoffFormatted}</span>)</span>
+           <span>Requirement: Minimum <strong>6 months</strong> validity beyond trip (<span id="expiredCutoffInline" class="font-bold text-red-600 dark:text-red-400">${cutoffFormatted}</span>)</span>
        </div>
        <div id="expiredPillsContainer" class="flex items-center gap-1">
            <!-- Rendered dynamically -->
@@ -158,12 +158,12 @@ function buildExpiredUI() {
   loadExpiredData();
 }
 
-async function loadExpiredData() {
+async function loadExpiredData(forceFetch = false, silent = false) {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
   const loader = document.getElementById("expiredLoading");
 
-  if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (!forceFetch && window.adminRosterData && window.adminRosterData.length > 0) {
     expiredRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function") {
       applyCaregiverLabels(expiredRosterData);
@@ -174,25 +174,62 @@ async function loadExpiredData() {
     return;
   }
 
-  if (loader) loader.classList.remove("hidden-force");
+  if (loader && !silent) loader.classList.remove("hidden-force");
 
   try {
-    const res = await apiCall("fetchAdminRoster");
+    const res = await apiCall("fetchAdminRoster", { bypassLocalCache: true });
+    const scroller = document.getElementById("expiredTableContainer");
+    const prevTop = scroller ? scroller.scrollTop : 0;
+    const prevLeft = scroller ? scroller.scrollLeft : 0;
     expiredRosterData = res.roster || [];
     window.adminRosterData = expiredRosterData;
     if (typeof applyCaregiverLabels === "function") {
       applyCaregiverLabels(expiredRosterData);
     }
     updateTraineeShortNames();
+    refreshExpiredThresholdBanner();
     renderExpiredTable();
+    if (scroller && silent) {
+      scroller.scrollTop = prevTop;
+      scroller.scrollLeft = prevLeft;
+    }
   } catch (e) {
-    if (typeof showToast === "function") {
+    if (!silent && typeof showToast === "function") {
       showToast("Failed to load passport data.", true);
     }
   } finally {
-    if (loader) loader.classList.add("hidden-force");
+    if (loader && !silent) loader.classList.add("hidden-force");
   }
 }
+
+function refreshExpiredThresholdBanner() {
+  const { tripEnd, minExpiry } = getTripExpiryThreshold();
+  const tripEndFormatted =
+    tripEnd && !isNaN(tripEnd.getTime())
+      ? typeof formatDDMmmYYYY === "function"
+        ? formatDDMmmYYYY(tripEnd)
+        : tripEnd.toLocaleDateString("en-GB")
+      : "Not Set";
+  const cutoffFormatted =
+    minExpiry && !isNaN(minExpiry.getTime())
+      ? typeof formatDDMmmYYYY === "function"
+        ? formatDDMmmYYYY(minExpiry)
+        : minExpiry.toLocaleDateString("en-GB")
+      : "Not Set";
+  const tag = document.getElementById("expiredCutoffTag");
+  if (tag) tag.textContent = `Cutoff: ${cutoffFormatted}`;
+  const endEl = document.getElementById("expiredTripEndLabel");
+  if (endEl) endEl.textContent = tripEndFormatted;
+  const inlineEl = document.getElementById("expiredCutoffInline");
+  if (inlineEl) inlineEl.textContent = cutoffFormatted;
+}
+
+window.pollExpiredNow = async function () {
+  const el = document.getElementById("tab-expired");
+  if (!el || el.classList.contains("hidden-force")) return;
+  refreshExpiredThresholdBanner();
+  await loadExpiredData(true, true);
+};
 
 function updateTraineeShortNames() {
   traineeShortNames = {};

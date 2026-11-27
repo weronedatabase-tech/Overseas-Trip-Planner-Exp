@@ -507,6 +507,53 @@ async function promptRenameDriveItem(id, isFolder, oldName) {
 }
 
 let driveLoadRequestId = 0;
+let isFilesPolling = false;
+let lastDriveSnapshotSig = "";
+
+window.pollFilesNow = async function (msg) {
+  const tabFiles = document.getElementById("tab-files");
+  if (!tabFiles || tabFiles.classList.contains("hidden-force")) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+
+  if (typeof updatePinnedTripFilesUI === "function") {
+    updatePinnedTripFilesUI();
+  }
+
+  const domainList = Array.isArray(msg?.domains) ? msg.domains : msg?.domain ? [msg.domain] : [];
+  const hasFiles = domainList.length === 0 || domainList.includes("all") || domainList.includes("files");
+  if (!hasFiles) return;
+
+  const overlay = document.getElementById("driveLoadingOverlay");
+  if (overlay && !overlay.classList.contains("hidden-force")) return;
+  if (selectedDriveItems && selectedDriveItems.size > 0) return;
+  if (document.querySelector("#tripFilePickerModal:not(.hidden-force)")) return;
+  if (document.querySelector("#appGlobalDialogModal:not(.hidden-force)")) return;
+  if (isFilesPolling) return;
+
+  const current = currentDrivePath[currentDrivePath.length - 1] || { id: "root" };
+  const reqId = driveLoadRequestId;
+  isFilesPolling = true;
+  try {
+    const res = await apiCall("getDriveContents", { folderId: current.id });
+    if (reqId !== driveLoadRequestId) return;
+    const folders = res.folders || [];
+    const files = res.files || [];
+    const nextSig = JSON.stringify({
+      f: folders.map((x) => `${x.id}:${x.name}:${x.lastUpdated || ""}`),
+      i: files.map((x) => `${x.id}:${x.name}:${x.lastUpdated || ""}`),
+    });
+    if (nextSig !== lastDriveSnapshotSig) {
+      lastDriveSnapshotSig = nextSig;
+      const listEl = document.getElementById("driveContentsList");
+      const prevTop = listEl ? listEl.scrollTop : 0;
+      renderDriveContents(folders, files);
+      if (listEl) listEl.scrollTop = prevTop;
+    }
+  } catch (e) {
+  } finally {
+    isFilesPolling = false;
+  }
+};
 
 async function loadDriveFolder(folderId, folderName, isBack = false) {
   const reqId = ++driveLoadRequestId;
@@ -538,6 +585,10 @@ async function loadDriveFolder(folderId, folderName, isBack = false) {
     }
 
     renderDriveContents(res.folders || [], res.files || []);
+    lastDriveSnapshotSig = JSON.stringify({
+      f: (res.folders || []).map((x) => `${x.id}:${x.name}:${x.lastUpdated || ""}`),
+      i: (res.files || []).map((x) => `${x.id}:${x.name}:${x.lastUpdated || ""}`),
+    });
   } catch (e) {
     if (reqId !== driveLoadRequestId) return;
     showToast("Failed to load folder contents.", true);

@@ -270,6 +270,186 @@ return true;
 }
 
 // ==========================================
+// REAL-TIME SYNC VERSION VECTOR ENGINE
+// Ultra-fast CacheService-backed change feed (zero Sheet reads on poll)
+// ==========================================
+const SYNC_ACTION_DOMAINS = {
+  syncAttendanceUpdate: ['attendance'],
+  syncPairingUpdates: ['pairings', 'logistics'],
+  syncRoomUpdates: ['rooms', 'logistics'],
+  syncAssignments: ['logistics', 'roster', 'attendance'],
+  saveFinance: ['finance'],
+  syncReceipts: ['receipts', 'finance'],
+  uploadReceipt: ['receipts', 'finance'],
+  syncMinutes: ['minutes'],
+  updateProfile: ['roster', 'logistics', 'finance'],
+  adminUpdateParticipant: ['roster', 'logistics', 'finance'],
+  submitRegistration: ['roster', 'logistics', 'finance'],
+  deleteParticipant: ['roster', 'logistics', 'finance'],
+  toggleRegistration: ['settings'],
+  toggleEdits: ['settings'],
+  addCommittee: ['settings'],
+  removeCommittee: ['settings'],
+  addHelpline: ['settings'],
+  removeHelpline: ['settings'],
+  addProjectGroup: ['settings', 'roster', 'logistics'],
+  removeProjectGroup: ['settings', 'roster', 'logistics'],
+  modifyJunctures: ['settings', 'attendance'],
+  modifyICJunctures: ['settings', 'attendance'],
+  saveSortingRules: ['settings', 'roster', 'logistics'],
+  saveCustomViewsOrder: ['settings'],
+  saveTripSettings: ['settings'],
+  addDriveAccess: ['settings'],
+  removeDriveAccess: ['settings'],
+  massDriveAccess: ['settings'],
+  setTripFile: ['settings', 'files'],
+  uploadDriveFile: ['files'],
+  createDriveFolder: ['files'],
+  createGoogleDoc: ['files'],
+  renameDriveItem: ['files'],
+  deleteDriveItem: ['files'],
+  bulkDriveOperation: ['files'],
+  extractData: ['files'],
+  deleteArchivedTrip: ['settings'],
+  archiveAndReset: ['all', 'roster', 'logistics', 'pairings', 'rooms', 'attendance', 'finance', 'receipts', 'minutes', 'settings', 'files'],
+  clearCache: ['all', 'roster', 'logistics', 'pairings', 'rooms', 'attendance', 'finance', 'receipts', 'minutes', 'settings', 'files']
+};
+
+function getSyncStateKey() {
+  return 'SYNC_STATE_V1_' + getDbId();
+}
+
+function loadSyncState() {
+  const key = getSyncStateKey();
+  const cache = CacheService.getScriptCache();
+  try {
+    const raw = cache.get(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.seq === 'number' && parsed.domains) {
+        return parsed;
+      }
+    }
+  } catch (e) {}
+
+  let state = null;
+  try {
+    const propRaw = PropertiesService.getScriptProperties().getProperty(key);
+    if (propRaw) {
+      const parsed = JSON.parse(propRaw);
+      if (parsed && typeof parsed.seq === 'number' && parsed.domains) {
+        state = parsed;
+      }
+    }
+  } catch (e) {}
+
+  if (!state) {
+    const now = Date.now();
+    state = {
+      seq: 1,
+      global: now,
+      domains: {
+        roster: now,
+        logistics: now,
+        pairings: now,
+        rooms: now,
+        attendance: now,
+        finance: now,
+        receipts: now,
+        minutes: now,
+        settings: now,
+        files: now
+      },
+      events: []
+    };
+  }
+  try {
+    cache.put(key, JSON.stringify(state), 21600);
+  } catch (e) {}
+  return state;
+}
+
+function recordSyncMutation(action, reqData, result) {
+  if (ACTIVE_ARCHIVE_SHEET_ID) return null;
+  const domains = SYNC_ACTION_DOMAINS[action];
+  if (!domains || !domains.length) return null;
+  if (result && result.status === 'error') return null;
+
+  const key = getSyncStateKey();
+  const state = loadSyncState();
+  const now = Math.max(Date.now(), (state.global || 0) + 1);
+  state.seq = (state.seq || 0) + 1;
+  state.global = now;
+  if (!state.domains) state.domains = {};
+  domains.forEach(d => {
+    if (d !== 'all') state.domains[d] = now;
+  });
+
+  const ev = {
+    seq: state.seq,
+    ts: now,
+    action: action,
+    domain: domains[0],
+    domains: domains.slice(),
+    clientId: reqData && reqData.clientId ? String(reqData.clientId).slice(0, 64) : ''
+  };
+  if (reqData && reqData.juncture) ev.juncture = String(reqData.juncture);
+  if (reqData && reqData.groupName) ev.groupName = String(reqData.groupName);
+  const fId = reqData && (reqData.folderId || reqData.parentFolderId || reqData.currentFolderId);
+  if (fId) ev.folderId = String(fId);
+
+  if (!Array.isArray(state.events)) state.events = [];
+  state.events.push(ev);
+  if (state.events.length > 40) {
+    state.events = state.events.slice(-40);
+  }
+
+  const serialized = JSON.stringify(state);
+  try {
+    CacheService.getScriptCache().put(key, serialized, 21600);
+  } catch (e) {}
+  try {
+    const compact = JSON.stringify({
+      seq: state.seq,
+      global: state.global,
+      domains: state.domains,
+      events: state.events.slice(-15)
+    });
+    PropertiesService.getScriptProperties().setProperty(key, compact);
+  } catch (e) {}
+
+  if (result && typeof result === 'object') {
+    result._syncSeq = state.seq;
+    result._syncTs = now;
+  }
+  return state;
+}
+
+function getSyncState(sinceSeq) {
+  const state = loadSyncState();
+  const clientSeq = Number(sinceSeq) || 0;
+  if (clientSeq > 0 && state.seq <= clientSeq) {
+    return {
+      status: 'success',
+      changed: false,
+      seq: state.seq,
+      global: state.global
+    };
+  }
+  const recentEvents = Array.isArray(state.events)
+    ? (clientSeq > 0 ? state.events.filter(ev => ev && ev.seq > clientSeq) : state.events.slice(-10))
+    : [];
+  return {
+    status: 'success',
+    changed: true,
+    seq: state.seq,
+    global: state.global,
+    domains: state.domains || {},
+    events: recentEvents
+  };
+}
+
+// ==========================================
 // API ROUTER
 // ==========================================
 function setupSheets(ss) {
@@ -350,6 +530,10 @@ if (data.archiveId || data.archiveSheetId) {
 }
 let result = {};
 switch(data.action) {
+case 'getSyncState':
+  requireAuth(auth, 'user');
+  result = getSyncState(data.sinceSeq);
+  break;
 case 'listArchivedTrips':
   requireAuth(auth, 'admin');
   result = listArchivedTrips();
@@ -574,6 +758,13 @@ case 'deleteArchivedTrip':
   result = deleteArchivedTrip(data.targetArchiveId, data.targetSheetId, auth);
   break;
 default: throw new Error("Unknown action.");
+}
+if (SYNC_ACTION_DOMAINS[data.action] && (!result || result.status !== 'error')) {
+  try {
+    recordSyncMutation(data.action, data, result);
+  } catch (syncErr) {
+    console.warn('recordSyncMutation warning:', syncErr);
+  }
 }
 return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 } catch (error) {
@@ -1799,6 +1990,7 @@ function fetchFinanceScoped(auth, forceRebuild = false, refreshRates = false) {
         finalOptionId: rawConfig.finalOptionId || '',
         perPersonFee: rawConfig.perPersonFee || 0,
         payNowNumber: rawConfig.payNowNumber || '',
+        showPaymentSection: Boolean(rawConfig.showPaymentSection),
         feeDeviations: myFeeDeviations,
         feesReceived: myFeesReceived
       },
@@ -2816,6 +3008,7 @@ function deleteParticipant(nric) {
     sheet.deleteRow(rowIndex);
     
     removeLargeCache(getCacheKey('ROSTER'));
+    removeLargeCache(getCacheKey('LOGISTICS'));
     return { status: 'success' };
   } catch(e) {
     return { status: 'error', message: e.message };

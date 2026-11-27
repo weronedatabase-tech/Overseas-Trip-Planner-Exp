@@ -32,7 +32,7 @@ function buildOtherUI() {
                <option value="expired.html">Expired Passports</option>
                <option value="other.html" selected>Other Notes</option>
            </select>
-           <button onclick="loadOtherData()" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
+           <button onclick="loadOtherData(true)" class="p-1.5 bg-gray-100 dark:bg-gray-800 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition focus:outline-none shadow-md" title="Refresh">
                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
            </button>
        </div>
@@ -64,10 +64,10 @@ function buildOtherUI() {
   loadOtherData();
 }
 
-async function loadOtherData() {
+async function loadOtherData(forceFetch = false, silent = false) {
   await new Promise((resolve) => setTimeout(resolve, 10)); // Yield to allow browser paint
 
-  if (window.adminRosterData && window.adminRosterData.length > 0) {
+  if (!forceFetch && window.adminRosterData && window.adminRosterData.length > 0) {
     otherRosterData = window.adminRosterData;
     if (typeof applyCaregiverLabels === "function")
       applyCaregiverLabels(otherRosterData);
@@ -89,10 +89,13 @@ async function loadOtherData() {
     return;
   }
   const loader = document.getElementById("otherLoading");
-  if (loader) loader.classList.remove("hidden-force");
+  if (loader && !silent) loader.classList.remove("hidden-force");
 
   try {
-    const res = await apiCall("fetchAdminRoster");
+    const res = await apiCall("fetchAdminRoster", { bypassLocalCache: true });
+    const scroller = document.getElementById("otherTableContainer");
+    const prevTop = scroller ? scroller.scrollTop : 0;
+    const prevLeft = scroller ? scroller.scrollLeft : 0;
     otherRosterData = res.roster || [];
     window.adminRosterData = otherRosterData;
     if (typeof applyCaregiverLabels === "function")
@@ -112,12 +115,22 @@ async function loadOtherData() {
     });
 
     renderOtherTable();
+    if (scroller && silent) {
+      scroller.scrollTop = prevTop;
+      scroller.scrollLeft = prevLeft;
+    }
   } catch (e) {
-    showToast("Failed to load other details.", true);
+    if (!silent) showToast("Failed to load other details.", true);
   } finally {
-    if (loader) loader.classList.add("hidden-force");
+    if (loader && !silent) loader.classList.add("hidden-force");
   }
 }
+
+window.pollOtherNow = async function () {
+  const el = document.getElementById("tab-other");
+  if (!el || el.classList.contains("hidden-force")) return;
+  await loadOtherData(true, true);
+};
 
 function handleOtherSearch() {
   otherSearchQuery = document

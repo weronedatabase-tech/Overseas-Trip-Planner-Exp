@@ -620,7 +620,14 @@ async function submitAdminProfileEdit(btn) {
     if (res.status === "success") {
       showToast("Participant updated successfully.");
       closeParticipantSummaryModal();
-      setTimeout(() => window.location.reload(), 800);
+      if (typeof window.dispatchRealtimeUpdate === "function") {
+        window.dispatchRealtimeUpdate({
+          type: "sync:local",
+          action: "adminUpdateParticipant",
+          domain: "roster",
+          domains: ["roster", "logistics", "finance"],
+        });
+      }
     } else {
       throw new Error(res.message || "Update failed");
     }
@@ -654,7 +661,16 @@ async function deleteParticipant(nric) {
     if (res.status === "success") {
       showToast("Participant deleted & archived.");
       closeParticipantSummaryModal();
-      if (typeof loadParticipantsData === "function") loadParticipantsData();
+      if (typeof window.dispatchRealtimeUpdate === "function") {
+        window.dispatchRealtimeUpdate({
+          type: "sync:local",
+          action: "deleteParticipant",
+          domain: "roster",
+          domains: ["roster", "logistics", "finance"],
+        });
+      } else if (typeof loadParticipantsData === "function") {
+        loadParticipantsData();
+      }
     } else {
       throw new Error(res.message || "Delete failed");
     }
@@ -1337,21 +1353,45 @@ window.refreshSettingsRealtime = async function () {
     return;
   }
   try {
-    const config = await apiCall("getSettings", { force: true });
+    const config = await apiCall("getSettings", { bypassLocalCache: true });
     if (config && config.status !== "error") {
       appSettings = config;
       localStorage.setItem("appSettings", JSON.stringify(appSettings));
       if (typeof applyHydrationDOMUpdates === "function") {
         applyHydrationDOMUpdates();
       }
-      if (
-        window.location.pathname.endsWith("settings.html") &&
-        typeof buildSettingsUI === "function" &&
-        document.activeElement &&
-        document.activeElement.tagName !== "INPUT" &&
-        document.activeElement.tagName !== "TEXTAREA"
-      ) {
-        buildSettingsUI();
+      if (window.location.pathname.endsWith("settings.html")) {
+        // Surgical non-destructive Settings refresh (preserves scroll, modals, and typed inputs)
+        if (typeof applyAdminVisuals === "function") applyAdminVisuals();
+        if (typeof renderJunctureList === "function") {
+          renderJunctureList(appSettings.junctures || []);
+        }
+        if (typeof renderGroupList === "function") {
+          renderGroupList(appSettings.projectGroups || []);
+        }
+        if (typeof renderDriveAccessList === "function") {
+          renderDriveAccessList(appSettings.driveAccess || []);
+        }
+        if (typeof renderCommList === "function") {
+          renderCommList(appSettings.committee || []);
+        }
+        if (typeof renderHelplineList === "function") {
+          renderHelplineList(appSettings.helpline || []);
+        }
+        const activeId = document.activeElement ? document.activeElement.id : "";
+        if (
+          typeof syncTripDateConfigInputs === "function" &&
+          activeId !== "tripStartDate" &&
+          activeId !== "tripEndDate"
+        ) {
+          syncTripDateConfigInputs(appSettings.tripStartDate || "", appSettings.tripEndDate || "");
+        }
+        if (
+          window.ArchiveMode &&
+          typeof window.ArchiveMode.renderArchivedTripsSection === "function"
+        ) {
+          window.ArchiveMode.renderArchivedTripsSection();
+        }
       }
     }
   } catch (e) {}

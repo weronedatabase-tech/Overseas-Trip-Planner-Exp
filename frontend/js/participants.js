@@ -559,6 +559,94 @@ async function loadParticipantsData() {
   }
 }
 
+let isRosterPolling = false;
+window.pollRosterNow = async function () {
+  const tabPart = document.getElementById("tab-participants");
+  if (!tabPart || tabPart.classList.contains("hidden-force")) return;
+  if (isRosterPolling) return;
+  if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+
+  isRosterPolling = true;
+  try {
+    const [rostRes, logRes] = await Promise.all([
+      apiCall("fetchAdminRoster", { bypassLocalCache: true }).catch(() => null),
+      apiCall("fetchLogistics", { bypassLocalCache: true }).catch(() => null),
+    ]);
+    if (!rostRes || !Array.isArray(rostRes.roster)) return;
+
+    const nextRoster = rostRes.roster;
+    if (typeof processDisplayNames === "function") processDisplayNames(nextRoster);
+    if (typeof applyCaregiverLabels === "function") applyCaregiverLabels(nextRoster);
+
+    const prevSig = JSON.stringify(adminRosterData);
+    adminRosterData = nextRoster;
+    window.adminRosterData = nextRoster;
+
+    if (logRes && logRes.participants) {
+      globalLogistics = logRes;
+      if (typeof applyLogisticsToRoster === "function") {
+        applyLogisticsToRoster(logRes);
+      }
+      try {
+        sessionStorage.setItem("cachedLogistics", JSON.stringify(logRes));
+        localStorage.setItem("cachedLogistics", JSON.stringify(logRes));
+      } catch (e) {}
+    }
+
+    try {
+      sessionStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+      localStorage.setItem("cachedAdminRoster", JSON.stringify(adminRosterData));
+    } catch (e) {}
+
+    traineeShortNames = {};
+    adminRosterData.forEach((p) => {
+      if (p.role === "TRAINEE" && p.fullName) {
+        traineeShortNames[String(p.fullName || "").trim().toUpperCase()] = String(
+          p.shortName || p.fullName || "",
+        )
+          .trim()
+          .toUpperCase();
+      }
+    });
+
+    if (JSON.stringify(adminRosterData) !== prevSig) {
+      const scroller = document.getElementById("rosterTableContainer");
+      const prevTop = scroller ? scroller.scrollTop : 0;
+      const prevLeft = scroller ? scroller.scrollLeft : 0;
+      renderRosterTable();
+      if (typeof window.populateLogisticsDropdown === "function") {
+        window.populateLogisticsDropdown();
+      }
+      if (scroller) {
+        scroller.scrollTop = prevTop;
+        scroller.scrollLeft = prevLeft;
+      }
+      // Refresh open global participant modal if in read-only view mode (not editing)
+      const gpm = document.getElementById("globalParticipantModal");
+      const gpmEdit = document.getElementById("gpm-edit");
+      if (
+        gpm &&
+        !gpm.classList.contains("hidden-force") &&
+        gpmEdit &&
+        gpmEdit.classList.contains("hidden-force") &&
+        window._currentModalParticipant &&
+        typeof window.openParticipantDetailsModal === "function"
+      ) {
+        const updatedP = adminRosterData.find(
+          (x) => x.nric === window._currentModalParticipant.nric,
+        );
+        if (updatedP) {
+          window.openParticipantDetailsModal(updatedP.nric);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("pollRosterNow warning:", e);
+  } finally {
+    isRosterPolling = false;
+  }
+};
+
 function handleRosterSearch() {
   rosterSearchQuery = document
     .getElementById("rosterSearch")

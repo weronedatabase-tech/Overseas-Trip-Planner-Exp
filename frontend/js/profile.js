@@ -9,6 +9,174 @@ let loadedGroupMembers = [];
 let loadedLogisticsGroup = "";
 let isCurrentUserGroupIC = false;
 let loadedIcJunctures = [];
+let isProfilePolling = false;
+let pendingProfileRemoteRender = false;
+let lastProfileSnapshotSig = "";
+let isSavingProfileEdit = false;
+
+function computeProfileSnapshotSig() {
+  try {
+    return JSON.stringify({
+      family: loadedFamily,
+      groupMembers: loadedGroupMembers,
+      logisticsGroup: loadedLogisticsGroup,
+      isGroupIC: isCurrentUserGroupIC,
+      icJunctures: loadedIcJunctures,
+      finConfig: finConfig,
+      myReceipts: myReceipts,
+      logistics: globalLogistics,
+      additionalProfiles: additionalProfiles,
+      settings: {
+        allowEdits: appSettings?.allowEdits,
+        tripTitle: appSettings?.tripTitle,
+        tripYear: appSettings?.tripYear,
+        tripEndDate: appSettings?.tripEndDate,
+        tripInfoDocId: appSettings?.tripInfoDocId,
+        tripInfoDocUrl: appSettings?.tripInfoDocUrl,
+        tripInfoDocName: appSettings?.tripInfoDocName,
+        projectGroups: appSettings?.projectGroups,
+        projectColors: appSettings?.projectColors,
+        junctures: appSettings?.junctures,
+        helpline: appSettings?.helpline,
+        committee: appSettings?.committee,
+      },
+    });
+  } catch (e) {
+    return String(Date.now());
+  }
+}
+
+function isProfileInteractionBusy() {
+  if (isSavingProfileEdit) return true;
+  if (document.querySelector('form[id^="profEdit_"]:not(.hidden-force)')) return true;
+  if (document.querySelector('#datePickerSheet:not(.hidden-force)')) return true;
+  if (document.querySelector('#receiptImageModal:not(.hidden-force)')) return true;
+  if (document.getElementById("pairing-details-modal")) return true;
+  if (document.getElementById("roomOccupantsModal")) return true;
+  if (document.getElementById("icExportModal")) return true;
+  if (document.querySelector('#appGlobalDialogModal:not(.hidden-force)')) return true;
+
+  const recSubmitBtn = document.getElementById("recSubmitBtn");
+  if (recSubmitBtn && recSubmitBtn.disabled) return true;
+  const recFile = document.getElementById("recFile");
+  if (recFile && recFile.files && recFile.files.length > 0) return true;
+  const recOverwriteId = document.getElementById("recOverwriteId");
+  if (recOverwriteId && recOverwriteId.value) return true;
+  const activeEl = document.activeElement;
+  if (activeEl && activeEl.closest && activeEl.closest("#uploadReceiptForm")) return true;
+  if (activeEl && (activeEl.id === "myGroupSearchInput" || activeEl.id === "myAttSearchInput")) return true;
+  const recRemarks = document.getElementById("recRemarks");
+  if (recRemarks && recRemarks.value.trim() !== "") return true;
+  return false;
+}
+
+function getActiveProfileSubTab() {
+  const secGroup = document.getElementById("section-my-group");
+  const secAttendance = document.getElementById("section-my-attendance");
+  if (secGroup && !secGroup.classList.contains("hidden-force")) return "group";
+  if (secAttendance && !secAttendance.classList.contains("hidden-force")) return "attendance";
+  return "profile";
+}
+
+function renderProfilePreservingState() {
+  const activeTab = getActiveProfileSubTab();
+  const tabContainer = document.getElementById("tabContainer");
+  const prevScrollTop = tabContainer ? tabContainer.scrollTop : 0;
+  const prevGroupSearch = document.getElementById("myGroupSearchInput")?.value || "";
+  const prevAttSearch = document.getElementById("myAttSearchInput")?.value || "";
+  const prevJuncture = document.getElementById("icJunctureSelect")?.value || lastFetchedJuncture || "";
+
+  renderProfileFullView();
+
+  if (isCurrentUserGroupIC && loadedGroupMembers.length > 0) {
+    if (activeTab === "group" || activeTab === "attendance") {
+      window.switchProfileTab(activeTab);
+    }
+    const grpSearchEl = document.getElementById("myGroupSearchInput");
+    if (grpSearchEl && prevGroupSearch) {
+      grpSearchEl.value = prevGroupSearch;
+      if (typeof window.filterMyGroup === "function") window.filterMyGroup();
+    }
+    refreshIcJunctureOptions(prevJuncture);
+    if (activeTab === "attendance") {
+      const attSearchEl = document.getElementById("myAttSearchInput");
+      if (attSearchEl && prevAttSearch) {
+        attSearchEl.value = prevAttSearch;
+      }
+      if (typeof window.renderGroupAttendance === "function") {
+        window.renderGroupAttendance(false, true);
+      }
+    }
+  }
+
+  if (tabContainer) {
+    tabContainer.scrollTop = prevScrollTop;
+  }
+}
+
+function flushPendingProfileRender() {
+  if (!pendingProfileRemoteRender) return;
+  if (isProfileInteractionBusy()) return;
+  pendingProfileRemoteRender = false;
+  renderProfilePreservingState();
+}
+
+window.flushPendingProfileRender = flushPendingProfileRender;
+
+async function fetchSecondaryAdditionalProfiles() {
+  const nextAdditional = {};
+  const selfProfile =
+    loadedFamily.find((f) => f.nric === currentUser.nric) || loadedFamily[0];
+  const tripRole = selfProfile ? String(selfProfile.role || "").toUpperCase() : "";
+  if (currentUser && globalLogistics && globalLogistics.pairings) {
+    const nricsToFetch = new Set();
+    if (tripRole === "VOLUNTEER") {
+      const myPairs = globalLogistics.pairings.filter(
+        (p) => p.volNric === currentUser.nric && p.status === "ACTIVE",
+      );
+      myPairs.forEach((p) => {
+        globalLogistics.pairings
+          .filter(
+            (op) =>
+              op.traineeNric === p.traineeNric &&
+              op.volNric !== currentUser.nric &&
+              op.status === "ACTIVE",
+          )
+          .forEach((op) => {
+            nricsToFetch.add(op.volNric);
+          });
+      });
+    } else if (tripRole === "CAREGIVER") {
+      const myPoc = (selfProfile && selfProfile.pocNric) || currentUser.nric;
+      const myTrainees = (globalLogistics.participants || []).filter(
+        (x) => x.role === "TRAINEE" && (x.pocNric || x.nric) === myPoc,
+      );
+      myTrainees.forEach((t) => {
+        const pairs = globalLogistics.pairings.filter(
+          (p) => p.traineeNric === t.nric && p.status === "ACTIVE",
+        );
+        pairs.forEach((p) => nricsToFetch.add(p.volNric));
+      });
+    }
+
+    const toFetch = Array.from(nricsToFetch).slice(0, 10);
+    if (toFetch.length > 0) {
+      await Promise.all(
+        toFetch.map(async (n) => {
+          try {
+            const res = await apiCall("getProfile", { nric: n, bypassLocalCache: true });
+            if (res && res.status === "success" && res.family) {
+              res.family.forEach((f) => {
+                nextAdditional[f.nric] = f;
+              });
+            }
+          } catch (e) {}
+        }),
+      );
+    }
+  }
+  additionalProfiles = nextAdditional;
+}
 
 async function loadProfileData() {
   const tabProfile = document.getElementById("tab-profile");
@@ -55,58 +223,9 @@ async function loadProfileData() {
     );
     globalLogistics = logRes || null;
 
-    additionalProfiles = {};
-    const selfProfile =
-      loadedFamily.find((f) => f.nric === currentUser.nric) || loadedFamily[0];
-    const tripRole = selfProfile ? String(selfProfile.role || "").toUpperCase() : "";
-    if (currentUser && globalLogistics && globalLogistics.pairings) {
-      const nricsToFetch = new Set();
-      if (tripRole === "VOLUNTEER") {
-        const myPairs = globalLogistics.pairings.filter(
-          (p) => p.volNric === currentUser.nric && p.status === "ACTIVE",
-        );
-        myPairs.forEach((p) => {
-          globalLogistics.pairings
-            .filter(
-              (op) =>
-                op.traineeNric === p.traineeNric &&
-                op.volNric !== currentUser.nric &&
-                op.status === "ACTIVE",
-            )
-            .forEach((op) => {
-              nricsToFetch.add(op.volNric);
-            });
-        });
-      } else if (tripRole === "CAREGIVER") {
-        const myPoc = (selfProfile && selfProfile.pocNric) || currentUser.nric;
-        const myTrainees = (globalLogistics.participants || []).filter(
-          (x) => x.role === "TRAINEE" && (x.pocNric || x.nric) === myPoc,
-        );
-        myTrainees.forEach((t) => {
-          const pairs = globalLogistics.pairings.filter(
-            (p) => p.traineeNric === t.nric && p.status === "ACTIVE",
-          );
-          pairs.forEach((p) => nricsToFetch.add(p.volNric));
-        });
-      }
+    await fetchSecondaryAdditionalProfiles();
 
-      const toFetch = Array.from(nricsToFetch).slice(0, 10);
-      if (toFetch.length > 0) {
-        await Promise.all(
-          toFetch.map(async (n) => {
-            try {
-              const res = await apiCall("getProfile", { nric: n });
-              if (res && res.status === "success" && res.family) {
-                res.family.forEach((f) => {
-                  additionalProfiles[f.nric] = f;
-                });
-              }
-            } catch (e) {}
-          }),
-        );
-      }
-    }
-
+    lastProfileSnapshotSig = computeProfileSnapshotSig();
     renderProfileFullView();
   } catch (e) {
     if (tabProfile) {
@@ -1252,9 +1371,11 @@ function enableEditMode(i) {
 function cancelEditMode(i) {
   document.getElementById(`profEdit_${i}`).classList.add("hidden-force");
   document.getElementById(`profCard_${i}`).classList.remove("hidden-force");
+  setTimeout(flushPendingProfileRender, 50);
 }
 
 async function saveProfileEdit(i, btn) {
+  isSavingProfileEdit = true;
   setBtnLoading(btn, true);
   const roleVal = document.getElementById(`edRole_${i}`).value;
   const relatedVal = document.getElementById(`edRelated_${i}`)
@@ -1293,10 +1414,13 @@ async function saveProfileEdit(i, btn) {
   try {
     await apiCall("updateProfile", { member: updated });
     showToast("Profile Updated!");
-    setTimeout(() => window.location.reload(), 800);
+    isSavingProfileEdit = false;
+    cancelEditMode(i);
+    await window.pollProfileNow(["roster", "logistics", "finance"]);
   } catch (e) {
     showToast(e.message, true);
   } finally {
+    isSavingProfileEdit = false;
     setBtnLoading(btn, false);
   }
 }
@@ -1932,26 +2056,39 @@ let lastFetchedJuncture = "";
 let icSyncTimeout = null;
 let isIcAttendanceSyncing = false;
 
-window.renderGroupAttendance = async function (forceRebuild = false) {
+function refreshIcJunctureOptions(preferredValue) {
+  const select = document.getElementById("icJunctureSelect");
+  if (!select) return;
+  const currentVal = preferredValue !== undefined ? preferredValue : select.value;
+
+  let adminHtml = "";
+  (appSettings.junctures || [])
+    .filter((j) => !String(j).startsWith("__BUS__"))
+    .forEach((j) => {
+      adminHtml += `<option value="${j}">${j}</option>`;
+    });
+  const optAdmin = document.getElementById("optgroup-admin-junctures");
+  if (optAdmin) optAdmin.innerHTML = adminHtml;
+
+  let icHtml = "";
+  (loadedIcJunctures || []).forEach((j) => {
+    icHtml += `<option value="[IC] ${j}">${j}</option>`;
+  });
+  const optIc = document.getElementById("optgroup-ic-junctures");
+  if (optIc) optIc.innerHTML = icHtml;
+
+  if (currentVal) {
+    const exists = Array.from(select.options).some((o) => o.value === currentVal);
+    if (exists) select.value = currentVal;
+  }
+}
+
+window.renderGroupAttendance = async function (forceRebuild = false, preserveSearch = false) {
   const select = document.getElementById("icJunctureSelect");
   if (!select) return;
 
   if (select.options.length <= 1) {
-    let adminHtml = "";
-    (appSettings.junctures || [])
-      .filter((j) => !String(j).startsWith("__BUS__"))
-      .forEach((j) => {
-        adminHtml += `<option value="${j}">${j}</option>`;
-      });
-    const optAdmin = document.getElementById("optgroup-admin-junctures");
-    if (optAdmin) optAdmin.innerHTML = adminHtml;
-
-    let icHtml = "";
-    loadedIcJunctures.forEach((j) => {
-      icHtml += `<option value="[IC] ${j}">${j}</option>`;
-    });
-    const optIc = document.getElementById("optgroup-ic-junctures");
-    if (optIc) optIc.innerHTML = icHtml;
+    refreshIcJunctureOptions();
   }
 
   const juncture = select.value;
@@ -1973,6 +2110,7 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
       const res = await apiCall("fetchAttendanceData", {
         juncture: juncture,
         forceRebuild,
+        bypassLocalCache: true,
       });
       currentIcAttendanceData = res.data || {};
       lastFetchedJuncture = juncture;
@@ -1989,11 +2127,14 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
     }
   }
 
-  pendingIcAttendanceUpdates.clear();
+  if (!preserveSearch && pendingIcAttendanceUpdates.size === 0) {
+    pendingIcAttendanceUpdates.clear();
+  }
 
   if (searchWrapper) searchWrapper.classList.remove("hidden-force");
   const searchInput = document.getElementById("myAttSearchInput");
-  if (searchInput) searchInput.value = "";
+  const preservedQuery = preserveSearch && searchInput ? searchInput.value : "";
+  if (searchInput && !preserveSearch) searchInput.value = "";
 
   let html = `
     <div class="flex flex-col gap-2" id="myAttMembersGrid">`;
@@ -2079,8 +2220,17 @@ window.renderGroupAttendance = async function (forceRebuild = false) {
   });
 
   html += "</div>";
+  const tabContainer = document.getElementById("tabContainer");
+  const prevScrollTop = tabContainer ? tabContainer.scrollTop : 0;
   const finalContainer = document.getElementById("icAttendanceListContainer") || container;
   if (finalContainer) finalContainer.innerHTML = html;
+  if (preservedQuery && searchInput) {
+    searchInput.value = preservedQuery;
+    if (typeof window.filterMyAtt === "function") window.filterMyAtt();
+  }
+  if (tabContainer && preserveSearch) {
+    tabContainer.scrollTop = prevScrollTop;
+  }
 };
 
 window.toggleIcAttendance = function (nric) {
@@ -2140,6 +2290,7 @@ window.toggleIcAttendance = function (nric) {
 };
 
 window.executeIcAttendanceSync = async function () {
+  icSyncTimeout = null;
   if (pendingIcAttendanceUpdates.size === 0) return;
   const junctureEl = document.getElementById("icJunctureSelect");
   const juncture = junctureEl ? junctureEl.value : null;
@@ -2201,6 +2352,7 @@ window.pollIcAttendanceNow = async function () {
     !select ||
     !container ||
     isIcAttendanceSyncing ||
+    icSyncTimeout !== null ||
     pendingIcAttendanceUpdates.size > 0
   )
     return;
@@ -2213,20 +2365,150 @@ window.pollIcAttendanceNow = async function () {
     const res = await apiCall("fetchAttendanceData", {
       juncture,
       forceRebuild: false,
+      bypassLocalCache: true,
     });
     if (
       lastLocalChange > fetchStartTime ||
       isIcAttendanceSyncing ||
+      icSyncTimeout !== null ||
       pendingIcAttendanceUpdates.size > 0
     )
       return;
     const incoming = res.data || {};
     if (JSON.stringify(incoming) !== JSON.stringify(currentIcAttendanceData)) {
       currentIcAttendanceData = incoming;
-      renderGroupAttendance(false);
+      renderGroupAttendance(false, true);
     }
   } catch (e) {}
 };
+
+window.pollProfileNow = async function (domains, msg) {
+  const tabProfile = document.getElementById("tab-profile");
+  if (!tabProfile || !currentUser || currentUser.role === "admin") return;
+
+  const domainList = Array.isArray(domains) ? domains : [domains || "all"];
+  const has = (...ds) => domainList.includes("all") || ds.some((d) => domainList.includes(d));
+
+  // Always refresh Group IC Attendance immediately if attendance/settings changed
+  if (has("attendance", "settings") && isCurrentUserGroupIC) {
+    if (typeof window.pollIcAttendanceNow === "function") {
+      window.pollIcAttendanceNow();
+    }
+  }
+
+  // Fast path: receipts-only change -> update #myReceiptsContainer directly (non-destructive)
+  const needsFullRefresh = has("roster", "logistics", "pairings", "rooms", "finance", "settings", "files");
+  if (!needsFullRefresh && has("receipts")) {
+    try {
+      const recRes = await apiCall("fetchReceipts", { bypassLocalCache: true });
+      const familyNrics = loadedFamily.map((f) => f.nric);
+      if (!familyNrics.includes(currentUser.nric)) familyNrics.push(currentUser.nric);
+      const nextReceipts = (recRes.receipts || []).filter(
+        (r) =>
+          (familyNrics.includes(r.uploaderNric) || familyNrics.includes(r.paidByNric)) &&
+          !r.isDeleted,
+      );
+      if (JSON.stringify(nextReceipts) !== JSON.stringify(myReceipts)) {
+        myReceipts = nextReceipts;
+        lastProfileSnapshotSig = computeProfileSnapshotSig();
+        if (typeof renderMyReceiptsContainer === "function") {
+          renderMyReceiptsContainer();
+        }
+      }
+    } catch (e) {}
+    return;
+  }
+
+  if (!needsFullRefresh) return;
+  if (isProfilePolling) return;
+  isProfilePolling = true;
+
+  try {
+    const needProfile = has("roster", "logistics", "settings");
+    const needLogistics = has("roster", "logistics", "pairings", "rooms");
+    const needFinance = has("finance", "roster", "receipts");
+    const needReceipts = has("receipts", "finance", "roster");
+
+    const [profRes, logRes, finRes, recRes] = await Promise.all([
+      needProfile
+        ? apiCall("getProfile", { nric: currentUser.nric, bypassLocalCache: true }).catch(() => null)
+        : Promise.resolve(null),
+      needLogistics
+        ? apiCall("fetchLogistics", { bypassLocalCache: true }).catch(() => null)
+        : Promise.resolve(null),
+      needFinance
+        ? apiCall("fetchFinance", { bypassLocalCache: true }).catch(() => null)
+        : Promise.resolve(null),
+      needReceipts
+        ? apiCall("fetchReceipts", { bypassLocalCache: true }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+
+    if (profRes && profRes.status === "success") {
+      loadedFamily = profRes.family || [];
+      loadedGroupMembers = profRes.groupMembers || [];
+      loadedLogisticsGroup = profRes.logisticsGroup || "";
+      isCurrentUserGroupIC = profRes.isGroupIC === true;
+      loadedIcJunctures = profRes.icJunctures || [];
+    }
+    if (logRes && logRes.status !== "error") {
+      globalLogistics = logRes;
+    }
+    if (finRes && finRes.status !== "error") {
+      finConfig = finRes.data?.config || {};
+      finOptions = finRes.data?.options || [];
+      if (finRes.rates && Object.keys(finRes.rates).length > 0) {
+        globalFinanceRates = finRes.rates;
+      }
+    }
+    if (recRes && recRes.status !== "error") {
+      const familyNrics = loadedFamily.map((f) => f.nric);
+      if (!familyNrics.includes(currentUser.nric)) familyNrics.push(currentUser.nric);
+      myReceipts = (recRes.receipts || []).filter(
+        (r) =>
+          (familyNrics.includes(r.uploaderNric) || familyNrics.includes(r.paidByNric)) &&
+          !r.isDeleted,
+      );
+    }
+
+    if (needProfile || needLogistics) {
+      await fetchSecondaryAdditionalProfiles();
+    }
+
+    const nextSig = computeProfileSnapshotSig();
+    if (nextSig === lastProfileSnapshotSig) {
+      return; // Nothing relevant to this participant/IC changed -> zero DOM churn!
+    }
+    lastProfileSnapshotSig = nextSig;
+
+    if (isCurrentUserGroupIC) {
+      refreshIcJunctureOptions();
+    }
+
+    if (isProfileInteractionBusy()) {
+      pendingProfileRemoteRender = true;
+      return;
+    }
+
+    renderProfilePreservingState();
+  } catch (e) {
+    console.warn("pollProfileNow warning:", e);
+  } finally {
+    isProfilePolling = false;
+  }
+};
+
+// Flush any deferred remote profile update once a modal closes or focus leaves upload form
+document.addEventListener("focusout", () => {
+  if (pendingProfileRemoteRender) {
+    setTimeout(flushPendingProfileRender, 150);
+  }
+});
+document.addEventListener("click", () => {
+  if (pendingProfileRemoteRender) {
+    setTimeout(flushPendingProfileRender, 200);
+  }
+});
 
 window.setIcSyncButtonState = function (state) {
   const btn = document.getElementById("icSyncBtn");

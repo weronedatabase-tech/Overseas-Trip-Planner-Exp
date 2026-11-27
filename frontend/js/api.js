@@ -82,6 +82,45 @@ function getStoredAuthToken() {
   return "";
 }
 
+const DOMAIN_CACHE_PREFIXES = {
+  roster: ["fetchAdminRoster", "fetchLogistics", "getProfile", "getPublicTrainees", "fetchFinance"],
+  logistics: ["fetchLogistics", "fetchAdminRoster", "getProfile", "fetchAttendanceData"],
+  pairings: ["fetchPairingsOnly", "fetchLogistics", "getProfile"],
+  rooms: ["fetchRoomsOnly", "fetchLogistics", "getProfile"],
+  attendance: ["fetchAttendanceData", "fetchLogistics"],
+  finance: ["fetchFinance", "fetchReceipts", "getProfile"],
+  receipts: ["fetchReceipts", "fetchFinance", "getProfile"],
+  minutes: ["fetchMinutes"],
+  settings: ["getSettings", "fetchAttendanceData", "fetchLogistics", "fetchAdminRoster", "getProfile"],
+  files: ["getSettings"],
+  all: ["ALL"],
+};
+
+function invalidateLocalApiCacheForDomains(domains) {
+  const list = Array.isArray(domains) ? domains : [domains];
+  const prefixes = new Set();
+  for (const d of list) {
+    const mapped = DOMAIN_CACHE_PREFIXES[d];
+    if (!mapped) continue;
+    for (const p of mapped) prefixes.add(p);
+  }
+  if (prefixes.has("ALL")) {
+    API_CACHE.clear();
+    return;
+  }
+  if (prefixes.size === 0) return;
+  for (const key of API_CACHE.keys()) {
+    for (const p of prefixes) {
+      if (key.startsWith(p + "::")) {
+        API_CACHE.delete(key);
+        break;
+      }
+    }
+  }
+}
+
+window.invalidateLocalApiCacheForDomains = invalidateLocalApiCacheForDomains;
+
 function invalidateLocalApiCache(action) {
   const entry = MUTATION_INVALIDATION_MAP[action];
   if (!entry) return null;
@@ -168,6 +207,8 @@ async function apiCall(action, payload = {}, retries = 2) {
     payload && typeof payload === "object" && !Array.isArray(payload)
       ? { ...payload }
       : {};
+  const bypassLocalCache = Boolean(safePayload.bypassLocalCache);
+  delete safePayload.bypassLocalCache;
   const forceRefresh = Boolean(safePayload.force || safePayload.forceRebuild);
   const authToken = getStoredAuthToken();
 
@@ -175,6 +216,9 @@ async function apiCall(action, payload = {}, retries = 2) {
     action: action,
     ...safePayload,
   };
+  if (action !== "getSyncState" && window.CLIENT_ID) {
+    reqBody.clientId = window.CLIENT_ID;
+  }
   if (authToken) {
     reqBody.authToken = authToken;
   }
@@ -188,7 +232,7 @@ async function apiCall(action, payload = {}, retries = 2) {
   delete cachePayloadCopy.forceRebuild;
   const cacheKey = `${action}::${activeArchive ? activeArchive.archiveId : "live"}::${authToken ? authToken.slice(-8) : "anon"}::${JSON.stringify(cachePayloadCopy)}`;
 
-  if (isCacheable && !forceRefresh) {
+  if (isCacheable && !forceRefresh && !bypassLocalCache) {
     const cached = API_CACHE.get(cacheKey);
     if (cached && Date.now() - cached.ts < API_CACHE_TTL_MS) {
       return JSON.parse(cached.raw);
@@ -258,7 +302,7 @@ async function apiCall(action, payload = {}, retries = 2) {
   };
 
   const promise = executeFetch();
-  if (isCacheable && !forceRefresh) {
+  if (isCacheable && !forceRefresh && !bypassLocalCache) {
     API_INFLIGHT.set(cacheKey, promise);
   }
 
@@ -270,11 +314,16 @@ async function apiCall(action, payload = {}, retries = 2) {
       API_CACHE.set(cacheKey, { ts: Date.now(), raw: rawText });
     } else if (mutationDomain) {
       invalidateLocalApiCache(action);
+      if (parsed && typeof parsed._syncSeq === "number" && window.LiveSync && typeof window.LiveSync.noteLocalSeq === "function") {
+        window.LiveSync.noteLocalSeq(parsed._syncSeq);
+      }
       if (window.LiveSync && typeof window.LiveSync.broadcast === "function") {
         window.LiveSync.broadcast({
           type: "sync:update",
           action: action,
           domain: mutationDomain,
+          domains: [mutationDomain],
+          syncSeq: parsed && parsed._syncSeq ? parsed._syncSeq : undefined,
           clientId: window.CLIENT_ID,
           ts: Date.now(),
         });
@@ -282,52 +331,77 @@ async function apiCall(action, payload = {}, retries = 2) {
     }
     return parsed;
   } finally {
-    if (isCacheable && !forceRefresh) {
+    if (isCacheable && !forceRefresh && !bypassLocalCache) {
       API_INFLIGHT.delete(cacheKey);
     }
   }
 }
 
 // ==========================================
-// CROSS-TAB REAL-TIME DISPATCHER (NO NODE SERVER NEEDED)
+// UNIFIED REAL-TIME DISPATCHER (CROSS-DEVICE + CROSS-TAB)
 // ==========================================
 window.dispatchRealtimeUpdate = async function (msg) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) {
     return;
   }
   if (!msg) return;
-  const domain = msg.domain || "all";
+
+  const domainSet = new Set();
+  if (Array.isArray(msg.domains)) {
+    msg.domains.forEach((d) => {
+      if (d) domainSet.add(d);
+    });
+  }
+  if (msg.domain) domainSet.add(msg.domain);
+  if (domainSet.size === 0) domainSet.add("all");
+
+  const has = (...ds) => domainSet.has("all") || ds.some((d) => domainSet.has(d));
 
   if (msg.action) {
     invalidateLocalApiCache(msg.action);
   }
+  invalidateLocalApiCacheForDomains(Array.from(domainSet));
 
   try {
-    if (domain === "attendance" || domain === "settings" || domain === "all") {
-      if (typeof window.pollAttendanceNow === "function") window.pollAttendanceNow();
-      if (typeof window.pollIcAttendanceNow === "function") window.pollIcAttendanceNow();
-    }
-    if (domain === "pairings" || domain === "logistics" || domain === "all") {
-      if (typeof window.pollPairingsNow === "function") window.pollPairingsNow();
-    }
-    if (domain === "rooms" || domain === "logistics" || domain === "all") {
-      if (typeof window.pollRoomsNow === "function") window.pollRoomsNow();
-    }
-    if (domain === "logistics" || domain === "roster" || domain === "all") {
-      if (typeof window.pollLogisticsAssignmentsNow === "function") {
-        window.pollLogisticsAssignmentsNow();
-      }
-    }
-    if (domain === "finance" || domain === "receipts" || domain === "all") {
-      if (typeof window.pollFinanceNow === "function") window.pollFinanceNow();
-    }
-    if (domain === "minutes" || domain === "all") {
-      if (typeof window.pollMinutesNow === "function") window.pollMinutesNow();
-    }
-    if (domain === "settings" || domain === "all") {
+    if (has("settings")) {
       if (typeof window.refreshSettingsRealtime === "function") {
-        window.refreshSettingsRealtime();
+        await window.refreshSettingsRealtime(msg);
       }
+    }
+    if (has("roster", "logistics", "pairings", "rooms", "settings")) {
+      if (typeof window.pollRosterNow === "function") window.pollRosterNow(msg);
+      if (typeof window.pollDietNow === "function") window.pollDietNow(msg);
+      if (typeof window.pollMedicalNow === "function") window.pollMedicalNow(msg);
+      if (typeof window.pollExpiredNow === "function") window.pollExpiredNow(msg);
+      if (typeof window.pollOtherNow === "function") window.pollOtherNow(msg);
+    }
+    if (has("attendance", "settings", "logistics", "roster")) {
+      if (typeof window.pollAttendanceNow === "function") window.pollAttendanceNow(msg);
+    }
+    if (has("pairings", "logistics", "roster")) {
+      if (typeof window.pollPairingsNow === "function") window.pollPairingsNow(msg);
+    }
+    if (has("rooms", "logistics", "roster")) {
+      if (typeof window.pollRoomsNow === "function") window.pollRoomsNow(msg);
+    }
+    if (has("logistics", "roster", "settings")) {
+      if (typeof window.pollLogisticsAssignmentsNow === "function") {
+        window.pollLogisticsAssignmentsNow(msg);
+      }
+    }
+    if (has("finance", "receipts", "roster", "logistics")) {
+      if (typeof window.pollFinanceNow === "function") window.pollFinanceNow(msg);
+    }
+    if (has("minutes")) {
+      if (typeof window.pollMinutesNow === "function") window.pollMinutesNow(msg);
+    }
+    if (has("files", "settings")) {
+      if (typeof window.pollFilesNow === "function") window.pollFilesNow(msg);
+    }
+    if (typeof window.pollProfileNow === "function") {
+      window.pollProfileNow(Array.from(domainSet), msg);
+    } else if (has("attendance", "settings") && typeof window.pollIcAttendanceNow === "function") {
+      window.pollIcAttendanceNow(msg);
     }
     if (Array.isArray(window.__realtimeListeners)) {
       window.__realtimeListeners.forEach((fn) => {

@@ -78,6 +78,7 @@ async function loadInitialMinutes() {
     startMinutesPolling();
     const loader = document.getElementById("minutesLoadingOverlay");
     if (loader) loader.classList.add("hidden-force");
+    window.pollMinutesNow();
     return;
   }
   const overlay = document.getElementById("minutesLoadingOverlay");
@@ -252,8 +253,8 @@ window.pollMinutesNow = async function () {
   const fetchStartTime = Date.now();
 
   try {
-    const res = await apiCall("fetchMinutes");
-    if (lastLocalChange > fetchStartTime) return;
+    const res = await apiCall("fetchMinutes", { bypassLocalCache: true });
+    if (lastLocalChange > fetchStartTime || pendingMinutesUpdates.size > 0) return;
 
     if (res.minutes) {
       let hasRemoteChanges = false;
@@ -279,7 +280,7 @@ window.pollMinutesNow = async function () {
 function startMinutesPolling() {
   if (minutesPollInterval) clearInterval(minutesPollInterval);
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
-  minutesPollInterval = setInterval(window.pollMinutesNow, 8000);
+  minutesPollInterval = setInterval(window.pollMinutesNow, 45000);
 }
 
 function stopMinutesPolling() {

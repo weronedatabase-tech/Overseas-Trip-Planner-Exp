@@ -23,6 +23,10 @@ async function attemptLogin(btn) {
     if (typeof window.clearApiClientCache === "function") {
       window.clearApiClientCache();
     }
+    if (window.LiveSync && typeof window.LiveSync.startRemoteSync === "function") {
+      window.LiveSync.resetRemoteSync();
+      window.LiveSync.startRemoteSync();
+    }
     if (currentUser.role === "admin") {
       const targetPage =
         typeof resolveAdminDefaultPage === "function"
@@ -66,6 +70,9 @@ function logout(btn) {
   }
   if (window.ArchiveMode && typeof window.ArchiveMode.resetAllModuleCaches === "function") {
     window.ArchiveMode.resetAllModuleCaches();
+  }
+  if (window.LiveSync && typeof window.LiveSync.resetRemoteSync === "function") {
+    window.LiveSync.resetRemoteSync();
   }
   currentUser = null;
   navigateTo("index.html");

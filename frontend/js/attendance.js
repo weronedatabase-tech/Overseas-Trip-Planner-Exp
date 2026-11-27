@@ -878,22 +878,62 @@ async function manualSyncAttendance() {
   }
 }
 
-window.pollAttendanceNow = async function () {
+window.pollAttendanceNow = async function (msg) {
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
+  const attTab = document.getElementById("tab-attendance");
+  if (!attTab || attTab.classList.contains("hidden-force")) return;
+
+  const domainList = Array.isArray(msg?.domains) ? msg.domains : msg?.domain ? [msg.domain] : [];
+  const hasDomain = (...ds) => domainList.includes("all") || ds.some((d) => domainList.includes(d));
+
+  // Refresh juncture dropdowns when settings changed remotely
+  if (hasDomain("settings")) {
+    const juncSel = document.getElementById("attJunctureSelect");
+    if (juncSel && typeof getRegularJunctures === "function") {
+      const prevVal = juncSel.value;
+      const regJunctures = getRegularJunctures();
+      const nextHtml = regJunctures.map((j) => `<option value="${j}">${j}</option>`).join("");
+      if (juncSel.innerHTML !== nextHtml) {
+        juncSel.innerHTML = nextHtml;
+        if (prevVal && regJunctures.includes(prevVal)) {
+          juncSel.value = prevVal;
+        } else if (regJunctures.length > 0) {
+          juncSel.value = regJunctures[0];
+          savedAttJuncture = regJunctures[0];
+        }
+      }
+    }
+    const busModal = document.getElementById("busTrackerModal");
+    if (busModal && !busModal.classList.contains("hidden-force") && typeof renderBusJunctures === "function") {
+      renderBusJunctures();
+    }
+  }
+
+  // Refresh participant/group/bus roster when logistics or roster changed remotely
+  if (hasDomain("roster", "logistics")) {
+    try {
+      const logRes = await apiCall("fetchLogistics", { bypassLocalCache: true });
+      if (logRes && Array.isArray(logRes.participants)) {
+        globalLogistics = logRes;
+        if (typeof processDisplayNames === "function") processDisplayNames(globalLogistics.participants);
+        if (typeof applyGlobalSorting === "function") {
+          globalLogistics.participants = applyGlobalSorting(globalLogistics.participants);
+        }
+        if (typeof populateAttendanceAssignments === "function") {
+          populateAttendanceAssignments();
+        }
+        renderAttendanceLists();
+      }
+    } catch (e) {}
+  }
+
   // If Bus Tracker Modal is open, also poll bus attendance
   const busModal = document.getElementById("busTrackerModal");
   if (busModal && !busModal.classList.contains("hidden-force")) {
     await pollBusAttendanceNow();
   }
 
-  const attTab = document.getElementById("tab-attendance");
-  if (
-    !attTab ||
-    attTab.classList.contains("hidden-force") ||
-    isAttendanceSyncing ||
-    pendingAttendanceUpdates.size > 0
-  )
-    return;
+  if (isAttendanceSyncing || pendingAttendanceUpdates.size > 0) return;
 
   const juncEl = document.getElementById("attJunctureSelect");
   const juncture = juncEl ? juncEl.value : "";
@@ -902,8 +942,8 @@ window.pollAttendanceNow = async function () {
   const fetchStartTime = Date.now();
 
   try {
-    const res = await apiCall("fetchAttendanceData", { juncture });
-    if (lastLocalChange > fetchStartTime) return;
+    const res = await apiCall("fetchAttendanceData", { juncture, bypassLocalCache: true });
+    if (lastLocalChange > fetchStartTime || pendingAttendanceUpdates.size > 0) return;
 
     const remoteData = res.data || {};
     let hasChanges = false;
@@ -921,7 +961,13 @@ window.pollAttendanceNow = async function () {
     }
 
     if (hasChanges) {
+      const nc = document.getElementById("attNotCheckedList");
+      const ck = document.getElementById("attCheckedList");
+      const prevNc = nc ? nc.scrollTop : 0;
+      const prevCk = ck ? ck.scrollTop : 0;
       renderAttendanceLists();
+      if (nc) nc.scrollTop = prevNc;
+      if (ck) ck.scrollTop = prevCk;
     }
   } catch (e) {}
 };
@@ -929,7 +975,7 @@ window.pollAttendanceNow = async function () {
 function startAttendancePolling() {
   if (attendancePollInterval) clearInterval(attendancePollInterval);
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
-  attendancePollInterval = setInterval(window.pollAttendanceNow, 8000);
+  attendancePollInterval = setInterval(window.pollAttendanceNow, 45000);
 }
 
 function stopAttendancePolling() {
@@ -1905,6 +1951,7 @@ async function pollBusAttendanceNow() {
   try {
     const res = await apiCall("fetchAttendanceData", {
       juncture: "__BUS__" + adhocBusState.juncture,
+      bypassLocalCache: true,
     });
     if (lastLocalChange > fetchStartTime || pendingAdhocBusUpdates.size > 0) return;
 
@@ -1919,17 +1966,27 @@ async function pollBusAttendanceNow() {
       hasChanges = true;
     }
 
-    Object.keys(parsed.participantBusMap).forEach((nric) => {
-      const rEntry = parsed.participantBusMap[nric];
+    const allNrics = new Set([
+      ...Object.keys(parsed.participantBusMap || {}),
+      ...Object.keys(adhocBusState.data || {}),
+    ]);
+    allNrics.forEach((nric) => {
+      const rEntry = parsed.participantBusMap[nric] || { bus: "", ts: 0 };
       const lEntry = adhocBusState.data[nric] || { bus: "", ts: 0 };
-      if (rEntry.ts > lEntry.ts) {
+      if (rEntry.ts > lEntry.ts || (rEntry.bus !== lEntry.bus && rEntry.ts >= lEntry.ts)) {
         adhocBusState.data[nric] = rEntry;
         hasChanges = true;
       }
     });
 
     if (hasChanges) {
+      const nb = document.getElementById("busNotBoardedList");
+      const bd = document.getElementById("busBoardedList");
+      const prevNb = nb ? nb.scrollTop : 0;
+      const prevBd = bd ? bd.scrollTop : 0;
       renderBusLists();
+      if (nb) nb.scrollTop = prevNb;
+      if (bd) bd.scrollTop = prevBd;
     }
   } catch (e) {}
 }

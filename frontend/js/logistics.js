@@ -598,8 +598,8 @@ window.pollPairingsNow = async function () {
 
   const fetchStartTime = Date.now();
   try {
-    const res = await apiCall("fetchPairingsOnly");
-    if (lastLocalChange > fetchStartTime) return;
+    const res = await apiCall("fetchPairingsOnly", { bypassLocalCache: true });
+    if (lastLocalChange > fetchStartTime || pendingPairingsMap.size > 0) return;
 
     if (res.pairings && globalLogistics && globalLogistics.pairings) {
       let hasChanges = false;
@@ -625,14 +625,31 @@ window.pollPairingsNow = async function () {
       });
 
       if (hasChanges && !dndState.el && !dndState.isDragging) {
+        const srcPool = document.getElementById("dnd-source-pool");
+        const tgtList = document.getElementById("dnd-target-list");
+        const prevSrcTop = srcPool ? srcPool.scrollTop : 0;
+        const prevTgtTop = tgtList ? tgtList.scrollTop : 0;
         renderPairings();
+        if (srcPool) srcPool.scrollTop = prevSrcTop;
+        if (tgtList) tgtList.scrollTop = prevTgtTop;
+
         const sheet = document.getElementById("selectionBottomSheet");
+        const sheetSearch = document.getElementById("sheetSearchInput");
+        const typingInSheet =
+          sheetSearch && document.activeElement === sheetSearch;
         if (
           sheet &&
           !sheet.classList.contains("hidden-force") &&
-          currentPairingTarget
+          currentPairingTarget &&
+          !typingInSheet
         ) {
+          const prevQuery = sheetSearch ? sheetSearch.value : "";
           openPairingSheet(currentPairingTarget, currentPairingSourceRole);
+          const nextSearch = document.getElementById("sheetSearchInput");
+          if (nextSearch && prevQuery) {
+            nextSearch.value = prevQuery;
+            if (typeof filterBottomSheet === "function") filterBottomSheet();
+          }
         }
       }
     }
@@ -642,7 +659,7 @@ window.pollPairingsNow = async function () {
 function startPairingPolling() {
   if (pairingPollInterval) clearInterval(pairingPollInterval);
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
-  pairingPollInterval = setInterval(window.pollPairingsNow, 8000);
+  pairingPollInterval = setInterval(window.pollPairingsNow, 45000);
 }
 
 // ==========================================
@@ -1143,8 +1160,6 @@ window.pollRoomsNow = async function () {
   if (
     !logTab ||
     logTab.classList.contains("hidden-force") ||
-    !roomSec ||
-    roomSec.classList.contains("hidden-force") ||
     isRoomSyncing ||
     pendingRoomUpdates.size > 0 ||
     (dndState.type === "rooming" && (dndState.el || dndState.isDragging))
@@ -1153,8 +1168,8 @@ window.pollRoomsNow = async function () {
 
   const fetchStartTime = Date.now();
   try {
-    const res = await apiCall("fetchRoomsOnly");
-    if (lastLocalChange > fetchStartTime) return;
+    const res = await apiCall("fetchRoomsOnly", { bypassLocalCache: true });
+    if (lastLocalChange > fetchStartTime || pendingRoomUpdates.size > 0) return;
 
     if (res.rooms && globalLogistics && globalLogistics.rooms) {
       let hasChanges = false;
@@ -1176,8 +1191,20 @@ window.pollRoomsNow = async function () {
           }
         }
       });
-      if (hasChanges && !dndState.el && !dndState.isDragging) {
+      if (
+        hasChanges &&
+        roomSec &&
+        !roomSec.classList.contains("hidden-force") &&
+        !dndState.el &&
+        !dndState.isDragging
+      ) {
+        const pool = document.getElementById("unassignedRoomPool");
+        const list = document.getElementById("roomListContainer");
+        const prevPoolTop = pool ? pool.scrollTop : 0;
+        const prevListTop = list ? list.scrollTop : 0;
         renderRooms();
+        if (pool) pool.scrollTop = prevPoolTop;
+        if (list) list.scrollTop = prevListTop;
       }
     }
   } catch (e) {}
@@ -1199,36 +1226,61 @@ window.pollLogisticsAssignmentsNow = async function () {
 
   const fetchStartTime = Date.now();
   try {
-    const res = await apiCall("fetchLogistics");
-    if (lastLocalChange > fetchStartTime) return;
-    if (res && res.participants && globalLogistics && globalLogistics.participants) {
-      let groupChanged = false;
-      let busChanged = false;
-      res.participants.forEach((sPart) => {
-        const lPart = globalLogistics.participants.find(
-          (p) => p.nric === sPart.nric,
-        );
+    const res = await apiCall("fetchLogistics", { bypassLocalCache: true });
+    if (
+      lastLocalChange > fetchStartTime ||
+      pendingGroupUpdates.size > 0 ||
+      pendingBusUpdates.size > 0
+    )
+      return;
+    if (res && Array.isArray(res.participants) && globalLogistics) {
+      const prevParts = globalLogistics.participants || [];
+      const prevSig = JSON.stringify(prevParts);
+      const nextParts = res.participants.map((sPart) => {
+        const lPart = prevParts.find((p) => p.nric === sPart.nric);
         if (lPart) {
-          if (
-            !pendingGroupUpdates.has(sPart.nric) &&
-            (lPart.logisticsGroup !== sPart.logisticsGroup ||
-              lPart.isGroupIC !== sPart.isGroupIC)
-          ) {
-            lPart.logisticsGroup = sPart.logisticsGroup;
-            lPart.isGroupIC = sPart.isGroupIC;
-            groupChanged = true;
+          if (pendingGroupUpdates.has(sPart.nric)) {
+            sPart.logisticsGroup = lPart.logisticsGroup;
+            sPart.isGroupIC = lPart.isGroupIC;
           }
-          if (
-            !pendingBusUpdates.has(sPart.nric) &&
-            lPart.bus !== sPart.bus
-          ) {
-            lPart.bus = sPart.bus;
-            busChanged = true;
+          if (pendingBusUpdates.has(sPart.nric)) {
+            sPart.bus = lPart.bus;
           }
         }
+        return sPart;
       });
-      if (groupChanged) renderGroups();
-      if (busChanged) renderBuses();
+      if (typeof processDisplayNames === "function") processDisplayNames(nextParts);
+      const sortedNext =
+        typeof applyGlobalSorting === "function"
+          ? applyGlobalSorting(nextParts)
+          : nextParts;
+      const nextSig = JSON.stringify(sortedNext);
+      if (nextSig !== prevSig) {
+        globalLogistics.participants = sortedNext;
+        const scrollIds = [
+          "dnd-source-pool",
+          "dnd-target-list",
+          "unassignedRoomPool",
+          "roomListContainer",
+          "unassignedGroupPool",
+          "groupListContainer",
+          "unassignedBusPool",
+          "busListContainer",
+        ];
+        const savedScroll = {};
+        scrollIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) savedScroll[id] = el.scrollTop;
+        });
+        renderPairings();
+        renderRooms();
+        renderGroups();
+        renderBuses();
+        scrollIds.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el && savedScroll[id] !== undefined) el.scrollTop = savedScroll[id];
+        });
+      }
     }
   } catch (e) {}
 };
@@ -1236,7 +1288,7 @@ window.pollLogisticsAssignmentsNow = async function () {
 function startRoomPolling() {
   if (roomPollInterval) clearInterval(roomPollInterval);
   if (typeof window.isArchiveReadOnly === "function" && window.isArchiveReadOnly()) return;
-  roomPollInterval = setInterval(window.pollRoomsNow, 10000);
+  roomPollInterval = setInterval(window.pollRoomsNow, 45000);
 }
 
 window.stopLogisticsPolling = function () {
@@ -2248,6 +2300,11 @@ async function loadLogisticsData() {
     renderBuses();
     const overlay = document.getElementById("logLoadingOverlay");
     if (overlay) overlay.classList.add("hidden-force");
+    startPairingPolling();
+    startRoomPolling();
+    window.pollPairingsNow();
+    window.pollRoomsNow();
+    window.pollLogisticsAssignmentsNow();
     return;
   }
   const overlay = document.getElementById("logLoadingOverlay");
